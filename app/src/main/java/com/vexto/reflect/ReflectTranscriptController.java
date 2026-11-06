@@ -71,10 +71,6 @@ final class ReflectTranscriptController {
                 this::transcriptionFinished);
     }
 
-    void open(File recording, String fallback, String length, int durationMs, boolean recordingDetails) {
-        open(recording, fallback, length, durationMs, recordingDetails, false);
-    }
-
     void open(File recording, String fallback, String length, int durationMs, boolean recordingDetails,
               boolean startImmediately) {
         int current = ++generation;
@@ -90,13 +86,23 @@ final class ReflectTranscriptController {
         issue = null;
         view.transcriptView().speakerNames(Collections.emptyMap());
         render();
-        view.show(ReflectView.Screen.TRANSCRIPT);
+        if (startImmediately) view.processingView().content(length, null);
+        view.show(startImmediately ? ReflectView.Screen.PROCESSING : ReflectView.Screen.TRANSCRIPT);
         io.execute(() -> {
             String resolvedTitle = store.title(recording, fallback);
             RecordingMetadata properties = RecordingMetadata.read(recording);
             try {
                 ReflectTranscript loaded = store.load(recording);
-                deliver(current, () -> {
+                activity.runOnUiThread(() -> {
+                    if (activity.isDestroyed()) return;
+                    if (current != generation) {
+                        // The user can send processing to the background before metadata is loaded.
+                        if (startImmediately && loaded == null && !importing.contains(recording)) {
+                            if (local.busy()) notice.accept("Дождитесь завершения текущей обработки.");
+                            else local.start(recording);
+                        }
+                        return;
+                    }
                     title = resolvedTitle;
                     metadata = properties;
                     transcript = loaded;
@@ -104,14 +110,22 @@ final class ReflectTranscriptController {
                     render();
                     refreshSpeakerNames(current, recording);
                     if (startImmediately && loaded == null) transcribe();
+                    else showTranscriptAfterProcessing();
                 });
             } catch (IOException | RuntimeException invalid) {
-                deliver(current, () -> {
+                String readIssue = "Не удалось прочитать сохранённый транскрипт. Можно импортировать другой JSON.";
+                activity.runOnUiThread(() -> {
+                    if (activity.isDestroyed()) return;
+                    if (current != generation) {
+                        if (startImmediately) notice.accept(readIssue);
+                        return;
+                    }
                     title = resolvedTitle;
                     metadata = properties;
-                    issue = "Не удалось прочитать сохранённый транскрипт. Можно импортировать другой JSON.";
+                    issue = readIssue;
                     loading = false;
                     render();
+                    showTranscriptAfterProcessing();
                     refreshSpeakerNames(current, recording);
                 });
             }
@@ -148,7 +162,10 @@ final class ReflectTranscriptController {
     void transcribe() {
         if (file == null || loading || recordingDetails || transcript != null) return;
         if (local.busy() || importing.contains(file)) {
-            if (local.progress(file) == null) notice.accept("Дождитесь завершения текущей обработки.");
+            if (local.progress(file) == null) {
+                showTranscriptAfterProcessing();
+                notice.accept("Дождитесь завершения текущей обработки.");
+            }
             return;
         }
         issue = null;
@@ -159,8 +176,9 @@ final class ReflectTranscriptController {
     void cancelTranscription() { local.cancel(file); }
 
     void saveState(Bundle state) {
-        if (view.screen() != ReflectView.Screen.TRANSCRIPT) return;
+        if (view.screen() != ReflectView.Screen.TRANSCRIPT && view.screen() != ReflectView.Screen.PROCESSING) return;
         state.putBoolean("transcript", true);
+        state.putBoolean("transcriptProcessing", view.screen() == ReflectView.Screen.PROCESSING);
         state.putBoolean("recordingDetails", recordingDetails);
         state.putString("transcriptTitle", title);
         state.putString("transcriptPreview", previewKey);
@@ -357,7 +375,10 @@ final class ReflectTranscriptController {
     }
 
     private void processingChanged(File recording) {
-        if (recording.equals(file) && !recordingDetails) view.transcriptView().transcription(local.progress(file));
+        if (!recording.equals(file) || recordingDetails) return;
+        var progress = local.progress(file);
+        if (view.screen() == ReflectView.Screen.PROCESSING) view.processingView().content(length, progress);
+        else view.transcriptView().transcription(progress);
     }
 
     private void transcriptionFinished(ReflectLocalTranscription.Result result) {
@@ -368,10 +389,15 @@ final class ReflectTranscriptController {
                 if (transcript != null) refreshSpeakerNames(generation, file);
             }
             render();
+            showTranscriptAfterProcessing();
         }
         if (result.transcript() != null || !result.recording().equals(file)) {
             notice.accept(result.message() == null ? "Расшифровка готова" : result.message());
         }
+    }
+
+    private void showTranscriptAfterProcessing() {
+        if (view.screen() == ReflectView.Screen.PROCESSING) view.show(ReflectView.Screen.TRANSCRIPT);
     }
 
     void refreshSpeakerNames() {

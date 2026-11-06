@@ -19,7 +19,10 @@ import java.util.function.Consumer;
 
 /** Coordinates one local inference task and commits only its complete transcript. */
 final class ReflectLocalTranscription {
-    record Progress(String stage, int percent, boolean cancellable) {}
+    record Progress(Stage stage, int percent, int speakers) {
+        boolean cancellable() { return stage != null; }
+        String title() { return cancellable() ? stage.getTitle() : "Сохраняю расшифровку"; }
+    }
     record Result(File recording, ReflectTranscript transcript, String message) {}
 
     private static final String SAVE_FAILED = "Не удалось сохранить расшифровку.";
@@ -58,11 +61,18 @@ final class ReflectLocalTranscription {
                 new TranscriptionOptions(null, false), new ReflectEngine.Listener() {
             @Override public void onProgress(Stage stage, float fraction) {
                 if (job != started) return;
-                started.progress = new Progress(stage.getTitle(), Math.round(fraction * 100), true);
+                started.progress = new Progress(stage, Math.round(fraction * 100), started.progress.speakers());
                 changed.accept(recording);
             }
 
-            @Override public void onPartial(Transcript transcript) {}
+            @Override public void onPartial(Transcript transcript) {
+                if (job != started) return;
+                int speakers = transcript.getSpeakers().size();
+                Progress previous = started.progress;
+                if (speakers == 0 || speakers == previous.speakers()) return;
+                started.progress = new Progress(previous.stage(), previous.percent(), speakers);
+                changed.accept(recording);
+            }
 
             @Override public void onDone(Transcript transcript, ProcessingStats stats) {
                 if (job != started) return;
@@ -70,7 +80,7 @@ final class ReflectLocalTranscription {
                     complete(started, null, "В записи не удалось распознать речь.");
                     return;
                 }
-                started.progress = new Progress("Сохраняю расшифровку", 100, false);
+                started.progress = new Progress(null, 100, transcript.getSpeakers().size());
                 changed.accept(recording);
                 io.execute(() -> persist(started, transcript));
             }
@@ -136,7 +146,7 @@ final class ReflectLocalTranscription {
     private static final class Job {
         final File recording;
         ReflectEngine.Task task;
-        Progress progress = new Progress("Подготовка к распознаванию", 0, true);
+        Progress progress = new Progress(Stage.Preparing, 0, 0);
 
         Job(File recording) { this.recording = recording; }
     }

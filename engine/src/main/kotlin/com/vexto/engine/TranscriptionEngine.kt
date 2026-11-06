@@ -91,6 +91,7 @@ class TranscriptionEngine(context: Context) {
             if (options.punctuation && !models.manifest.asr.punctuation) {
                 transcript = stage(Stage.Punctuation) { SimplePunctuation.apply(transcript) }
             }
+            if (transcript.utterances.isNotEmpty()) send(TranscriptionEvent.Partial(transcript))
             val emotionModel = models.manifest.emotion
             if (emotionModel != null && transcript.utterances.isNotEmpty()) {
                 transcript = stage(Stage.Emotion) { progress ->
