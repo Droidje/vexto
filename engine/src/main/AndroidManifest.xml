@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <service android:name="com.vexto.engine.quality.InferenceStageService"
+            android:process=":inference" android:exported="false" />
+    </application>
+</manifest>

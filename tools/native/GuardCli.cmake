@@ -1,0 +1,12 @@
+# Only attach to the top-level CLI, after upstream has declared its targets.
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    set(VEXTO_CLI_GUARD_SOURCE "${CMAKE_CURRENT_LIST_DIR}/parent_death.cpp")
+    function(vexto_attach_cli_guard)
+        foreach(cli whisper-cli llama-completion)
+            if(TARGET ${cli})
+                target_sources(${cli} PRIVATE "${VEXTO_CLI_GUARD_SOURCE}")
+            endif()
+        endforeach()
+    endfunction()
+    cmake_language(DEFER CALL vexto_attach_cli_guard)
+endif()

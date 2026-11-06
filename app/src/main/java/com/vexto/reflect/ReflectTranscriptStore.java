@@ -47,6 +47,22 @@ final class ReflectTranscriptStore {
         }
     }
 
+    /** Replace only the exact provisional transcript owned by this task. Imports/manual changes win. */
+    boolean replaceIfSame(File recording, ReflectTranscript expected, ReflectTranscript replacement) throws IOException {
+        synchronized (TRANSCRIPT_WRITE_LOCK) {
+            if (expected == null || !expected.sameLines(load(recording))) return false;
+            writeAtomically(sidecar(recording, ".json"), replacement.encode());
+            return true;
+        }
+    }
+
+    void saveEngineArtifacts(File recording, String directory) throws IOException {
+        File path = new File(directory).getCanonicalFile();
+        File root = new File(filesDirectory, "inference/jobs").getCanonicalFile();
+        if (!root.equals(path.getParentFile())) throw new IOException("Engine artifacts outside private job storage");
+        writeAtomically(sidecar(recording, ".engine"), path.getName().getBytes(StandardCharsets.UTF_8));
+    }
+
     String title(File recording, String fallback) {
         try {
             File path = sidecar(recording, ".title");

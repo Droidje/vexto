@@ -25,3 +25,10 @@ local.properties
 # Локальные артефакты офлайн-движка
 /engine/libs/
 /engine/src/main/assets/models/
+
+# Generated native runtimes and ORT C API headers
+/engine/src/main/jniLibs/
+/engine/src/main/cpp/include/
+
+# Android CMake intermediates
+**/.cxx/

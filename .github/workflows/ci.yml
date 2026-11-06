@@ -82,3 +82,13 @@ jobs:
         run: python -m unittest discover -s tools/benchmarks/tests -v
       - name: Синтаксис Android memory guard
         run: bash -n tools/benchmarks/android_memory_guard.sh
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Подготовить SDK и Java API без весов моделей
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+          bash scripts/fetch_models.sh --aar-only
+      - name: Unit-тесты Android-ядра (без JNI и инференса)
+        run: bash ./gradlew --no-daemon --max-workers=2 -PvextoSkipNative=true :engine:testDebugUnitTest

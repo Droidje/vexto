@@ -29,6 +29,8 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    packaging { jniLibs { useLegacyPackaging = true } }
+
     androidResources {
         // The offline engine checks asset sizes through AssetManager.openFd.
         noCompress 'onnx', 'txt', 'json'

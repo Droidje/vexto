@@ -9,5 +9,6 @@
             android:name="com.vexto.engine.eval.DiarizationEvalActivity"
             android:exported="true"
             android:theme="@android:style/Theme.Material.NoActionBar" />
+        <activity android:name="com.vexto.engine.eval.QualityEvalActivity" android:exported="true" />
     </application>
 </manifest>

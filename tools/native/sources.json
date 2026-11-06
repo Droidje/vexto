@@ -1,0 +1,34 @@
+{
+  "nemotron": {
+    "repository": "https://github.com/NVIDIA/NeMo-Speech.cpp",
+    "revision": "536b17a41bef62d2a67a40ed3df61df26a4389fe",
+    "license": "Apache-2.0",
+    "cmake_sha256_lf": "267264647705f6def21a7c81a73c2364a9563c1c67c0f95878f2536e7ed0d51c",
+    "source_archive_sha256": "ec91c81896e5b86b27e34b1765ecea3e4d6824e1f0784e9dde25de46faa3adbf",
+    "source_archive_url": "https://codeload.github.com/NVIDIA/NeMo-Speech.cpp/zip/536b17a41bef62d2a67a40ed3df61df26a4389fe"
+  },
+  "llama": {
+    "repository": "https://github.com/ggml-org/llama.cpp",
+    "revision": "bd4f514db14d87fded667787a7a963bfbaa98e89",
+    "license": "MIT",
+    "cmake_sha256_lf": "cc74926303df70623265bd8439680adca32d4ed5aba8af1cdb64911e473e5c21",
+    "source_archive_sha256": "d74b36880a15ad7e6889dc1bb1db7489e929e4110cc613b9716cfc31bc33bbe7",
+    "source_archive_url": "https://codeload.github.com/ggml-org/llama.cpp/zip/bd4f514db14d87fded667787a7a963bfbaa98e89"
+  },
+  "sentencepiece": {
+    "repository": "https://github.com/google/sentencepiece",
+    "revision": "31646a467d2051eb904e0b45de3a73e91fe1c1e3",
+    "license": "Apache-2.0 with bundled third party notices",
+    "cmake_sha256_lf": "a23f3d790b2e4a31dfcf7f1a759b9377eb5f5caba7b2936c45be5e322a819932",
+    "source_archive_sha256": "ae0a258a823b895d3c3879d2f44a14c91abe1e3e2a67273ad12b90afdce00211",
+    "source_archive_url": "https://codeload.github.com/google/sentencepiece/zip/31646a467d2051eb904e0b45de3a73e91fe1c1e3"
+  },
+  "whisper": {
+    "repository": "https://github.com/ggml-org/whisper.cpp",
+    "revision": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+    "license": "MIT",
+    "cmake_sha256_lf": "f4494d2da1353158b8a33b935abe6bbe76b8cee95d503fb16088224dd4755dcc",
+    "source_archive_sha256": "6be93b881acb415c5a25d0ef85bb6a488099de0296e072e22a66d50f20ec40b9",
+    "source_archive_url": "https://codeload.github.com/ggml-org/whisper.cpp/zip/d1be6fde11ac6e0407606b4e42fe72d34add8037"
+  }
+}
