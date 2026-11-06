@@ -74,7 +74,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             backend.retry();
         });
         transcripts = new ReflectTranscriptController(this, view, preferences, transcriptStore, imports,
-                this::notice, this::playFrom, this::refreshRecordings, backend, backendUi);
+                this::notice, this::playFrom, this::play, this::refreshRecordings, backend, backendUi);
         view.backendEnabled(!designPreview && backend.enabled());
         setContentView(view);
         fullscreen();

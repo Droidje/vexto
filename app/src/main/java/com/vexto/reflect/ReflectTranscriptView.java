@@ -7,30 +7,42 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.Outline;
+import android.graphics.Typeface;
 import android.graphics.drawable.RippleDrawable;
-import android.text.TextUtils;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.format.Formatter;
+import android.text.style.StyleSpan;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewOutlineProvider;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
-import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 /** Native conversation detail with a virtualized, scrollable transcript. */
 final class ReflectTranscriptView extends FrameLayout {
+    private static final Avatar GREEN = new Avatar("transcript_avatar_base_green", "transcript_avatar_green");
+    private static final Avatar AMBER = new Avatar("transcript_avatar_base_amber", "transcript_avatar_amber");
+    private static final Avatar ROSE = new Avatar("transcript_avatar_base_rose", "transcript_avatar_rose");
+    private static final Avatar PREVIEW_PORTRAIT = new Avatar("transcript_avatar_base_green", null);
+    private static final Avatar[] SPEAKER_AVATARS = {GREEN, AMBER, ROSE};
+    private static final Avatar[] PREVIEW_AVATARS = {GREEN, AMBER,
+            new Avatar("transcript_avatar_base_rose", "transcript_avatar_green"), ROSE,
+            PREVIEW_PORTRAIT, PREVIEW_PORTRAIT};
+
     interface Actions {
         void closeTranscript();
         void openExportOptions();
@@ -66,6 +78,12 @@ final class ReflectTranscriptView extends FrameLayout {
         this.artwork = artwork;
         this.preferences = preferences;
         this.actions = actions;
+        setOutlineProvider(new ViewOutlineProvider() {
+            @Override public void getOutline(View view, Outline outline) {
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), view.getWidth() * 47f / 393f);
+            }
+        });
+        setClipToOutline(true);
     }
 
     void content(String title, String length, ReflectTranscript transcript, boolean preview,
@@ -125,6 +143,8 @@ final class ReflectTranscriptView extends FrameLayout {
         if (play != null) play.setText(playing ? "Приостановить" : "Прослушать аудио");
     }
 
+    boolean isPlaying() { return playing; }
+
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec);
         if (width > 0 && (refresh || width != layoutWidth)) {
@@ -152,10 +172,11 @@ final class ReflectTranscriptView extends FrameLayout {
         list.addHeaderView(header(), null, false);
         list.setAdapter(new LineAdapter());
         FrameLayout.LayoutParams scroll = new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT);
-        scroll.topMargin = style.px(141);
+        scroll.topMargin = style.px(recordingDetails ? 141 : 139);
         addView(list, scroll);
         list.setSelectionFromTop(first, offset);
 
+        if (!recordingDetails) addTranscriptBackdrop();
         pill(16, 60, 48, 48, false);
         icon("transcript_back", "Назад", 16, 60, 48, 48, false, actions::closeTranscript);
         pill(281, 60, 96, 48, false);
@@ -164,27 +185,31 @@ final class ReflectTranscriptView extends FrameLayout {
                 329, 60, 48, 48, false, actions::openTranscriptOptions);
         if (recordingDetails) return;
 
-        View shade = new View(getContext());
-        shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0x00040402, 0xf0040402, 0xff040402}));
-        FrameLayout.LayoutParams fade = new FrameLayout.LayoutParams(MATCH_PARENT, style.px(108),
-                Gravity.BOTTOM);
-        addView(shade, fade);
         pill(16, 28, 144, 48, true);
         icon("transcript_more", "Действия транскрипта", 16, 28, 48, 48, true, actions::openTranscriptOptions);
         icon("transcript_add", "Импортировать транскрипт", 64, 28, 48, 48, true, actions::importTranscript);
         icon("transcript_style", "Настройки чтения", 112, 28, 48, 48, true, actions::openTranscriptStyle);
     }
 
+    private void addTranscriptBackdrop() {
+        View shade = new ReflectTranscriptBackdrop(getContext(), list, style.px(8));
+        addView(shade, new FrameLayout.LayoutParams(MATCH_PARENT, style.px(115), Gravity.BOTTOM));
+        list.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override public void onScrollStateChanged(AbsListView view, int state) {}
+
+            @Override public void onScroll(AbsListView view, int first, int count, int total) {
+                shade.invalidate();
+            }
+        });
+    }
+
     private LinearLayout header() {
         LinearLayout header = style.column();
         TextView heading = style.title(title);
+        if (!recordingDetails) heading.setTextSize(TypedValue.COMPLEX_UNIT_PX, style.px(22));
         heading.setPadding(style.px(16), 0, style.px(16), 0);
-        style.append(header, heading, 0, 14);
-        if (!lines.isEmpty()) {
-            style.append(header, participants(), 0, 20);
-        }
-        if (hasAudio) {
+        style.append(header, heading, 0, lines.isEmpty() ? 14 : 30);
+        if (hasAudio && lines.isEmpty()) {
             TextView label = style.text(length + " · Локальная запись", 14, ReflectPageStyle.MUTED, artwork.regular);
             label.setPadding(style.px(16), 0, style.px(16), 0);
             style.append(header, label, 0, 10);
@@ -195,13 +220,6 @@ final class ReflectTranscriptView extends FrameLayout {
             addInset(header, metadataCard(), 8, 12);
         } else if (lines.isEmpty()) {
             addInset(header, transcriptionCard(), 8, 12);
-        } else {
-            View divider = new ArtView("transcript_divider", false);
-            FrameLayout dividerBox = new FrameLayout(getContext());
-            dividerBox.addView(divider, new FrameLayout.LayoutParams(style.px(361), style.px(2), Gravity.CENTER));
-            LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(MATCH_PARENT, style.px(2));
-            dividerParams.bottomMargin = style.px(22);
-            header.addView(dividerBox, dividerParams);
         }
         return header;
     }
@@ -279,39 +297,6 @@ final class ReflectTranscriptView extends FrameLayout {
         style.append(card, row, 0, 0);
     }
 
-    private HorizontalScrollView participants() {
-        HorizontalScrollView strip = new HorizontalScrollView(getContext());
-        strip.setHorizontalScrollBarEnabled(false);
-        strip.setOverScrollMode(OVER_SCROLL_NEVER);
-        LinearLayout people = new LinearLayout(getContext());
-        people.setPadding(style.px(16), 0, style.px(16), 0);
-        Set<String> unique = new LinkedHashSet<>();
-        if (preview && "Спринт по портфолио".equals(title)) Collections.addAll(unique, "jennifer", "alex", "michel");
-        for (ReflectTranscript.Line line : lines) unique.add(line.speakerId);
-        int visible = 0;
-        for (String speaker : unique) {
-            if (visible++ == 24) break;
-            LinearLayout person = style.column();
-            person.setGravity(Gravity.CENTER_HORIZONTAL);
-            person.addView(avatar(speaker, true), new LinearLayout.LayoutParams(style.px(120), style.px(120)));
-            String name = speakerName(speaker);
-            if (preview && speaker.equals("jennifer")) name = "Jennifer\nColein";
-            TextView label = style.text(name, 18, Color.WHITE, preview ? artwork.latinSemibold : artwork.semibold);
-            label.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-            label.setMaxLines(2);
-            label.setEllipsize(TextUtils.TruncateAt.END);
-            style.append(person, label, 9, 0);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(style.px(120), WRAP_CONTENT);
-            params.rightMargin = style.px(16);
-            people.addView(person, params);
-        }
-        if (unique.size() > 24) {
-            people.addView(style.text("+" + (unique.size() - 24), 18, ReflectPageStyle.MUTED, artwork.semibold));
-        }
-        strip.addView(people);
-        return strip;
-    }
-
     private TextView button(String text, Runnable action) {
         TextView button = style.text(text, 16, Color.WHITE, artwork.medium);
         button.setGravity(Gravity.CENTER);
@@ -329,13 +314,13 @@ final class ReflectTranscriptView extends FrameLayout {
 
     private void pill(int left, int y, int width, int height, boolean bottom) {
         View pill = new View(getContext());
-        pill.setBackground(style.rounded(0xff212121, 24));
+        pill.setBackground(style.rounded(recordingDetails ? 0xff212121 : 0x1cffffff, 24));
         place(pill, left, y, width, height, bottom);
     }
 
     private void icon(String asset, String label, int left, int y, int width, int height, boolean bottom,
                       Runnable action) {
-        ArtView button = new ArtView(asset, false);
+        ArtView button = new ArtView(asset);
         button.setContentDescription(label);
         button.setFocusable(true);
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x30ffffff), null,
@@ -353,48 +338,47 @@ final class ReflectTranscriptView extends FrameLayout {
         addView(view, params);
     }
 
-    private View avatar(String speaker, boolean large) {
-        if (preview && ("jennifer".equals(speaker) || "alex".equals(speaker) || "michel".equals(speaker))) {
-            return new ArtView((large ? "transcript_speaker_" : "transcript_row_") + speaker, true);
-        }
-        String name = speakerName(speaker);
-        TextView initial = style.text(name.substring(0, name.offsetByCodePoints(0, 1)).toUpperCase(Locale.ROOT),
-                large ? 35 : 16, 0xffd4baff, artwork.display);
-        initial.setGravity(Gravity.CENTER);
-        initial.setBackground(style.rounded(0xff2c1740, 100));
-        return initial;
-    }
+    private record Avatar(String base, String picture) {}
 
-    private String speakerName(String speaker) {
-        return preview ? switch (speaker) {
-            case "jennifer" -> "Jennifer Colein";
-            case "alex" -> "Alex";
-            case "michel" -> "MichelYe";
-            default -> speaker;
-        } : speakerNames.getOrDefault(speaker, speaker);
+    private final class AvatarView extends View {
+        private Avatar avatar;
+
+        AvatarView() {
+            super(ReflectTranscriptView.this.getContext());
+            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
+
+        void show(Avatar value) {
+            if (avatar == value) return;
+            avatar = value;
+            invalidate();
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            if (avatar == null) return;
+            artwork.imagePixels(canvas, avatar.base(), 0, 0, getWidth(), getHeight());
+            if (avatar.picture() != null) {
+                artwork.imagePixels(canvas, avatar.picture(), 0, 0, getWidth(), getHeight());
+            }
+        }
     }
 
     private final class ArtView extends View {
         private final String asset;
-        private final boolean photo;
 
-        ArtView(String asset, boolean photo) {
+        ArtView(String asset) {
             super(ReflectTranscriptView.this.getContext());
             this.asset = asset;
-            this.photo = photo;
         }
 
         @Override protected void onDraw(Canvas canvas) {
-            if (photo) artwork.imagePixels(canvas, asset, 0, 0, getWidth(), getHeight());
-            else {
-                canvas.save();
-                canvas.translate(getWidth() / 2f, getHeight() / 2f);
-                float scale = layoutWidth / 393f;
-                canvas.scale(scale, scale);
-                if ("transcript_more".equals(asset)) canvas.rotate(-90);
-                artwork.centeredIcon(canvas, asset, 0, 0);
-                canvas.restore();
-            }
+            canvas.save();
+            canvas.translate(getWidth() / 2f, getHeight() / 2f);
+            float scale = layoutWidth / 393f;
+            canvas.scale(scale, scale);
+            if ("transcript_more".equals(asset)) canvas.rotate(-90);
+            artwork.centeredIcon(canvas, asset, 0, 0);
+            canvas.restore();
         }
 
         @Override public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
@@ -408,26 +392,51 @@ final class ReflectTranscriptView extends FrameLayout {
         @Override public ReflectTranscript.Line getItem(int position) { return lines.get(position); }
         @Override public long getItemId(int position) { return position; }
         @Override public View getView(int position, View recycled, ViewGroup parent) {
-            ReflectTranscript.Line line = getItem(position);
-            LinearLayout row = recycled instanceof LinearLayout ? (LinearLayout) recycled : new LinearLayout(getContext());
-            row.removeAllViews();
-            row.setPadding(style.px(16), 0, style.px(16), style.px(28));
-            row.addView(avatar(line.speakerId, false), new LinearLayout.LayoutParams(style.px(40), style.px(40)));
+            TranscriptRow row = recycled instanceof TranscriptRow existing ? existing : new TranscriptRow();
+            row.bind(getItem(position), position);
+            return row;
+        }
+    }
+
+    private final class TranscriptRow extends LinearLayout {
+        private final AvatarView avatar = new AvatarView();
+        private final TextView metadata;
+        private final TextView body;
+
+        TranscriptRow() {
+            super(ReflectTranscriptView.this.getContext());
+            setPadding(style.px(16), 0, style.px(16), style.px(17));
+            addView(avatar, new LinearLayout.LayoutParams(style.px(40), style.px(40)));
             LinearLayout words = style.column();
             LinearLayout.LayoutParams width = new LinearLayout.LayoutParams(0, WRAP_CONTENT, 1);
             width.leftMargin = style.px(12);
-            row.addView(words, width);
-            if (!preview) {
-                String meta = speakerName(line.speakerId);
-                if (preferences.timestamps()) meta += " · " + clock(line.startMs) + "–" + clock(line.endMs);
-                style.append(words, style.text(meta, 13, ReflectPageStyle.MUTED, artwork.medium), 2, 4);
-            }
-            TextView body = style.text(line.text, preferences.textSize(), 0xffcccccc, artwork.regular);
+            addView(words, width);
+            metadata = style.text("", 13, 0xff747474, artwork.regular);
+            metadata.setLetterSpacing(-.01f);
+            metadata.setTranslationY(-style.px(2));
+            style.append(words, metadata, 0, 0);
+            body = style.text("", preferences.textSize(), 0xffcccccc, artwork.regular);
             body.setLetterSpacing(-.01f);
-            body.setLineSpacing(style.px(preview && position == 0 ? 0 : 2), 1);
-            style.append(words, body, preview ? 8 : 0, 0);
-            row.setOnLongClickListener(v -> { actions.openTranscriptLine(line); return true; });
-            return row;
+            body.setTranslationY(-style.px(2));
+            style.append(words, body, 0, 0);
+        }
+
+        void bind(ReflectTranscript.Line line, int position) {
+            boolean designRow = preview && "Спринт по портфолио".equals(title);
+            if (designRow && position < PREVIEW_AVATARS.length) avatar.show(PREVIEW_AVATARS[position]);
+            else avatar.show(SPEAKER_AVATARS[Math.floorMod(line.speakerId.hashCode(), SPEAKER_AVATARS.length)]);
+            SpannableStringBuilder label = new SpannableStringBuilder(
+                    speakerNames.getOrDefault(line.speakerId, line.speakerId));
+            if (preferences.timestamps()) {
+                label.append(" ");
+                int dot = label.length();
+                label.append("· ").append(clock(line.startMs)).append("-").append(clock(line.endMs));
+                label.setSpan(new StyleSpan(Typeface.BOLD), dot, dot + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            metadata.setText(label);
+            body.setLineHeight(style.px(preferences.textSize() * (position == 0 ? 1.3125f : 1.5f)));
+            body.setText(line.text);
+            setOnLongClickListener(v -> { actions.openTranscriptLine(line); return true; });
         }
     }
 

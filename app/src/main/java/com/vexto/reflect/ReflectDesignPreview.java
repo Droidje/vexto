@@ -45,14 +45,15 @@ final class ReflectDesignPreview {
             return new ReflectTranscript(Collections.singletonList(new ReflectTranscript.Line(
                     "Настя", 0, 4500, "Все они показывают разные аспекты моих навыков.")));
         }
+        String question = "Звучит интересно! Какие проекты ты выбрала для своего спринта?";
+        String plan = "Планирую создать небольшую презентацию с описанием каждого проекта, добавить графики и отзывы клиентов. Думаю, это поможет лучше донести информацию.";
         return new ReflectTranscript(Arrays.asList(
-                new ReflectTranscript.Line("jennifer", 0, 4200,
-                        "Звучит интересно! Какие проекты ты выбрала для своего спринта?"),
-                new ReflectTranscript.Line("michel", 4500, 16700,
+                new ReflectTranscript.Line("Александр Симаранов", 1000, 5000, question),
+                new ReflectTranscript.Line("Настя Иванова", 5000, 17000,
                         "Ну, у меня есть несколько ключевых: разработка мобильного приложения, участие в большом маркетинговом проекте и запуск веб-сайта. Все они показывают разные аспекты моих навыков."),
-                new ReflectTranscript.Line("alex", 17000, 28100,
-                        "Планирую создать небольшую презентацию с описанием каждого проекта, добавить графики и отзывы клиентов. Думаю, это поможет лучше донести информацию."),
-                new ReflectTranscript.Line("jennifer", 28500, 33100,
-                        "Звучит интересно! Какие проекты ты выбрала для своего спринта?")));
+                new ReflectTranscript.Line("Олег Шишкин", 17000, 25000, plan),
+                new ReflectTranscript.Line("Олег Шишкин", 17000, 25000, plan),
+                new ReflectTranscript.Line("Александр Симаранов", 25000, 29000, question),
+                new ReflectTranscript.Line("Александр Симаранов", 29000, 33000, question)));
     }
 }
