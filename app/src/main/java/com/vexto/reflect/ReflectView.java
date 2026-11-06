@@ -16,6 +16,7 @@ import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
+import android.os.SystemClock;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.PathInterpolator;
@@ -25,14 +26,14 @@ import java.util.List;
 
 /** Native stage with the design's 393 × 852 coordinate space and Android touch targets. */
 final class ReflectView extends ViewGroup {
-    enum Screen { HOME, RECORDS, SPEAKERS, SETTINGS, MENU, READY, RECORDING, REVIEW, TRANSCRIPT }
+    enum Screen { HOME, RECORDS, SPEAKERS, SETTINGS, MENU, READY, RECORDING, PAUSED, REVIEW, TRANSCRIPT }
 
     interface Actions extends ReflectLibraryView.Actions, ReflectTranscriptView.Actions {
         void toggleMenu();
         void attach();
         void openRecorder();
         void startRecording();
-        void finishRecording();
+        void pauseRecording();
         void closeRecorder();
         void play();
         void save();
@@ -43,7 +44,6 @@ final class ReflectView extends ViewGroup {
 
     private static final float WIDTH = 393, HEIGHT = 852;
     private static final int BACKGROUND = 0xff040402, WHITE = Color.WHITE;
-    private static final int[] LIVE_WAVE = {4,6,10,7,14,9,18,12,8,16,22,13,9,42,52,36,44,20,10,7,12,17,9,5,11,14,8,6,10,7,5,4};
     private static final int[] REVIEW_WAVE = {4,6,10,7,14,9,18,12,8,16,22,13,9,19,11,6,15,20,10,7,12,17,9,5,11,14,8,6,10,7,5,4};
     private static final String[] TAB_ICONS = {"tab_home", "tab_records", "tab_speakers", "tab_settings"};
     private static final String[] TAB_NAMES = {"Главная", "Записи", "Спикеры", "Настройки"};
@@ -75,13 +75,15 @@ final class ReflectView extends ViewGroup {
     private final Path stage = new Path();
     private final Path glass = new Path();
     private final Path playGlyph = new Path();
+    private final RecordingVisuals recordingVisuals = new RecordingVisuals();
     private Bitmap orbEdgeShade;
     private Screen screen = Screen.HOME;
     private Screen departing = Screen.HOME;
     private Screen tab = Screen.HOME;
     private float scale = 1, offsetX, offsetY, transition = 1, menuProgress;
     private float capsuleCenter = TAB_CENTERS[0], capsuleHalfWidth = 34;
-    private float liveLevel, playProgress;
+    private float playProgress;
+    private long elapsedSeconds;
     private String elapsed = "0:00";
     private String duration = "+ 0:00";
     private boolean playing;
@@ -135,6 +137,11 @@ final class ReflectView extends ViewGroup {
         if (screen == Screen.RECORDS) records.dismissKeyboard();
         if (screen == Screen.SPEAKERS) speakers.dismissKeyboard();
         boolean withinNavigation = navigation(screen) && navigation(next);
+        boolean withinRecorder = recordingScreen(screen) && recordingScreen(next);
+        long now = SystemClock.uptimeMillis();
+        if (next == Screen.RECORDING) recordingVisuals.start(now, !preferences.reduceMotion());
+        else if (next == Screen.PAUSED) recordingVisuals.pause(now);
+        else if (screen == Screen.RECORDING || screen == Screen.PAUSED) recordingVisuals.reset();
         departing = screen;
         screen = next;
         if (isTab(next)) tab = next;
@@ -151,7 +158,7 @@ final class ReflectView extends ViewGroup {
         float stretch = Math.min(7, Math.abs(endCenter - startCenter) * .06f);
         transition = withinNavigation ? 1 : 0;
         rebuildControls();
-        if (preferences.reduceMotion()) {
+        if (preferences.reduceMotion() || withinRecorder) {
             transition = 1;
             menuProgress = endMenu;
             capsuleCenter = endCenter;
@@ -174,9 +181,14 @@ final class ReflectView extends ViewGroup {
         animator.start();
     }
 
-    void updateRecording(String elapsed, float amplitude) {
-        this.elapsed = elapsed;
-        liveLevel = 0.72f * liveLevel + 0.28f * amplitude;
+    void updateRecording(long elapsedMillis, int peak) {
+        long seconds = elapsedMillis / 1000;
+        if (seconds != elapsedSeconds) {
+            elapsedSeconds = seconds;
+            long remainder = seconds % 60;
+            elapsed = seconds / 60 + ":" + (remainder < 10 ? "0" : "") + remainder;
+        }
+        if (screen == Screen.RECORDING) recordingVisuals.sample(peak, SystemClock.uptimeMillis());
         invalidate();
     }
 
@@ -193,6 +205,10 @@ final class ReflectView extends ViewGroup {
     }
 
     private static boolean navigation(Screen page) { return isTab(page) || page == Screen.MENU; }
+
+    private static boolean recordingScreen(Screen page) {
+        return page == Screen.READY || page == Screen.RECORDING || page == Screen.PAUSED;
+    }
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec), height = MeasureSpec.getSize(heightSpec);
@@ -230,6 +246,7 @@ final class ReflectView extends ViewGroup {
             case MENU -> "Добавить аудио";
             case READY -> "Запись аудио";
             case RECORDING -> "Идёт запись";
+            case PAUSED -> "Запись на паузе";
             case REVIEW -> "Готово";
             case TRANSCRIPT -> "Транскрипт разговора";
         });
@@ -268,7 +285,8 @@ final class ReflectView extends ViewGroup {
             control("Закрыть", 318, 765, 59, 59, actions::closeRecorder);
             switch (screen) {
                 case READY: control("Начать запись", 245, 765, 59, 59, actions::startRecording); break;
-                case RECORDING: control("Завершить запись", 245, 765, 59, 59, actions::finishRecording); break;
+                case RECORDING: control("Поставить запись на паузу", 245, 765, 59, 59, actions::pauseRecording); break;
+                case PAUSED: control("Продолжить запись", 245, 765, 59, 59, actions::startRecording); break;
                 case REVIEW:
                     control("Воспроизвести или приостановить", 16, 578, 361, 44, actions::play);
                     control("Расшифровать позже", 84, 75, 222, 48, actions::save);
@@ -320,6 +338,9 @@ final class ReflectView extends ViewGroup {
             drawScreen(canvas, screen, menuProgress);
         }
         canvas.restore();
+        if (recordingScreen(screen) && recordingVisuals.needsFrame(SystemClock.uptimeMillis())) {
+            postInvalidateOnAnimation();
+        }
     }
 
     private void drawScreen(Canvas canvas, Screen page, float menu) {
@@ -376,33 +397,42 @@ final class ReflectView extends ViewGroup {
 
     private void drawRecorder(Canvas c, Screen page) {
         if (orbEdgeShade == null) orbEdgeShade = orbEdgeShade();
-        if (page == Screen.READY) {
-            c.save();
-            c.scale(-1, 1, 197, 403.5f);
-            artwork.image(c, "orb_ready", 57, 217, 280, 373);
-            c.restore();
-            c.drawBitmap(orbEdgeShade, 260, 217, null);
-            artworkButton(c, WHITE, "mic_start", 274.5f, 794.5f, 0);
-        } else {
-            c.save();
-            c.clipRect(65, 251, 328, 529);
-            float pulse = page == Screen.RECORDING ? 1 + .018f * liveLevel : 1;
-            c.scale(pulse, pulse, 196.5f, 390);
-            artwork.image(c, "orb_active", 39.49f, 251, 289.51f, 278);
-            c.restore();
-            c.drawBitmap(orbEdgeShade, 260, 217, null);
-            if (page == Screen.RECORDING) {
+        long now = SystemClock.uptimeMillis();
+        c.save();
+        c.clipRect(65, 251, 329, 529);
+        if (page == Screen.RECORDING || page == Screen.PAUSED) {
+            // Rotate about the center of the visible sphere, not the PNG's transparent padding.
+            c.rotate(recordingVisuals.angle(now), 196.79f, 389.72f);
+        }
+        artwork.image(c, "orb_active", 39.49f, 251, 289.51f, 278);
+        c.restore();
+        c.drawBitmap(orbEdgeShade, 260, 217, null);
+        switch (page) {
+            case RECORDING -> {
                 text(c, "Распознаю голос...", 196.5f, 412.3f, 18, WHITE, artwork.display, true);
-                waveform(c, LIVE_WAVE, 45, 349, 627, WHITE, liveLevel, 0);
-                text(c, elapsed, 32, 803, 26, WHITE, artwork.display, false);
+                liveWaveform(c, now);
                 artworkButton(c, WHITE, "pause", 274.75f, 794.9f, 0);
-            } else {
+            }
+            case REVIEW -> {
                 text(c, "Готово!", 196.5f, 412.3f, 18, WHITE, artwork.display, true);
                 drawReview(c);
                 artworkButton(c, 0xff0088ff, "send", 275.26f, 794.75f, 90);
             }
+            default -> artworkButton(c, WHITE, "mic_start", 274.5f, 794.5f, 0);
+        }
+        if (page == Screen.RECORDING || page == Screen.PAUSED) {
+            text(c, elapsed, 32, 803, 26, WHITE, artwork.display, false);
         }
         closeButton(c, "plus_recorder", -45);
+    }
+
+    private void liveWaveform(Canvas c, long now) {
+        float progress = preferences.reduceMotion() ? 1 : recordingVisuals.sampleProgress(now);
+        for (int i = 0; i < RecordingVisuals.BARS; i++) {
+            float x = 45 + 302 * i / (float) (RecordingVisuals.BARS - 1);
+            float h = recordingVisuals.height(i, progress);
+            rounded(c, x, 627 - h / 2, x + 2, 627 + h / 2, 1, WHITE);
+        }
     }
 
     private void drawReview(Canvas c) {

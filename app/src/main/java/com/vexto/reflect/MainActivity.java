@@ -2,6 +2,7 @@ package com.vexto.reflect;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -42,14 +43,15 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private File audio;
     private int duration;
     private MediaPlayer player;
+    private AlertDialog recordingExit;
     private boolean importing;
     private boolean designPreview;
     private boolean previewSpeakersEmpty;
     private final Runnable heartbeat = new Runnable() {
         @Override public void run() {
             if (view.screen() == RECORDING) {
-                view.updateRecording(time(session.elapsedMillis()), session.amplitude());
-                handler.postDelayed(this, 65);
+                view.updateRecording(session.elapsedMillis(), session.peakAmplitude());
+                handler.postDelayed(this, RecordingVisuals.sampleInterval());
             } else if (player != null && player.isPlaying()) {
                 view.updatePlayback(time(duration), true, player.getCurrentPosition() / (float) duration);
                 if (view.screen() == REVIEW) handler.postDelayed(this, 65);
@@ -123,6 +125,16 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override public void openRecorder() { view.show(READY); }
 
     @Override public void startRecording() {
+        if (view.screen() == PAUSED) {
+            try {
+                session.resume();
+                view.show(RECORDING);
+                handler.post(heartbeat);
+            } catch (RuntimeException error) {
+                notice("Не удалось продолжить запись");
+            }
+            return;
+        }
         if (view.screen() != READY) return;
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MICROPHONE_PERMISSION);
@@ -130,7 +142,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         }
         try {
             session.start(this);
-            view.updateRecording("0:00", 0);
+            view.updateRecording(0, 0);
             view.show(RECORDING);
             handler.post(heartbeat);
         } catch (IOException | RuntimeException error) {
@@ -146,8 +158,25 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         }
     }
 
-    @Override public void finishRecording() {
+    @Override public void pauseRecording() {
         if (view.screen() != RECORDING) return;
+        try {
+            session.pause();
+            handler.removeCallbacks(heartbeat);
+            view.updateRecording(session.elapsedMillis(), 0);
+            view.show(PAUSED);
+        } catch (RuntimeException error) {
+            notice("Не удалось поставить запись на паузу");
+        }
+    }
+
+    private boolean hasRecordingDraft() {
+        return view.screen() == RECORDING || view.screen() == PAUSED;
+    }
+
+    private void finishRecording() {
+        if (!hasRecordingDraft()) return;
+        if (recordingExit != null) recordingExit.dismiss();
         handler.removeCallbacks(heartbeat);
         File recorded = null;
         try {
@@ -161,6 +190,23 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     @Override public void closeRecorder() {
+        if (hasRecordingDraft()) {
+            if (recordingExit != null) return;
+            pauseRecording();
+            recordingExit = new AlertDialog.Builder(this)
+                    .setTitle("Завершить запись?")
+                    .setPositiveButton("Прослушать", (dialog, which) -> finishRecording())
+                    .setNegativeButton("Остаться", null)
+                    .setNeutralButton("Удалить", (dialog, which) -> discardRecording())
+                    .create();
+            recordingExit.setOnDismissListener(dialog -> recordingExit = null);
+            recordingExit.show();
+            return;
+        }
+        discardRecording();
+    }
+
+    private void discardRecording() {
         handler.removeCallbacks(heartbeat);
         session.cancel();
         stopPlayer();
@@ -413,7 +459,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     @Override protected void onStop() {
-        if (view.screen() == RECORDING) finishRecording();
+        if (hasRecordingDraft()) finishRecording();
         stopPlayer();
         super.onStop();
     }

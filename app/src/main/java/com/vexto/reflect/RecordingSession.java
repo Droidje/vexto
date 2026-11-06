@@ -12,6 +12,8 @@ final class RecordingSession {
     private MediaRecorder recorder;
     private File output;
     private long started;
+    private long accumulated;
+    private boolean paused;
 
     void start(Context context) throws IOException {
         if (recorder != null) throw new IllegalStateException("Recording already started");
@@ -28,16 +30,36 @@ final class RecordingSession {
             recorder.prepare();
             recorder.start();
             started = SystemClock.elapsedRealtime();
+            accumulated = 0;
+            paused = false;
         } catch (IOException | RuntimeException error) {
             cancel();
             throw error;
         }
     }
 
-    long elapsedMillis() { return SystemClock.elapsedRealtime() - started; }
+    void pause() {
+        if (recorder == null || paused) throw new IllegalStateException("No active recording");
+        long elapsed = elapsedMillis();
+        recorder.pause();
+        accumulated = elapsed;
+        paused = true;
+    }
 
-    float amplitude() {
-        return recorder == null ? 0 : Math.min(1, recorder.getMaxAmplitude() / 12000f);
+    void resume() {
+        if (recorder == null || !paused) throw new IllegalStateException("No paused recording");
+        recorder.resume();
+        started = SystemClock.elapsedRealtime();
+        paused = false;
+    }
+
+    long elapsedMillis() {
+        if (recorder == null) return 0;
+        return accumulated + (paused ? 0 : SystemClock.elapsedRealtime() - started);
+    }
+
+    int peakAmplitude() {
+        return recorder == null || paused ? 0 : recorder.getMaxAmplitude();
     }
 
     File finish() {
