@@ -1,0 +1,48 @@
+name: Release Checks
+
+# Пайплайн 2 — релизные проверки для MR в main (обычно dev → main).
+# Не повторяет тесты пайплайна 1: сначала убеждается, что на head-коммите уже
+# есть зелёный CI-прогон, затем выполняет только релизные проверки.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-checks-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-dev-ci:
+    name: Гейт — CI в dev уже пройден
+    runs-on: ubuntu-latest
+    steps:
+      - name: Проверить зелёный CI на head-коммите
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          OK=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${SHA}&status=completed&per_page=100" \
+            --jq '[.workflow_runs[] | select(.name=="CI" and .conclusion=="success")] | length')
+          if [ "${OK:-0}" -lt 1 ]; then
+            echo "::error::Коммит ${SHA} ещё не проходил CI в dev. Сначала смержите изменения в dev и дождитесь зелёного прогона."
+            exit 1
+          fi
+          echo "CI на ${SHA} уже зелёный — релизные проверки не дублируют тесты"
+
+  release-checks:
+    name: Релизные проверки — слот
+    runs-on: ubuntu-latest
+    needs: verify-dev-ci
+    steps:
+      - uses: actions/checkout@v7
+      # Только релизные проверки, не дублирующие CI: контроль версии, changelog,
+      # готовность релизных артефактов. Заполнить при появлении релизного процесса.
+      - name: Слот релизных проверок
+        run: echo "Релизные проверки — заглушка, всегда зелёная (см. README → CI/CD)."
