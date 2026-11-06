@@ -1,0 +1,4 @@
+interface:
+  display_name: "Android Emulator"
+  short_description: "Android SDK и ADB, фоновый запуск и проверка APK"
+  default_prompt: "Используй $android-emulator для работы с Android-эмулятором через SDK и ADB без мешающего окна."
