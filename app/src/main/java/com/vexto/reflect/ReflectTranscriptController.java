@@ -38,6 +38,7 @@ final class ReflectTranscriptController {
     private final ExecutorService io;
     private final Consumer<String> notice;
     private final IntConsumer playFrom;
+    private final Runnable playAudio;
     private final Runnable refreshCatalog;
     private final ReflectBackendSync backend;
     private final ReflectBackendUi backendUi;
@@ -54,7 +55,7 @@ final class ReflectTranscriptController {
 
     ReflectTranscriptController(Activity activity, ReflectView view, ReflectPreferences preferences,
                                 ReflectTranscriptStore store, ExecutorService io, Consumer<String> notice,
-                                IntConsumer playFrom, Runnable refreshCatalog,
+                                IntConsumer playFrom, Runnable playAudio, Runnable refreshCatalog,
                                 ReflectBackendSync backend, ReflectBackendUi backendUi) {
         this.activity = activity;
         this.view = view;
@@ -63,6 +64,7 @@ final class ReflectTranscriptController {
         this.io = io;
         this.notice = notice;
         this.playFrom = playFrom;
+        this.playAudio = playAudio;
         this.refreshCatalog = refreshCatalog;
         this.backend = backend;
         this.backendUi = backendUi;
@@ -263,6 +265,9 @@ final class ReflectTranscriptController {
     void options() {
         Sheet menu = sheet(recordingDetails ? "Действия записи" : "Действия разговора");
         if (file != null) {
+            if (!recordingDetails && transcript != null && !transcript.lines.isEmpty()) {
+                menu.option(view.transcriptView().isPlaying() ? "Приостановить" : "Прослушать аудио", playAudio);
+            }
             menu.option("Переименовать", () -> rename());
             if (!recordingDetails) menu.option("Импортировать транскрипт", this::pick);
             if (backend.enabled()) menu.option("Отправить запись на сервер", this::sendToBackend);
