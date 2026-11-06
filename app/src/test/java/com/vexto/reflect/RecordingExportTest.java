@@ -60,6 +60,15 @@ public class RecordingExportTest {
         assertEquals(EMOTIONS.ordered(), engineParsed.get(0).getEmotionProbabilities());
     }
 
+    @Test public void optionalExportDetailsDoNotChangeExistingSpeakerLinks() throws Exception {
+        var plain = new ReflectTranscript(List.of(new ReflectTranscript.Line("speaker_1", 0, 1000, "Текст")));
+        var enriched = new ReflectTranscript(List.of(new ReflectTranscript.Line(
+                "speaker_1", 0, 1000, "Текст", EMOTIONS, "Алиса")));
+
+        assertArrayEquals(plain.encode(), enriched.encodeSpeakerRevision());
+        assertTrue(enriched.sameLines(ReflectTranscript.parse(new ByteArrayInputStream(enriched.encode()))));
+    }
+
     @Test public void markdownIncludesAllIdsEvenForIdenticalNamesAndAllProbabilityValues() throws Exception {
         String md = new String(export(RecordingExport.MARKDOWN, conversation(137)), StandardCharsets.UTF_8);
         for (int i = 0; i < 137; i++) assertTrue(md.contains("Реплика " + i + " — полный текст"));
