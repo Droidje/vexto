@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -36,6 +37,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private final ExecutorService imports = Executors.newSingleThreadExecutor();
     private final RecordingSession session = new RecordingSession();
     private ReflectView view;
+    private ReflectPreferences preferences;
     private File audio;
     private int duration;
     private MediaPlayer player;
@@ -58,14 +60,15 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         super.onCreate(state);
         designPreview = BuildConfig.DEBUG && getIntent().getBooleanExtra("reflect_preview", false);
         previewSpeakersEmpty = state != null && state.getBoolean("previewSpeakersEmpty");
-        view = new ReflectView(this, this, designPreview);
+        preferences = new ReflectPreferences(this);
+        view = new ReflectView(this, this, designPreview, preferences);
         setContentView(view);
         fullscreen();
         refreshRecordings();
         refreshSpeakers();
         if (state != null) {
-            if (state.getBoolean("records")) view.show(RECORDS);
-            if (state.getBoolean("speakers")) view.show(SPEAKERS);
+            ReflectView.Screen tab = ReflectView.Screen.valueOf(state.getString("tab", HOME.name()));
+            if (ReflectView.isTab(tab)) view.show(tab);
             String file = state.getString("audio");
             if (file != null && new File(file).isFile()) {
                 try { review(new File(file)); }
@@ -78,8 +81,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         super.onSaveInstanceState(state);
         if (audio != null) state.putString("audio", audio.getAbsolutePath());
         state.putBoolean("ready", view.screen() == READY);
-        state.putBoolean("records", view.tab() == RECORDS);
-        state.putBoolean("speakers", view.tab() == SPEAKERS);
+        state.putString("tab", view.tab().name());
         state.putBoolean("previewSpeakersEmpty", previewSpeakersEmpty);
     }
 
@@ -332,6 +334,11 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
                 .setType("text/plain")
                 .putExtra(Intent.EXTRA_TEXT, configuredUrl);
         startActivity(Intent.createChooser(invitation, "Отправить ссылку"));
+    }
+
+    @Override public void openMicrophoneSettings() {
+        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", getPackageName(), null)));
     }
 
     private void discardDraft() {

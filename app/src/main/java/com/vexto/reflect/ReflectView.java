@@ -25,7 +25,7 @@ import java.util.List;
 
 /** Native stage with the design's 393 × 852 coordinate space and Android touch targets. */
 final class ReflectView extends ViewGroup {
-    enum Screen { HOME, RECORDS, SPEAKERS, MENU, READY, RECORDING, REVIEW }
+    enum Screen { HOME, RECORDS, SPEAKERS, SETTINGS, MENU, READY, RECORDING, REVIEW }
 
     interface Actions extends ReflectLibraryView.Actions {
         void toggleMenu();
@@ -38,6 +38,7 @@ final class ReflectView extends ViewGroup {
         void save();
         void send();
         void toggleSpeakerPreview();
+        void openMicrophoneSettings();
     }
 
     private static final float WIDTH = 393, HEIGHT = 852;
@@ -50,6 +51,8 @@ final class ReflectView extends ViewGroup {
     private final Actions actions;
     private final boolean designPreview;
     private final ReflectArtwork artwork;
+    private final ReflectPreferences preferences;
+    private final ReflectSettingsView settings;
     private final ReflectLibraryView records, speakers, conversations;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final List<RectF> childAreas = new ArrayList<>();
@@ -67,11 +70,13 @@ final class ReflectView extends ViewGroup {
     private boolean playing;
     private ValueAnimator animator;
 
-    ReflectView(Context context, Actions actions, boolean designPreview) {
+    ReflectView(Context context, Actions actions, boolean designPreview, ReflectPreferences preferences) {
         super(context);
         this.actions = actions;
         this.designPreview = designPreview;
+        this.preferences = preferences;
         artwork = new ReflectArtwork(context.getAssets());
+        settings = new ReflectSettingsView(context, artwork, preferences, actions::openMicrophoneSettings);
         records = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.RECORDS, actions);
         speakers = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.SPEAKERS, actions);
         conversations = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.CONVERSATIONS, actions);
@@ -113,6 +118,12 @@ final class ReflectView extends ViewGroup {
         float startMenu = menuProgress;
         float endMenu = next == Screen.MENU ? 1 : 0;
         rebuildControls();
+        if (preferences.reduceMotion()) {
+            transition = 1;
+            menuProgress = endMenu;
+            invalidate();
+            return;
+        }
         animator = ValueAnimator.ofFloat(0, 1);
         animator.setDuration(menuOnly ? 300 : 340);
         animator.setInterpolator(new PathInterpolator(0.22f, 0.85f, 0.27f, 1f));
@@ -139,7 +150,7 @@ final class ReflectView extends ViewGroup {
     }
 
     static boolean isTab(Screen page) {
-        return page == Screen.HOME || page == Screen.RECORDS || page == Screen.SPEAKERS;
+        return page == Screen.HOME || page == Screen.RECORDS || page == Screen.SPEAKERS || page == Screen.SETTINGS;
     }
 
     private static boolean navigation(Screen page) { return isTab(page) || page == Screen.MENU; }
@@ -175,6 +186,7 @@ final class ReflectView extends ViewGroup {
             case HOME -> conversations.hasConversations() ? "Ваши разговоры" : "Начните работу с Reflect";
             case RECORDS -> "Ваши записи";
             case SPEAKERS -> "Спикеры";
+            case SETTINGS -> "Настройки";
             case MENU -> "Добавить аудио";
             case READY -> "Запись аудио";
             case RECORDING -> "Идёт запись";
@@ -184,6 +196,7 @@ final class ReflectView extends ViewGroup {
             float contentHeight = screen == Screen.MENU ? 578 : 653;
             if (tab == Screen.RECORDS) place(records, 0, 83, 393, contentHeight);
             if (tab == Screen.SPEAKERS) place(speakers, 0, 83, 393, contentHeight);
+            if (tab == Screen.SETTINGS) place(settings, 0, 83, 393, contentHeight);
             if (tab == Screen.HOME && conversations.hasConversations()) {
                 place(conversations, 0, 83, 393, contentHeight);
             }
@@ -197,6 +210,7 @@ final class ReflectView extends ViewGroup {
                 show(Screen.SPEAKERS);
                 return true;
             });
+            control("Настройки", 223, 771, 68, 47, () -> show(Screen.SETTINGS)).setSelected(tab == Screen.SETTINGS);
             if (screen == Screen.MENU) {
                 control("Прикрепить файл", 175, 661, 202, 44, actions::attach);
                 control("Записать сейчас", 175, 705, 202, 44, actions::openRecorder);
@@ -266,6 +280,7 @@ final class ReflectView extends ViewGroup {
             int selected = switch (active) {
                 case RECORDS -> 1;
                 case SPEAKERS -> 2;
+                case SETTINGS -> 3;
                 default -> 0;
             };
             drawNavigation(canvas, menu, selected);
