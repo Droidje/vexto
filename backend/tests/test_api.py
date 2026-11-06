@@ -144,6 +144,29 @@ class RecordingApiTest(unittest.TestCase):
         self.assertEqual(len(self.client.get(self.transcript + "/revisions",
                                             headers=self.primary).json()["revisions"]), 2)
 
+    def test_emotion_probabilities_round_trip_and_preserve_legacy_revision(self):
+        self.assertEqual(self.upload().status_code, 201)
+        payload = self.transcript_with("Первая", "Вторая", "Без оценок")
+        self.assertEqual(self.client.put(self.transcript, headers=self.primary, json=payload).json(), {"revision": 1})
+        payload["transcript"][0]["emotion_probabilities"] = [0.8, 0.1, 0.09, 0.01]
+        payload["transcript"][1]["emotion_probabilities"] = [0.00000001, 0.89999999, 0.1, 0]
+        self.assertEqual(self.client.put(self.transcript, headers=self.primary, json=payload).json(), {"revision": 2})
+        with TestClient(create_app(self.settings)) as restarted:
+            self.assertEqual(restarted.get(self.transcript, headers=self.primary).json(), payload)
+            legacy = self.transcript_with("Первая", "Вторая", "Без оценок")
+            self.assertEqual(restarted.get(self.transcript + "?revision=1", headers=self.primary).json(), legacy)
+            self.assertEqual(restarted.put(self.transcript, headers=self.primary, json=legacy).json(), {"revision": 1})
+
+    def test_invalid_emotion_probabilities_are_rejected(self):
+        self.assertEqual(self.upload().status_code, 201)
+        payload = self.transcript_with("Привет")
+        for scores in (None, [1, 0, 0], [1, 0, 0, 0, 0], [1.01, -0.01, 0, 0],
+                       [0.8, 0, 0, 0], ["1", 0, 0, 0], [True, 0, 0, 0]):
+            with self.subTest(scores=scores):
+                payload["transcript"][0]["emotion_probabilities"] = scores
+                result = self.client.put(self.transcript, headers=self.primary, json=payload)
+                self.assertEqual(result.status_code, 422, result.text)
+
     def test_speaker_crud_and_revision_scoped_links(self):
         self.assertEqual(self.upload().status_code, 201)
         first = self.transcript_with("Реплика")

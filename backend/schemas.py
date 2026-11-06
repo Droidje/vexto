@@ -8,6 +8,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validato
 JSON_LIMIT = 8 * 1024 * 1024
 MAX_MILLIS = 2_147_483_647
 Millis = Annotated[int, Field(strict=True, ge=0, le=MAX_MILLIS)]
+Probability = Annotated[float, Field(strict=True, ge=0, le=1, allow_inf_nan=False)]
 AUDIO_TYPE = re.compile(r"(?:audio/[a-z0-9][a-z0-9+._-]{0,119}|application/octet-stream)")
 
 
@@ -91,11 +92,22 @@ class TranscriptLine(Input):
     start_ms: Millis
     end_ms: Millis
     text: str = Field(max_length=65536)
+    emotion_probabilities: list[Probability] | None = Field(
+        default=None, min_length=4, max_length=4,
+        description="GigaAM-Emo: neutral, joy, sadness, anger, in this order. Omitted if unavailable.",
+    )
 
     @field_validator("speaker_id", "text")
     @classmethod
     def line_text(cls, value: str) -> str:
         return valid_text(value)
+
+    @field_validator("emotion_probabilities")
+    @classmethod
+    def valid_emotion_probabilities(cls, value):
+        if value is None or abs(sum(value) - 1) > 0.001:
+            raise ValueError("Expected four emotion probabilities summing to one")
+        return value
 
     @model_validator(mode="after")
     def time_range(self):
