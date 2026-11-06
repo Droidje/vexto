@@ -1,5 +1,6 @@
 package com.vexto.llm
 
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** Разбор и проверка ответов модели: всё, что нельзя подтвердить транскриптом, отбрасывается. */
@@ -12,35 +13,73 @@ internal object Validation {
         return t.takeIf { it.length >= 3 }?.let { it.substring(0, 1).uppercase() + it.substring(1) }
     }
 
-    // Слова, которые маленькая модель путает с именами: приветствия и обращения к группе.
+    // Слова, которые маленькая модель путает с именами: приветствия, обращения к группе, шаблон из промпта.
     private val notNames = setOf(
         "привет", "здравствуйте", "здравствуй", "добрый", "спасибо", "пожалуйста", "пока", "слушай",
         "слушайте", "смотри", "смотрите", "ну", "да", "нет", "ладно", "хорошо", "окей", "итак", "давай",
         "давайте", "коллеги", "ребята", "друзья", "господа", "все", "мы", "я", "ты", "вы", "он", "она",
-        "спикер", "speaker", "null",
+        "имя", "спикер", "speaker", "null",
     )
 
+    // Слова перед именем, по которым видно, что человек называет себя.
+    private val selfIntro = Regex("""(?<!\p{L})(?:зовут|я|это|меня)[\s,—-]+$""", RegexOption.IGNORE_CASE)
+
     /**
-     * Оставляет имя, только если оно буквально звучит в тексте транскрипта
-     * (с учётом окончаний: «Мурзик» засчитывается по «Мурзика»). Одно имя не отдаётся двум участникам.
+     * Разбирает список `[{"name", "speaker"}]` от модели и оставляет только подтверждённые имена:
+     * - имя буквально звучит в репликах (окончание допускается: «Барсик» засчитывается по «Барсику»);
+     * - участник представился («меня зовут», «я», «это» перед именем) или имя произносят только другие;
+     *   если участник сам говорит это имя без представления, он обращается к кому-то другому;
+     * - у участника одно имя, одно имя (с учётом окончаний) у одного участника.
      */
-    fun speakerNames(raw: String, speakers: List<String>, transcriptText: String): Map<String, String?> {
-        val json = runCatching { JSONObject(raw) }.getOrNull()
-        val used = mutableSetOf<String>()
+    fun speakerNames(raw: String, utterances: List<Utterance>): Map<String, String?> {
         val result = LinkedHashMap<String, String?>()
-        for (id in speakers) {
-            val name = json?.optString(id, "")?.trim()?.takeIf { it.isNotEmpty() && it != "null" }
-            result[id] = name?.takeIf { isNameInText(it, transcriptText) && used.add(it.lowercase()) }
+        utterances.forEach { result.putIfAbsent(it.speakerId, null) }
+        val json = raw.substringAfter('[', "").substringBeforeLast(']', "")
+        val items = runCatching { JSONArray("[$json]") }.getOrNull() ?: return result
+        for (i in 0 until items.length()) {
+            val item = items.optJSONObject(i) ?: continue
+            val name = item.optString("name").trim()
+            val speaker = item.optString("speaker")
+            if (speaker !in result || result[speaker] != null) continue
+            if (result.values.any { it != null && sameName(it, name) }) continue
+            if (isConfirmed(name, speaker, utterances)) result[speaker] = name
         }
         return result
     }
 
-    fun isNameInText(name: String, text: String): Boolean {
-        val words = name.split(' ')
-        if (words.any { it.length < 2 || it.lowercase() in notNames }) return false
-        val pattern = words.joinToString("""\s+""") { Regex.escape(it) }
-        return Regex("""(?<!\p{L})$pattern""", setOf(RegexOption.IGNORE_CASE)).containsMatchIn(text)
+    private fun isConfirmed(name: String, speaker: String, utterances: List<Utterance>): Boolean {
+        val pattern = namePattern(name) ?: return false
+        var byOthers = false
+        var introduced = false
+        var ownMention = false
+        for (u in utterances) {
+            for (m in pattern.findAll(u.text)) {
+                when {
+                    u.speakerId != speaker -> byOthers = true
+                    selfIntro.containsMatchIn(u.text.substring(0, m.range.first)) -> introduced = true
+                    else -> ownMention = true
+                }
+            }
+        }
+        return introduced || (byOthers && !ownMention)
     }
+
+    fun isNameInText(name: String, text: String): Boolean = namePattern(name)?.containsMatchIn(text) == true
+
+    private fun namePattern(name: String): Regex? {
+        val words = name.split(' ').filter { it.isNotEmpty() }
+        if (words.isEmpty() || words.any { it.length < 2 || it.lowercase() in notNames }) return null
+        val body = words.joinToString("""\s+""") { Regex.escape(it) }
+        return Regex("""(?<!\p{L})$body""", RegexOption.IGNORE_CASE)
+    }
+
+    private fun sameName(a: String, b: String): Boolean {
+        val x = a.lowercase()
+        val y = b.lowercase()
+        return x.startsWith(y) || y.startsWith(x)
+    }
+
+    private val speakerPrefix = Regex("""^\s*speaker_\d+:\s*""", RegexOption.IGNORE_CASE)
 
     /** [timestamps] — метка `mm:ss` → начало первой реплики с этой меткой. */
     fun summary(raw: String, timestamps: Map<String, Long>): Summary? {
@@ -53,7 +92,8 @@ internal object Validation {
                 val p = arr.optJSONObject(i) ?: continue
                 val t = p.optString("t")
                 val startMs = timestamps[t] ?: continue
-                val pointText = p.optString("text").trim()
+                // Модель иногда копирует реплику вместе с меткой: «Speaker_2: ...».
+                val pointText = p.optString("text").replace(speakerPrefix, "").trim()
                 if (pointText.isEmpty() || points.any { it.text.equals(pointText, ignoreCase = true) }) continue
                 points += SummaryPoint(t, startMs, pointText)
             }

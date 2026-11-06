@@ -82,7 +82,7 @@ class LlmClient @JvmOverloads constructor(
         return deferred.await()
     }
 
-    /** Отвязывается от сервиса; процесс `:llm` завершится, когда у него не останется клиентов. */
+    /** Отвязывается от сервиса; без клиентов сервис останавливается и выгружает модель. */
     override fun close() {
         scope.coroutineContext.cancelChildren()
         synchronized(lock) {
@@ -107,23 +107,15 @@ class LlmClient @JvmOverloads constructor(
      * Имя остаётся, только если оно действительно звучит в тексте.
      */
     suspend fun speakerNames(transcript: List<Utterance>): Map<String, String?> {
-        val speakers = transcript.map { it.speakerId }.distinct()
-        val result = LinkedHashMap<String, String?>().apply { speakers.forEach { put(it, null) } }
-        if (speakers.isEmpty()) return result
-        val maxTokens = 16 + speakers.size * 16
-        for (chunk in chunks(transcript, maxTokens)) {
+        val result = LinkedHashMap<String, String?>()
+        transcript.forEach { result.putIfAbsent(it.speakerId, null) }
+        for (chunk in chunks(transcript, NAMES_TOKENS)) {
             val ids = chunk.map { it.speakerId }.distinct()
-            val missing = ids.filter { result[it] == null }
-            if (missing.isEmpty()) continue
-            val raw = complete(
-                Prompts.speakerNames(TranscriptText.format(chunk), ids),
-                Prompts.speakerNamesGrammar(ids),
-                maxTokens,
-            )
-            val text = chunk.joinToString("\n") { it.text }
-            val taken = result.values.filterNotNull().map { it.lowercase() }.toSet()
-            Validation.speakerNames(raw, ids, text).forEach { (id, name) ->
-                if (id in missing && name != null && name.lowercase() !in taken) result[id] = name
+            if (ids.all { result[it] != null }) continue
+            val raw = complete(Prompts.speakerNames(TranscriptText.format(chunk)), Prompts.speakerNamesGrammar(ids), NAMES_TOKENS)
+            Validation.speakerNames(raw, chunk).forEach { (id, name) ->
+                val taken = result.values.any { it != null && it.equals(name, ignoreCase = true) }
+                if (name != null && result[id] == null && !taken) result[id] = name
             }
         }
         return result
@@ -274,6 +266,7 @@ class LlmClient @JvmOverloads constructor(
     private companion object {
         const val TEMPERATURE = 0.2f
         const val TITLE_TOKENS = 24
+        const val NAMES_TOKENS = 200
         const val SUMMARY_TOKENS = 512
         const val MERGE_TOKENS = 256
         const val PROMPT_OVERHEAD_TOKENS = 400
