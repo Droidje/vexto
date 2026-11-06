@@ -76,6 +76,14 @@ final class ReflectTranscriptView extends FrameLayout {
         requestLayout();
     }
 
+    void clear() {
+        lines = Collections.emptyList();
+        removeAllViews();
+        list = null;
+        play = null;
+        refresh = true;
+    }
+
     void playing(boolean playing) {
         if (this.playing == playing) return;
         this.playing = playing;
@@ -273,7 +281,7 @@ final class ReflectTranscriptView extends FrameLayout {
         }
 
         @Override protected void onDraw(Canvas canvas) {
-            if (photo) artwork.image(canvas, asset, 0, 0, getWidth(), getHeight());
+            if (photo) artwork.imagePixels(canvas, asset, 0, 0, getWidth(), getHeight());
             else {
                 canvas.save();
                 canvas.translate(getWidth() / 2f, getHeight() / 2f);

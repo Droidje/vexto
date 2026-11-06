@@ -15,43 +15,59 @@ import android.view.accessibility.AccessibilityNodeInfo;
 final class ReflectLibraryRow extends View {
     private static final int MUTED = 0xff999999;
     private final TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
-    private final float height;
-    private final Drawing drawing;
+    private static final Path COVER_CLIP = coverClip();
+    private float height;
+    private Drawing drawing;
 
-    interface Drawing { void draw(Canvas canvas, TextPaint paint); }
+    private interface Drawing { void draw(Canvas canvas, TextPaint paint); }
 
-    private ReflectLibraryRow(Context context, float height, String label, Drawing drawing) {
+    private ReflectLibraryRow(Context context) {
         super(context);
-        this.height = height;
-        this.drawing = drawing;
-        setContentDescription(label);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
     }
 
-    static ReflectLibraryRow heading(Context context, ReflectArtwork artwork, String title) {
-        ReflectLibraryRow row = new ReflectLibraryRow(context, 47, title,
-                (canvas, paint) -> text(canvas, paint, title, 16, 23, 24, Color.WHITE, artwork.display, -.24f));
-        row.setAccessibilityHeading(true);
-        return row;
+    private ReflectLibraryRow bind(float height, String label, boolean heading, Runnable open, Drawing drawing) {
+        if (this.height != height) {
+            this.height = height;
+            requestLayout();
+        }
+        this.drawing = drawing;
+        setContentDescription(label);
+        setAccessibilityHeading(heading);
+        setOnClickListener(open == null ? null : view -> open.run());
+        setClickable(open != null);
+        setFocusable(open != null);
+        invalidate();
+        return this;
     }
 
-    static ReflectLibraryRow message(Context context, ReflectArtwork artwork, String message) {
-        return new ReflectLibraryRow(context, 44, message,
+    static ReflectLibraryRow reuse(Context context, View recycled) {
+        return recycled instanceof ReflectLibraryRow ? (ReflectLibraryRow) recycled : new ReflectLibraryRow(context);
+    }
+
+    ReflectLibraryRow heading(ReflectArtwork artwork, String title) {
+        return bind(47, title, true, null,
+                (canvas, paint) -> text(canvas, paint, title, 16, 23, 24, Color.WHITE, artwork.display, -.24f));
+    }
+
+    ReflectLibraryRow message(ReflectArtwork artwork, String message) {
+        return bind(44, message, false, null,
                 (canvas, paint) -> text(canvas, paint, message, 16, 25, 16, MUTED, artwork.regular, 0));
     }
 
-    static ReflectLibraryRow recording(Context context, ReflectArtwork art, ReflectCatalog.Recording item, Runnable open) {
+    ReflectLibraryRow recording(ReflectArtwork art, ReflectCatalog.Recording item, Runnable open) {
         boolean hasSpeakers = !item.portraits.isEmpty();
-        ReflectLibraryRow row = new ReflectLibraryRow(context, hasSpeakers ? 109 : 88,
-                item.title + ", " + item.time + ", " + item.length + ", " + item.status, (canvas, paint) -> {
-            recordingCover(canvas, art, item.waveCover, 21);
+        String timeAndLength = item.time + " · " + item.length;
+        return bind(hasSpeakers ? 109 : 88,
+                item.title + ", " + item.time + ", " + item.length + ", " + item.status, false, open, (canvas, paint) -> {
+            recordingCover(canvas, art, item.waveCover);
             boolean arrow = !item.complete;
             String status = item.status;
             textRight(canvas, paint, status, arrow ? 361 : 377, 29, 17,
                     item.complete ? 0xff34c759 : MUTED, art.regular, -.43f);
             float available = (arrow ? 361 : 377) - 74 - 10 - paint.measureText(status);
             rowTitle(canvas, paint, art, item.title, available);
-            text(canvas, paint, item.time + " · " + item.length, 74, 51, 16, MUTED, art.regular, -.23f);
+            text(canvas, paint, timeAndLength, 74, 51, 16, MUTED, art.regular, -.23f);
             if (arrow) chevron(canvas, paint, 373, 23);
             if (hasSpeakers) {
                 text(canvas, paint, "Участники:", 74, 83, 16, MUTED, art.regular, -.23f);
@@ -61,16 +77,13 @@ final class ReflectLibraryRow extends View {
             }
             separator(canvas, paint, hasSpeakers ? 106 : 85);
         });
-        row.setFocusable(true);
-        row.setOnClickListener(view -> open.run());
-        return row;
     }
 
-    static ReflectLibraryRow speaker(Context context, ReflectArtwork art, ReflectCatalog.Speaker item) {
-        return new ReflectLibraryRow(context, 84, item.name + ", " + item.duration, (canvas, paint) -> {
+    ReflectLibraryRow speaker(ReflectArtwork art, ReflectCatalog.Speaker item) {
+        Typeface nameFont = item.name.codePoints().anyMatch(cp -> Character.UnicodeScript.of(cp)
+                == Character.UnicodeScript.CYRILLIC) ? art.semibold : art.latinSemibold;
+        return bind(84, item.name + ", " + item.duration, false, null, (canvas, paint) -> {
             art.image(canvas, item.avatar, 16, 0, 64, 64);
-            Typeface nameFont = item.name.codePoints().anyMatch(cp -> Character.UnicodeScript.of(cp)
-                    == Character.UnicodeScript.CYRILLIC) ? art.semibold : art.latinSemibold;
             text(canvas, paint, item.name, 92, 38.5f, 18, Color.WHITE, nameFont, -.306f);
             float badgeX = 104 + paint.measureText(item.name);
             style(paint, 14, 0xffae86e8, art.medium, -.42f);
@@ -81,11 +94,10 @@ final class ReflectLibraryRow extends View {
         });
     }
 
-    static ReflectLibraryRow conversation(Context context, ReflectArtwork art, ReflectCatalog.Conversation item,
-                                          Runnable open) {
-        ReflectLibraryRow row = new ReflectLibraryRow(context, 91,
-                item.title + ", " + item.time + ", " + item.preview, (canvas, paint) -> {
-            if (item.recording != null) recordingCover(canvas, art, item.recording.waveCover, 21);
+    ReflectLibraryRow conversation(ReflectArtwork art, ReflectCatalog.Conversation item, Runnable open) {
+        return bind(91,
+                item.title + ", " + item.time + ", " + item.preview, false, open, (canvas, paint) -> {
+            if (item.recording != null) recordingCover(canvas, art, item.recording.waveCover);
             else conversationCover(canvas, art, item.roomCover);
             textRight(canvas, paint, item.time, 361, 29, 17, MUTED, art.duration, -.43f);
             float available = 279 - paint.measureText(item.time);
@@ -94,9 +106,6 @@ final class ReflectLibraryRow extends View {
             chevron(canvas, paint, 373, 23);
             separator(canvas, paint, 88);
         });
-        row.setFocusable(true);
-        row.setOnClickListener(view -> open.run());
-        return row;
     }
 
     private static void preview(Canvas canvas, Paint paint, ReflectArtwork art, String value, float width) {
@@ -126,9 +135,7 @@ final class ReflectLibraryRow extends View {
 
     private static void conversationCover(Canvas canvas, ReflectArtwork art, boolean room) {
         canvas.save();
-        Path clip = new Path();
-        clip.addCircle(39, 44, 23, Path.Direction.CW);
-        canvas.clipPath(clip);
+        canvas.clipPath(COVER_CLIP);
         if (room) {
             art.image(canvas, "conversation_room", -29, -203, 261, 564);
         } else {
@@ -138,17 +145,21 @@ final class ReflectLibraryRow extends View {
         canvas.restore();
     }
 
-    private static void recordingCover(Canvas canvas, ReflectArtwork art, boolean wave, float y) {
+    private static void recordingCover(Canvas canvas, ReflectArtwork art, boolean wave) {
         canvas.save();
+        canvas.clipPath(COVER_CLIP);
+        canvas.save();
+        canvas.scale(1, -1, 39.5f, 44);
+        art.image(canvas, "record_prism", 9, -17, 61, 122);
+        canvas.restore();
+        if (wave) art.image(canvas, "record_wave", 9, -1, 60, 90);
+        canvas.restore();
+    }
+
+    private static Path coverClip() {
         Path clip = new Path();
-        clip.addCircle(39, y + 23, 23, Path.Direction.CW);
-        canvas.clipPath(clip);
-        canvas.save();
-        canvas.scale(1, -1, 39.5f, y + 23);
-        art.image(canvas, "record_prism", 9, y - 38, 61, 122);
-        canvas.restore();
-        if (wave) art.image(canvas, "record_wave", 9, y - 22, 60, 90);
-        canvas.restore();
+        clip.addCircle(39, 44, 23, Path.Direction.CW);
+        return clip;
     }
 
     static void separator(Canvas canvas, Paint paint, float y) {

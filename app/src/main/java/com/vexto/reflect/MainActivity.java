@@ -52,7 +52,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
                 handler.postDelayed(this, 65);
             } else if (player != null && player.isPlaying()) {
                 view.updatePlayback(time(duration), true, player.getCurrentPosition() / (float) duration);
-                handler.postDelayed(this, 65);
+                if (view.screen() == REVIEW) handler.postDelayed(this, 65);
             }
         }
     };
@@ -416,6 +416,11 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         if (view.screen() == RECORDING) finishRecording();
         stopPlayer();
         super.onStop();
+    }
+
+    @Override public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        if (view != null) view.trimMemory(level);
     }
 
     @Override protected void onDestroy() {

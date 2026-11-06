@@ -49,6 +49,19 @@ final class ReflectView extends ViewGroup {
     private static final String[] TAB_NAMES = {"Главная", "Записи", "Спикеры", "Настройки"};
     private static final float[] TAB_CENTERS = {56, 121.5f, 188.5f, 255.5f};
     private static final PathInterpolator TAB_EASING = new PathInterpolator(.22f, .78f, .25f, 1);
+    private static final Shader PILL_FILL = edge(0, 765, 0, 824, 0x19ffffff, 0x1cffffff);
+    private static final Shader NAV_EDGE = edge(16, 765, 302, 824, 0x25ffffff, 0x0cffffff);
+    private static final Shader PLUS_EDGE = edge(318, 765, 377, 824, 0x25ffffff, 0x0cffffff);
+    private static final Shader MENU_EDGE = edge(175, 661, 377, 749, 0xff666765, 0xff525250);
+    private static final Shader REVIEW_EDGE = edge(16, 578, 377, 622, 0xff696968, 0xff3c3c39);
+    private static final Shader[] MENU_FILL = {
+            new LinearGradient(0, 661, 0, 749,
+                    new int[]{0xff232323, 0xff272725, 0xff2c2c2a}, null, Shader.TileMode.CLAMP),
+            new RadialGradient(374, 708, 43,
+                    new int[]{0xff49534c, 0xff423b34, 0x0043413b}, new float[]{0, .46f, 1}, Shader.TileMode.CLAMP),
+            new RadialGradient(336, 660, 33, 0xff3a414d, 0x003a414d, Shader.TileMode.CLAMP),
+            new RadialGradient(232, 663, 38, 0xff373d43, 0x00373d43, Shader.TileMode.CLAMP)
+    };
     private final Actions actions;
     private final String welcomeTitle;
     private final boolean designPreview;
@@ -62,7 +75,7 @@ final class ReflectView extends ViewGroup {
     private final Path stage = new Path();
     private final Path glass = new Path();
     private final Path playGlyph = new Path();
-    private final Bitmap orbEdgeShade = orbEdgeShade();
+    private Bitmap orbEdgeShade;
     private Screen screen = Screen.HOME;
     private Screen departing = Screen.HOME;
     private Screen tab = Screen.HOME;
@@ -102,6 +115,7 @@ final class ReflectView extends ViewGroup {
     Screen screen() { return screen; }
     Screen tab() { return tab; }
     ReflectTranscriptView transcriptView() { return transcript; }
+    void trimMemory(int level) { artwork.trimMemory(level); }
     ReflectPageStyle pageStyle() { return new ReflectPageStyle(getContext(), artwork, Math.max(1, Math.round(WIDTH * scale))); }
     void refreshSettings() { settings.refresh(); }
     void setRecordings(List<ReflectCatalog.Recording> recordings) { records.setRecordings(recordings); }
@@ -171,7 +185,7 @@ final class ReflectView extends ViewGroup {
         this.playing = playing;
         this.playProgress = progress;
         transcript.playing(playing);
-        invalidate();
+        if (screen == Screen.REVIEW) invalidate();
     }
 
     static boolean isTab(Screen page) {
@@ -184,6 +198,7 @@ final class ReflectView extends ViewGroup {
         int width = MeasureSpec.getSize(widthSpec), height = MeasureSpec.getSize(heightSpec);
         setMeasuredDimension(width, height);
         scale = Math.min(width / WIDTH, height / HEIGHT);
+        artwork.setScale(scale);
         offsetX = (width - scale * WIDTH) / 2;
         offsetY = (height - scale * HEIGHT) / 2;
         for (int i = 0; i < getChildCount(); i++) {
@@ -326,7 +341,7 @@ final class ReflectView extends ViewGroup {
 
     private void drawNavigation(Canvas c, float menu) {
         rounded(c, 0, 736, 393, 852, 0, (Math.round(3 * (1 - menu)) << 24) | 0xffffff);
-        pill(c, 16, 765, 302, 824, 29.5f, 0x1cffffff);
+        pill(c, 16, 765, 302, 824, NAV_EDGE);
         rounded(c, capsuleCenter - capsuleHalfWidth, 771, capsuleCenter + capsuleHalfWidth,
                 818, 24, 0x1affffff);
         for (int i = 0; i < TAB_NAMES.length; i++) {
@@ -346,19 +361,13 @@ final class ReflectView extends ViewGroup {
     private void drawMenu(Canvas c) {
         c.save();
         c.clipPath(glass);
-        paint.setShader(new LinearGradient(0, 661, 0, 749,
-                new int[]{0xff232323, 0xff272725, 0xff2c2c2a}, null, Shader.TileMode.CLAMP));
-        c.drawPath(glass, paint);
-        paint.setShader(new RadialGradient(374, 708, 43,
-                new int[]{0xff49534c, 0xff423b34, 0x0043413b}, new float[]{0, .46f, 1}, Shader.TileMode.CLAMP));
-        c.drawPath(glass, paint);
-        paint.setShader(new RadialGradient(336, 660, 33, 0xff3a414d, 0x003a414d, Shader.TileMode.CLAMP));
-        c.drawPath(glass, paint);
-        paint.setShader(new RadialGradient(232, 663, 38, 0xff373d43, 0x00373d43, Shader.TileMode.CLAMP));
-        c.drawPath(glass, paint);
+        for (Shader fill : MENU_FILL) {
+            paint.setShader(fill);
+            c.drawPath(glass, paint);
+        }
         paint.setShader(null);
         c.restore();
-        outline(c, 175, 661, 377, 749, 26, 0xff666765, 0xff525250);
+        outline(c, 175, 661, 377, 749, 26, MENU_EDGE);
         artwork.icon(c, "attach", 191, 675);
         artwork.icon(c, "mic_menu", 191, 715);
         text(c, "Прикрепить файл", 219.5f, 690, 16, WHITE, artwork.medium, false);
@@ -366,6 +375,7 @@ final class ReflectView extends ViewGroup {
     }
 
     private void drawRecorder(Canvas c, Screen page) {
+        if (orbEdgeShade == null) orbEdgeShade = orbEdgeShade();
         if (page == Screen.READY) {
             c.save();
             c.scale(-1, 1, 197, 403.5f);
@@ -399,7 +409,7 @@ final class ReflectView extends ViewGroup {
         rounded(c, 84, 75, 306, 123, 24, WHITE);
         text(c, "Расшифровать позже", 195, 104.8f, 16, BACKGROUND, artwork.medium, true);
         rounded(c, 16, 578, 377, 622, 22, 0xff090908);
-        outline(c, 16, 578, 377, 622, 22, 0xff696968, 0xff3c3c39);
+        outline(c, 16, 578, 377, 622, 22, REVIEW_EDGE);
         rounded(c, 23, 585, 53, 615, 15, 0x1f767680);
         paint.setColor(WHITE);
         if (playing) {
@@ -425,7 +435,7 @@ final class ReflectView extends ViewGroup {
     }
 
     private void closeButton(Canvas c, String asset, float angle) {
-        pill(c, 318, 765, 377, 824, 29.5f, 0x1cffffff);
+        pill(c, 318, 765, 377, 824, PLUS_EDGE);
         rotatedIcon(c, asset, 347.5f, 794.5f, angle);
     }
 
@@ -441,12 +451,12 @@ final class ReflectView extends ViewGroup {
         c.restore();
     }
 
-    private void pill(Canvas c, float x, float y, float right, float bottom, float radius, int color) {
+    private void pill(Canvas c, float x, float y, float right, float bottom, Shader stroke) {
         paint.setColor(WHITE);
-        paint.setShader(new LinearGradient(x, y, x, bottom, 0x19ffffff, color, Shader.TileMode.CLAMP));
-        c.drawRoundRect(x, y, right, bottom, radius, radius, paint);
+        paint.setShader(PILL_FILL);
+        c.drawRoundRect(x, y, right, bottom, 29.5f, 29.5f, paint);
         paint.setShader(null);
-        outline(c, x, y, right, bottom, radius, 0x25ffffff, 0x0cffffff);
+        outline(c, x, y, right, bottom, 29.5f, stroke);
     }
 
     private static Bitmap orbEdgeShade() {
@@ -459,11 +469,15 @@ final class ReflectView extends ViewGroup {
         return mask;
     }
 
-    private void outline(Canvas c, float x, float y, float right, float bottom, float radius, int top, int end) {
+    private static Shader edge(float x, float y, float right, float bottom, int top, int end) {
+        return new LinearGradient(x, y, right, bottom, top, end, Shader.TileMode.CLAMP);
+    }
+
+    private void outline(Canvas c, float x, float y, float right, float bottom, float radius, Shader stroke) {
         paint.setColor(WHITE);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(.7f);
-        paint.setShader(new LinearGradient(x, y, right, bottom, top, end, Shader.TileMode.CLAMP));
+        paint.setShader(stroke);
         c.drawRoundRect(x + .35f, y + .35f, right - .35f, bottom - .35f, radius, radius, paint);
         paint.setShader(null);
         paint.setStyle(Paint.Style.FILL);

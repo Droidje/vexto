@@ -106,6 +106,7 @@ final class ReflectTranscriptController {
         file = null;
         transcript = null;
         previewKey = null;
+        view.transcriptView().clear();
     }
 
     void saveState(Bundle state) {
