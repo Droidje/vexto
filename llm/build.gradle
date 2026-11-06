@@ -1,0 +1,96 @@
+plugins {
+    id 'com.android.library' version '8.7.3'
+    id 'org.jetbrains.kotlin.android' version '2.1.21'
+}
+
+// Исходники llama.cpp не хранятся в репозитории: скрипт скачивает закреплённый тег
+// и проверяет sha256 (см. llm/README.md).
+def llamaCppDir = file('third_party/llama.cpp')
+def fetchLlamaCpp = tasks.register('fetchLlamaCpp', Exec) {
+    onlyIf { !new File(llamaCppDir, 'CMakeLists.txt').exists() }
+    commandLine 'bash', rootProject.file('scripts/fetch_llama_cpp.sh').absolutePath
+}
+
+android {
+    namespace 'com.vexto.llm'
+    compileSdk 35
+    buildToolsVersion '35.0.0'
+    ndkVersion '28.2.13676358'
+
+    buildFeatures {
+        aidl true
+    }
+
+    defaultConfig {
+        minSdk 28
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        consumerProguardFiles 'consumer-rules.pro'
+
+        ndk {
+            abiFilters 'arm64-v8a', 'x86_64'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_shared',
+                        '-DCMAKE_BUILD_TYPE=Release'
+                cppFlags '-std=c++17'
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            // llama.cpp в Debug медленнее в десятки раз, поэтому натив всегда Release.
+            externalNativeBuild {
+                cmake {
+                    arguments '-DCMAKE_BUILD_TYPE=Release'
+                }
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'src/main/cpp/CMakeLists.txt'
+            version '3.22.1'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    androidResources {
+        noCompress 'gguf'
+    }
+
+    // ggml собирает все варианты CPU-бэкенда, а JNI выбирает только из этих:
+    // x86_64 — haswell, sandybridge, sse42, x64; arm64 — android_armv8.6_1, 8.2_2, 8.2_1, 8.0_1.
+    packaging {
+        jniLibs {
+            excludes += ['alderlake', 'cannonlake', 'cascadelake', 'cooperlake', 'icelake', 'ivybridge',
+                         'piledriver', 'sapphirerapids', 'skylakex', 'zen4',
+                         'android_armv9.0_1', 'android_armv9.2_1', 'android_armv9.2_2']
+                    .collect { "**/libggml-cpu-${it}.so".toString() }
+        }
+    }
+}
+
+tasks.named('preBuild') {
+    dependsOn fetchLlamaCpp
+}
+
+dependencies {
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}

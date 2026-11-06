@@ -1,0 +1,2 @@
+-keep class com.vexto.llm.LlamaNative { *; }
+-keep class com.vexto.llm.LlamaNative$PieceCallback { *; }

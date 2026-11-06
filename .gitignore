@@ -1,9 +1,14 @@
 .gradle/
 .idea/
 **/build/
+.cxx/
 local.properties
 *.iml
 *.log
 *.apk
 .env
 .DS_Store
+
+# llama.cpp и модели скачиваются скриптами из scripts/
+llm/third_party/
+*.gguf

@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = 'Vexto'
 include ':app'
+include ':llm'
