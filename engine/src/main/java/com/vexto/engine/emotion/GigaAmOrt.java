@@ -1,12 +1,12 @@
 package com.vexto.engine.emotion;
 
 /** Narrow JNI wrapper over the ONNX Runtime already bundled with the speech engine. */
-final class GigaAmOrt implements AutoCloseable {
+public final class GigaAmOrt implements AutoCloseable {
     static { System.loadLibrary("vexto_emotion"); }
 
     private long handle;
 
-    GigaAmOrt(String model, int threads) {
+    public GigaAmOrt(String model, int threads) {
         handle = nativeOpen(model, threads);
     }
 

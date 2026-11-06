@@ -24,7 +24,7 @@ final class ReflectProcessingView extends ViewGroup {
             new Step("Предобработка аудио", Stage.Preparing, Stage.Decoding),
             new Step("Распознавание речи", Stage.Recognition, Stage.Recognition),
             new Step("Определение спикеров", Stage.Diarization, Stage.Diarization),
-            new Step("Умная постобработка", Stage.Assembly, Stage.Emotion)
+            new Step("Умная постобработка", Stage.Assembly, Stage.Punctuation)
     };
 
     private final ReflectArtwork artwork;
@@ -88,7 +88,7 @@ final class ReflectProcessingView extends ViewGroup {
             case ACTIVE -> "Определяю голоса…";
             case COMPLETE -> speakers == 0 ? "Готово" : "Найдено " + speakers + " " + voiceWord(speakers);
         });
-        update(subtitles[3], stage == null ? "Сохраняю расшифровку" : "Структура текста и эмоции");
+        update(subtitles[3], stage == null ? "Сохраняю расшифровку" : "Структура текста и пунктуация");
         invalidate();
     }
 
@@ -165,7 +165,7 @@ final class ReflectProcessingView extends ViewGroup {
     }
 
     private StepState state(Step step) {
-        if (stage == null) return step.last() == Stage.Emotion ? StepState.ACTIVE : StepState.COMPLETE;
+        if (stage == null) return step.last() == Stage.Punctuation ? StepState.ACTIVE : StepState.COMPLETE;
         if (stage.compareTo(step.first()) < 0) return StepState.WAITING;
         return stage.compareTo(step.last()) > 0 ? StepState.COMPLETE : StepState.ACTIVE;
     }
@@ -178,9 +178,9 @@ final class ReflectProcessingView extends ViewGroup {
             case Decoding -> part(5, 15, percent);
             case Diarization -> part(15, 40, percent);
             case Recognition -> part(40, 75, percent);
-            case Assembly -> part(75, 78, percent);
-            case Punctuation -> part(78, 80, percent);
-            case Emotion -> part(80, 99, percent);
+            case Assembly -> part(75, 90, percent);
+            case Punctuation -> part(90, 99, percent);
+            case Emotion -> 99; // Legacy event; emotions now run after the transcript is saved.
         };
     }
 

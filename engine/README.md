@@ -60,12 +60,14 @@ ReflectEngine.Task task = ReflectEngine.transcribe(context, audioUri, new Transc
 
 - Колбэки приходят в главном потоке, вся работа в фоне.
 - `new TranscriptionOptions(2)` задаёт известное число спикеров, по умолчанию оно определяется само.
-- Этапы `Stage`: `Preparing` (копирование моделей, только при первом запуске), `Decoding`, `Diarization`, `Recognition`, `Assembly`, `Punctuation`, `Emotion`. У каждого `getTitle()` для экрана.
+- Этапы расшифровки `Stage`: `Preparing` (копирование моделей, только при первом запуске), `Decoding`, `Diarization`, `Recognition`, `Assembly`, `Punctuation`. Значение `Emotion` сохранено для совместимости; расшифровка больше не ждёт оценки эмоций.
 - `Transcript.getUtterances()`: `Utterance` с `getSpeakerId()`, `getStartMs()`, `getEndMs()`, `getText()`, `getWords()` и `getEmotionProbabilities()` (может быть `null`). `Transcript.speaker(id).displayName()` даёт «Спикер N» или имя.
 - Экспорт: `TranscriptExport.json/text/markdown/srt(transcript)` или `render(transcript, ExportFormat.Srt)`; у `ExportFormat` есть расширение и MIME-тип. JSON всегда с `speaker_N`, имена спикеров туда не попадают.
 - `ProcessingStats`: `getAudioMs()`, `getProcessingMs()`, `getRtf()`, `getStageMs()`, `getPeakMemoryMb()`.
 
 Из Kotlin: `TranscriptionEngine(context).transcribe(uri, options)` возвращает `Flow<TranscriptionEvent>` (`Progress`, `Partial`, `Done`), отмена через отмену корутины.
+
+`ReflectEmotionEngine.analyze(context, uri, utterances, listener)` отдельно оценивает реплики. `onUtterance(index, scores)` вызывается в фоне: необходимо синхронно сохранить результат перед `true`; `false` прекращает устаревший batch без terminal callback. `onDone/onYielded/onError` приходят в main после освобождения ресурсов. `null` scores означает интервал без аудиосэмплов. `getEmotionName()` возвращает `none`, пока вероятностей нет. Общий gate вытесняет эмоции перед ASR/диаризацией и ждёт закрытия ONNX/PCM; отмена проверяется между native-вызовами. Приложение хранит очередь, курсор и retry в SQLite; см. [контракт](../docs/local-emotions.md).
 
 ## Прогон без UI
 

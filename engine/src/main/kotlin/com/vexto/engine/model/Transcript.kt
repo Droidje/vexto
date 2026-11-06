@@ -22,7 +22,10 @@ data class Utterance(
     val text: String,
     val words: List<Word> = emptyList(),
     val emotionProbabilities: EmotionProbabilities? = null,
-)
+) {
+    /** Pending/unavailable analysis is distinct from a predicted neutral emotion. */
+    val emotionName: String get() = emotionProbabilities?.strongest()?.name?.lowercase(java.util.Locale.ROOT) ?: "none"
+}
 
 /** Участник разговора. [id] стабилен и уходит в экспорт, [name] задаёт пользователь. */
 data class Speaker(

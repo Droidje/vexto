@@ -51,6 +51,8 @@ final class ReflectTranscriptController {
     private String previewKey;
     private boolean loading, recordingDetails;
     private int generation, transcriptRequest, durationMs;
+    private final Consumer<File> storeListener = this::storedTranscriptChanged;
+    private boolean destroyed;
 
     ReflectTranscriptController(Activity activity, ReflectView view, ReflectPreferences preferences,
                                 ReflectTranscriptStore store, ExecutorService io, Consumer<String> notice,
@@ -69,6 +71,7 @@ final class ReflectTranscriptController {
         this.profilesUi = profilesUi;
         local = new ReflectLocalTranscription(activity, store, profiles, io, this::processingChanged,
                 this::transcriptionFinished);
+        ReflectTranscriptStore.addListener(storeListener);
     }
 
     void open(File recording, String fallback, String length, int durationMs, boolean recordingDetails,
@@ -157,7 +160,30 @@ final class ReflectTranscriptController {
         view.transcriptView().clear();
     }
 
-    void destroy() { local.close(); }
+    void destroy() {
+        destroyed = true;
+        ReflectTranscriptStore.removeListener(storeListener);
+        local.close();
+    }
+
+    private void storedTranscriptChanged(File recording) {
+        activity.runOnUiThread(() -> {
+            if (destroyed || activity.isDestroyed() || !recording.equals(file)) return;
+            int current = generation;
+            io.execute(() -> {
+                try {
+                    ReflectTranscript updated = store.load(recording);
+                    deliver(current, () -> {
+                        if (updated == null) return;
+                        transcript = updated;
+                        render();
+                    });
+                } catch (IOException invalid) {
+                    android.util.Log.w("ReflectTranscript", "Cannot refresh local transcript", invalid);
+                }
+            });
+        });
+    }
 
     void transcribe() {
         if (file == null || loading || recordingDetails || transcript != null) return;
@@ -414,7 +440,7 @@ final class ReflectTranscriptController {
 
     private void deliver(int current, Runnable result) {
         activity.runOnUiThread(() -> {
-            if (!activity.isDestroyed() && current == generation) result.run();
+            if (!destroyed && !activity.isDestroyed() && current == generation) result.run();
         });
     }
 

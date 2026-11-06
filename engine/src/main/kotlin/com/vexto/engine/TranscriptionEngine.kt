@@ -5,7 +5,6 @@ import android.net.Uri
 import android.os.SystemClock
 import com.vexto.engine.audio.AudioDecoder
 import com.vexto.engine.diarization.Diarizer
-import com.vexto.engine.emotion.UtteranceEmotions
 import com.vexto.engine.model.ProcessingStats
 import com.vexto.engine.model.SimplePunctuation
 import com.vexto.engine.model.Stage
@@ -23,8 +22,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 /**
@@ -37,7 +34,7 @@ class TranscriptionEngine(context: Context) {
     private val context = context.applicationContext
 
     fun transcribe(audio: Uri, options: TranscriptionOptions = TranscriptionOptions()): Flow<TranscriptionEvent> =
-        channelFlow { lock.withLock { run(audio, options) } }.flowOn(Dispatchers.Default)
+        channelFlow { sharedPriorityInferenceGate.foreground { run(audio, options) } }.flowOn(Dispatchers.Default)
 
     private suspend fun ProducerScope<TranscriptionEvent>.run(uri: Uri, options: TranscriptionOptions) {
         val stageMs = linkedMapOf<Stage, Long>()
@@ -92,12 +89,6 @@ class TranscriptionEngine(context: Context) {
                 transcript = stage(Stage.Punctuation) { SimplePunctuation.apply(transcript) }
             }
             if (transcript.utterances.isNotEmpty()) send(TranscriptionEvent.Partial(transcript))
-            val emotionModel = models.manifest.emotion
-            if (emotionModel != null && transcript.utterances.isNotEmpty()) {
-                transcript = stage(Stage.Emotion) { progress ->
-                    UtteranceEmotions.annotate(models.path(emotionModel), audio, transcript, threads, progress)
-                }
-            }
             val stats = ProcessingStats(
                 audioMs = audio.durationMs,
                 processingMs = SystemClock.elapsedRealtime() - started,
@@ -114,6 +105,5 @@ class TranscriptionEngine(context: Context) {
         const val MaxThreads = 4
         const val VadShare = 0.1f
         const val PartialIntervalMs = 2_000L
-        val lock = Mutex()
     }
 }

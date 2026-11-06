@@ -1,56 +1,18 @@
 package com.vexto.engine.emotion
 
-import android.util.Log
 import com.vexto.engine.audio.PcmAudio
 import com.vexto.engine.model.EmotionProbabilities
 import com.vexto.engine.model.SampleRate
-import com.vexto.engine.model.Transcript
 import com.vexto.engine.model.Utterance
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import java.io.IOException
 
-/** Runs one CPU session after the recognizer is closed, against each line's unmodified audio. */
+/** Computes one complete line from its unmodified PCM, with cancellation between native windows. */
 internal object UtteranceEmotions {
     private const val MaxSamples = 8 * SampleRate
     private const val MinSamples = SampleRate / 5
-    private const val Tag = "VextoEmotion"
 
-    suspend fun annotate(
-        model: String,
-        audio: PcmAudio,
-        transcript: Transcript,
-        threads: Int,
-        onProgress: (Float) -> Unit,
-    ): Transcript {
-        val annotated = ArrayList<Utterance>(transcript.utterances.size)
-        try {
-            currentCoroutineContext().ensureActive()
-            GigaAmOrt(model, threads.coerceIn(1, 2)).use { session ->
-                val frontend = GigaAmMel()
-                transcript.utterances.forEachIndexed { index, line ->
-                    val scores = predict(session, frontend, audio, line)
-                    annotated.add(line.copy(emotionProbabilities = scores))
-                    onProgress((index + 1f) / transcript.utterances.size)
-                }
-            }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (failure: IOException) {
-            Log.w(Tag, "Audio is unavailable for emotion analysis")
-        } catch (failure: RuntimeException) {
-            Log.w(Tag, "Emotion analysis stopped (${failure.javaClass.simpleName})")
-        } catch (failure: LinkageError) {
-            Log.w(Tag, "Emotion runtime unavailable (${failure.javaClass.simpleName})")
-        }
-        currentCoroutineContext().ensureActive()
-        if (annotated.isEmpty()) return transcript
-        // Keep completed scores and the full text even when the optional stage fails.
-        return transcript.copy(utterances = annotated + transcript.utterances.drop(annotated.size))
-    }
-
-    private suspend fun predict(
+    suspend fun predict(
         session: GigaAmOrt,
         frontend: GigaAmMel,
         audio: PcmAudio,
@@ -75,7 +37,9 @@ internal object UtteranceEmotions {
             val samples = if (clip.size >= MinSamples) clip else FloatArray(MinSamples).also {
                 clip.copyInto(it, (MinSamples - clip.size) / 2)
             }
-            val scores = EmotionProbabilities.fromModel(session.predict(frontend.logMel(samples), GigaAmMel.frames(samples.size)))
+            val mel = frontend.logMel(samples)
+            currentCoroutineContext().ensureActive()
+            val scores = EmotionProbabilities.fromModel(session.predict(mel, GigaAmMel.frames(samples.size)))
             currentCoroutineContext().ensureActive()
             val weight = (to - from).toDouble()
             neutral += weight * scores.neutral

@@ -35,6 +35,11 @@ final class ReflectTranscript {
         final String text;
         final EmotionProbabilities emotionProbabilities;
 
+        String emotionName() {
+            return emotionProbabilities == null ? "none"
+                    : emotionProbabilities.strongest().name().toLowerCase(java.util.Locale.ROOT);
+        }
+
         Line(String speakerId, int startMs, int endMs, String text) {
             this(speakerId, startMs, endMs, text, null);
         }
