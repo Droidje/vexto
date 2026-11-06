@@ -84,4 +84,5 @@ data class JsonUtterance(
     @SerialName("end_ms") val endMs: Long,
     val text: String,
     @SerialName("emotion_probabilities") val emotionProbabilities: List<Double>? = null,
+    @SerialName("speaker_name") val speakerName: String? = null,
 )

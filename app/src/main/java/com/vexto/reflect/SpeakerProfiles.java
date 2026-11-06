@@ -87,6 +87,9 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
         Map<String, String> allNames = new HashMap<>();
         for (Profile profile : list()) allNames.put(profile.id, profile.name);
         Map<String, String> names = new HashMap<>();
+        for (ReflectTranscript.Line line : transcript.lines) {
+            if (line.speakerName != null) names.put(line.speakerId, line.speakerName);
+        }
         links(recording, transcript).forEach((local, profile) -> {
             if (allNames.containsKey(profile)) names.put(local, allNames.get(profile));
         });
