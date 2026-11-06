@@ -26,7 +26,7 @@ import java.util.List;
 
 /** Native stage with the design's 393 × 852 coordinate space and Android touch targets. */
 final class ReflectView extends ViewGroup {
-    enum Screen { HOME, RECORDS, SPEAKERS, SETTINGS, MENU, READY, RECORDING, PAUSED, REVIEW, PROCESSING, TRANSCRIPT }
+    enum Screen { HOME, RECORDS, SPEAKERS, SETTINGS, MENU, READY, RECORDING, PAUSED, REVIEW, PROCESSING, TRANSCRIPT, SPEAKER_PROFILE }
 
     interface Actions extends ReflectLibraryView.Actions, ReflectTranscriptView.Actions {
         void toggleMenu();
@@ -42,6 +42,9 @@ final class ReflectView extends ViewGroup {
         void toggleSpeakerPreview();
         void openMicrophoneSettings();
         void refreshSpeakers();
+        void closeSpeakerProfile();
+        void openSpeakerMenu();
+        void openSpeakerUtterance(SpeakerDirectory.Utterance utterance);
     }
 
     private static final float WIDTH = 393, HEIGHT = 852;
@@ -72,6 +75,7 @@ final class ReflectView extends ViewGroup {
     private final ReflectPreferences preferences;
     private final ReflectSettingsView settings;
     private final ReflectTranscriptView transcript;
+    private final SpeakerProfileView speakerProfile;
     private final ReflectProcessingView processing;
     private final ReflectLibraryView records, speakers, conversations;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
@@ -103,6 +107,9 @@ final class ReflectView extends ViewGroup {
         artwork = new ReflectArtwork(context.getAssets());
         settings = new ReflectSettingsView(context, artwork, preferences, actions::openMicrophoneSettings);
         transcript = new ReflectTranscriptView(context, artwork, preferences, actions);
+        speakerProfile = new SpeakerProfileView(context, artwork, actions::closeSpeakerProfile,
+                actions::openSpeakerMenu, actions::openSpeakerUtterance);
+        speakerProfile.setBackgroundColor(BACKGROUND);
         processing = new ReflectProcessingView(context, artwork, actions::closeTranscript);
         records = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.RECORDS, actions);
         speakers = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.SPEAKERS, actions);
@@ -123,6 +130,7 @@ final class ReflectView extends ViewGroup {
     Screen screen() { return screen; }
     Screen tab() { return tab; }
     ReflectTranscriptView transcriptView() { return transcript; }
+    SpeakerProfileView speakerProfileView() { return speakerProfile; }
     ReflectProcessingView processingView() { return processing; }
     void trimMemory(int level) { artwork.trimMemory(level); }
     ReflectPageStyle pageStyle() { return new ReflectPageStyle(getContext(), artwork, Math.max(1, Math.round(WIDTH * scale))); }
@@ -258,9 +266,12 @@ final class ReflectView extends ViewGroup {
             case REVIEW -> "Готово";
             case PROCESSING -> "Локальная расшифровка";
             case TRANSCRIPT -> "Транскрипт разговора";
+            case SPEAKER_PROFILE -> "Профиль спикера";
         });
         if (screen == Screen.TRANSCRIPT) {
             place(transcript, 0, 0, WIDTH, HEIGHT);
+        } else if (screen == Screen.SPEAKER_PROFILE) {
+            place(speakerProfile, 0, 0, WIDTH, HEIGHT);
         } else if (screen == Screen.PROCESSING) {
             place(processing, 0, 0, WIDTH, HEIGHT);
         } else if (navigation(screen)) {
@@ -366,7 +377,9 @@ final class ReflectView extends ViewGroup {
             if (active == Screen.HOME && !conversations.hasConversations()) drawHome(canvas);
             drawNavigation(canvas, menu);
         }
-        else if (page != Screen.TRANSCRIPT && page != Screen.PROCESSING) drawRecorder(canvas, page);
+        else if (page != Screen.TRANSCRIPT && page != Screen.PROCESSING && page != Screen.SPEAKER_PROFILE) {
+            drawRecorder(canvas, page);
+        }
     }
 
     private void drawHome(Canvas c) {

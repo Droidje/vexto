@@ -103,8 +103,9 @@ public class SpeakerProfilesTest {
         try { profiles.saveEmbeddings(first,transcript,List.of(voice("m",0,0,3000))); fail(); }
         catch (IllegalArgumentException expected) {}
         assertEquals(1,profiles.suggestions(second,transcript,"speaker_1").size());
-        profiles.link(first,transcript,"speaker_1",null);
-        assertTrue(profiles.suggestions(second,transcript,"speaker_1").isEmpty());
+        profiles.separate(first,transcript,"speaker_1");
+        assertTrue(profiles.suggestions(second,transcript,"speaker_1").stream()
+                .noneMatch(candidate -> candidate.profile().id().equals(profile.id())));
     }
 
     @Test public void rejectsRecordingOutsidePrivateDirectoryAndUnknownLocalSpeaker() throws Exception {
