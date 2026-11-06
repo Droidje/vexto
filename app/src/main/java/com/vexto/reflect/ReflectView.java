@@ -26,7 +26,7 @@ import java.util.List;
 
 /** Native stage with the design's 393 × 852 coordinate space and Android touch targets. */
 final class ReflectView extends ViewGroup {
-    enum Screen { HOME, RECORDS, SPEAKERS, SETTINGS, MENU, READY, RECORDING, PAUSED, REVIEW, TRANSCRIPT }
+    enum Screen { HOME, RECORDS, SPEAKERS, SETTINGS, MENU, READY, RECORDING, PAUSED, REVIEW, PROCESSING, TRANSCRIPT }
 
     interface Actions extends ReflectLibraryView.Actions, ReflectTranscriptView.Actions {
         void toggleMenu();
@@ -72,6 +72,7 @@ final class ReflectView extends ViewGroup {
     private final ReflectPreferences preferences;
     private final ReflectSettingsView settings;
     private final ReflectTranscriptView transcript;
+    private final ReflectProcessingView processing;
     private final ReflectLibraryView records, speakers, conversations;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final List<RectF> childAreas = new ArrayList<>();
@@ -102,6 +103,7 @@ final class ReflectView extends ViewGroup {
         artwork = new ReflectArtwork(context.getAssets());
         settings = new ReflectSettingsView(context, artwork, preferences, actions::openMicrophoneSettings);
         transcript = new ReflectTranscriptView(context, artwork, preferences, actions);
+        processing = new ReflectProcessingView(context, artwork, actions::closeTranscript);
         records = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.RECORDS, actions);
         speakers = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.SPEAKERS, actions);
         conversations = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.CONVERSATIONS, actions);
@@ -121,6 +123,7 @@ final class ReflectView extends ViewGroup {
     Screen screen() { return screen; }
     Screen tab() { return tab; }
     ReflectTranscriptView transcriptView() { return transcript; }
+    ReflectProcessingView processingView() { return processing; }
     void trimMemory(int level) { artwork.trimMemory(level); }
     ReflectPageStyle pageStyle() { return new ReflectPageStyle(getContext(), artwork, Math.max(1, Math.round(WIDTH * scale))); }
     void refreshSettings() { settings.refresh(); }
@@ -253,10 +256,13 @@ final class ReflectView extends ViewGroup {
             case RECORDING -> "Идёт запись";
             case PAUSED -> "Запись на паузе";
             case REVIEW -> "Готово";
+            case PROCESSING -> "Локальная расшифровка";
             case TRANSCRIPT -> "Транскрипт разговора";
         });
         if (screen == Screen.TRANSCRIPT) {
             place(transcript, 0, 0, WIDTH, HEIGHT);
+        } else if (screen == Screen.PROCESSING) {
+            place(processing, 0, 0, WIDTH, HEIGHT);
         } else if (navigation(screen)) {
             float contentHeight = screen == Screen.MENU ? 578 : 653;
             if (tab == Screen.RECORDS) place(records, 0, 83, 393, contentHeight);
@@ -360,7 +366,7 @@ final class ReflectView extends ViewGroup {
             if (active == Screen.HOME && !conversations.hasConversations()) drawHome(canvas);
             drawNavigation(canvas, menu);
         }
-        else if (page != Screen.TRANSCRIPT) drawRecorder(canvas, page);
+        else if (page != Screen.TRANSCRIPT && page != Screen.PROCESSING) drawRecorder(canvas, page);
     }
 
     private void drawHome(Canvas c) {

@@ -257,7 +257,7 @@ final class ReflectTranscriptView extends FrameLayout {
 
     private void updateProgress() {
         if (progressText == null || progressBar == null) return;
-        progressText.setText(transcription.stage() + " · " + transcription.percent() + "%");
+        progressText.setText(transcription.title() + " · " + transcription.percent() + "%");
         progressBar.setProgress(transcription.percent());
     }
 

@@ -87,7 +87,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
                 try {
                     if (state.getBoolean("transcript")) {
                         openLocalDetail(new File(file), state.getString("transcriptTitle", "Запись"),
-                                state.getBoolean("recordingDetails"));
+                                state.getBoolean("recordingDetails"), state.getBoolean("transcriptProcessing"));
                     } else review(new File(file));
                 }
                 catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
@@ -216,8 +216,9 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         session.cancel();
         stopPlayer();
         discardDraft();
-        if (view.screen() == TRANSCRIPT) transcripts.close();
-        view.show(view.tab());
+        boolean processing = view.screen() == PROCESSING;
+        if (processing || view.screen() == TRANSCRIPT) transcripts.close();
+        view.show(processing ? HOME : view.tab());
     }
 
     @Override public void attach() {
@@ -365,17 +366,18 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             if (designPreview) transcripts.openPreview(recording.title);
             return;
         }
-        try { openLocalDetail(recording.file, recording.title, recordingDetails); }
+        try { openLocalDetail(recording.file, recording.title, recordingDetails, false); }
         catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
     }
 
-    private void openLocalDetail(File file, String title, boolean recordingDetails) throws IOException {
+    private void openLocalDetail(File file, String title, boolean recordingDetails, boolean startImmediately)
+            throws IOException {
         int length = RecordingSession.duration(file);
         stopPlayer();
         discardDraft();
         audio = file;
         duration = length;
-        transcripts.open(file, title, time(length), length, recordingDetails);
+        transcripts.open(file, title, time(length), length, recordingDetails, startImmediately);
     }
 
     private void refreshRecordings() {
