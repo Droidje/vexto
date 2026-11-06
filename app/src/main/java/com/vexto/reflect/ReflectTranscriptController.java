@@ -38,9 +38,10 @@ final class ReflectTranscriptController {
     private final Runnable refreshCatalog;
     private File file;
     private ReflectTranscript transcript;
+    private RecordingMetadata metadata;
     private String title, length, issue;
     private String previewKey;
-    private boolean loading;
+    private boolean loading, recordingDetails;
     private int generation;
 
     ReflectTranscriptController(Activity activity, ReflectView view, ReflectPreferences preferences,
@@ -56,12 +57,14 @@ final class ReflectTranscriptController {
         this.refreshCatalog = refreshCatalog;
     }
 
-    void open(File recording, String fallback, String length) {
+    void open(File recording, String fallback, String length, boolean recordingDetails) {
         int current = ++generation;
         file = recording;
         title = fallback;
         this.length = length;
+        this.recordingDetails = recordingDetails;
         transcript = null;
+        metadata = null;
         previewKey = null;
         loading = true;
         issue = null;
@@ -69,10 +72,12 @@ final class ReflectTranscriptController {
         view.show(ReflectView.Screen.TRANSCRIPT);
         io.execute(() -> {
             String resolvedTitle = store.title(recording, fallback);
+            RecordingMetadata properties = RecordingMetadata.read(recording);
             try {
                 ReflectTranscript loaded = store.load(recording);
                 deliver(current, () -> {
                     title = resolvedTitle;
+                    metadata = properties;
                     transcript = loaded;
                     loading = false;
                     render();
@@ -80,6 +85,7 @@ final class ReflectTranscriptController {
             } catch (IOException | RuntimeException invalid) {
                 deliver(current, () -> {
                     title = resolvedTitle;
+                    metadata = properties;
                     issue = "Не удалось прочитать сохранённый транскрипт. Можно импортировать другой JSON.";
                     loading = false;
                     render();
@@ -94,6 +100,8 @@ final class ReflectTranscriptController {
         previewKey = key;
         title = ReflectDesignPreview.transcriptTitle(key);
         transcript = ReflectDesignPreview.transcript(key);
+        recordingDetails = false;
+        metadata = null;
         length = "";
         loading = false;
         issue = null;
@@ -105,6 +113,7 @@ final class ReflectTranscriptController {
         ++generation;
         file = null;
         transcript = null;
+        metadata = null;
         previewKey = null;
         view.transcriptView().clear();
     }
@@ -112,6 +121,7 @@ final class ReflectTranscriptController {
     void saveState(Bundle state) {
         if (view.screen() != ReflectView.Screen.TRANSCRIPT) return;
         state.putBoolean("transcript", true);
+        state.putBoolean("recordingDetails", recordingDetails);
         state.putString("transcriptTitle", title);
         state.putString("transcriptPreview", previewKey);
         if (file != null) state.putString("transcriptAudio", file.getAbsolutePath());
@@ -144,7 +154,7 @@ final class ReflectTranscriptController {
 
     private void export(RecordingExport format) {
         if (file == null) return;
-        activity.startActivityForResult(format.createDocument(file, title), format.request);
+        activity.startActivityForResult(format.createDocument(metadata, title), format.request);
     }
 
     boolean onActivityResult(int request, int result, Intent data) {
@@ -190,12 +200,12 @@ final class ReflectTranscriptController {
     }
 
     void options() {
-        Sheet menu = sheet("Действия разговора");
+        Sheet menu = sheet(recordingDetails ? "Действия записи" : "Действия разговора");
         if (file != null) {
             menu.option("Переименовать", () -> rename());
-            menu.option("Импортировать транскрипт", this::pick);
+            if (!recordingDetails) menu.option("Импортировать транскрипт", this::pick);
         }
-        menu.option("Настройки чтения", this::styleOptions);
+        if (!recordingDetails) menu.option("Настройки чтения", this::styleOptions);
         menu.show();
     }
 
@@ -236,7 +246,7 @@ final class ReflectTranscriptController {
     private void rename() {
         File recording = file;
         if (recording == null) return;
-        Sheet editor = sheet("Название разговора");
+        Sheet editor = sheet(recordingDetails ? "Название записи" : "Название разговора");
         EditText input = new EditText(activity);
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -274,7 +284,8 @@ final class ReflectTranscriptController {
     }
 
     private void render() {
-        view.transcriptView().content(title, length, transcript, previewKey != null, file != null, loading, issue);
+        view.transcriptView().content(title, length, transcript, previewKey != null, file != null,
+                loading, issue, recordingDetails, metadata);
     }
 
     private void deliver(int current, Runnable result) {

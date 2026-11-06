@@ -10,6 +10,7 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.text.TextUtils;
+import android.text.format.Formatter;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,7 +45,8 @@ final class ReflectTranscriptView extends FrameLayout {
     private ReflectPageStyle style;
     private int layoutWidth;
     private boolean refresh = true;
-    private boolean preview, loading, hasAudio, playing;
+    private boolean preview, loading, hasAudio, playing, recordingDetails;
+    private RecordingMetadata metadata;
     private String title = "", length = "", issue;
     private List<ReflectTranscript.Line> lines = Collections.emptyList();
     private TextView play;
@@ -58,7 +60,8 @@ final class ReflectTranscriptView extends FrameLayout {
     }
 
     void content(String title, String length, ReflectTranscript transcript, boolean preview,
-                 boolean hasAudio, boolean loading, String issue) {
+                 boolean hasAudio, boolean loading, String issue, boolean recordingDetails,
+                 RecordingMetadata metadata) {
         if (!title.equals(this.title)) list = null;
         this.title = title;
         this.length = length;
@@ -66,7 +69,9 @@ final class ReflectTranscriptView extends FrameLayout {
         this.hasAudio = hasAudio;
         this.loading = loading;
         this.issue = issue;
-        lines = transcript == null ? Collections.emptyList() : transcript.lines;
+        this.recordingDetails = recordingDetails;
+        this.metadata = metadata;
+        lines = recordingDetails || transcript == null ? Collections.emptyList() : transcript.lines;
         refresh = true;
         requestLayout();
     }
@@ -78,6 +83,7 @@ final class ReflectTranscriptView extends FrameLayout {
 
     void clear() {
         lines = Collections.emptyList();
+        metadata = null;
         removeAllViews();
         list = null;
         play = null;
@@ -123,7 +129,9 @@ final class ReflectTranscriptView extends FrameLayout {
         icon("transcript_back", "Назад", 16, 60, 48, 48, false, actions::closeTranscript);
         pill(281, 60, 96, 48, false);
         icon("transcript_export", "Поделиться", 281, 60, 48, 48, false, actions::openExportOptions);
-        icon("transcript_more", "Действия разговора", 329, 60, 48, 48, false, actions::openTranscriptOptions);
+        icon("transcript_more", recordingDetails ? "Действия записи" : "Действия разговора",
+                329, 60, 48, 48, false, actions::openTranscriptOptions);
+        if (recordingDetails) return;
 
         View shade = new View(getContext());
         shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
@@ -152,7 +160,9 @@ final class ReflectTranscriptView extends FrameLayout {
             play = button(playing ? "Приостановить" : "Прослушать аудио", actions::playTranscriptAudio);
             addInset(header, play, 0, 16);
         }
-        if (lines.isEmpty()) {
+        if (recordingDetails) {
+            addInset(header, metadataCard(), 8, 12);
+        } else if (lines.isEmpty()) {
             LinearLayout empty = style.column();
             empty.setBackground(style.rounded(ReflectPageStyle.CARD, 24));
             empty.setPadding(style.px(16), style.px(16), style.px(16), style.px(16));
@@ -173,6 +183,38 @@ final class ReflectTranscriptView extends FrameLayout {
             header.addView(dividerBox, dividerParams);
         }
         return header;
+    }
+
+    private LinearLayout metadataCard() {
+        LinearLayout card = style.column();
+        card.setBackground(style.rounded(ReflectPageStyle.CARD, 24));
+        card.setPadding(style.px(16), style.px(16), style.px(16), style.px(8));
+        TextView heading = style.text("О записи", 18, Color.WHITE, artwork.semibold);
+        heading.setAccessibilityHeading(true);
+        style.append(card, heading, 0, 8);
+        if (metadata == null) {
+            style.append(card, style.text("Загружаем данные записи", 15, ReflectPageStyle.MUTED, artwork.regular),
+                    0, 8);
+            return card;
+        }
+        metadataRow(card, metadata.dateLabel(), metadata.dateText());
+        metadataRow(card, "Локация", metadata.location());
+        metadataRow(card, "Формат", metadata.format());
+        metadataRow(card, "Размер файла", Formatter.formatShortFileSize(getContext(), metadata.bytes()));
+        if (metadata.bitrate() != null) metadataRow(card, "Битрейт", metadata.bitrate());
+        return card;
+    }
+
+    private void metadataRow(LinearLayout card, String label, String value) {
+        LinearLayout row = new LinearLayout(getContext());
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setMinimumHeight(style.px(38));
+        row.addView(style.text(label, 14, ReflectPageStyle.MUTED, artwork.regular),
+                new LinearLayout.LayoutParams(style.px(124), WRAP_CONTENT));
+        TextView data = style.text(value, 14, Color.WHITE, artwork.medium);
+        data.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        row.addView(data, new LinearLayout.LayoutParams(0, WRAP_CONTENT, 1));
+        style.append(card, row, 0, 0);
     }
 
     private HorizontalScrollView participants() {

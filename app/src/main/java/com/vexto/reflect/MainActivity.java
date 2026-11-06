@@ -82,7 +82,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             } else if (file != null && new File(file).isFile()) {
                 try {
                     if (state.getBoolean("transcript")) {
-                        openLocalTranscript(new File(file), state.getString("transcriptTitle", "Запись"));
+                        openLocalDetail(new File(file), state.getString("transcriptTitle", "Запись"),
+                                state.getBoolean("recordingDetails"));
                     } else review(new File(file));
                 }
                 catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
@@ -351,21 +352,25 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     @Override public void openRecording(ReflectCatalog.Recording recording) {
+        openLocalDetail(recording, true);
+    }
+
+    private void openLocalDetail(ReflectCatalog.Recording recording, boolean recordingDetails) {
         if (recording.file == null) {
             if (designPreview) transcripts.openPreview(recording.title);
             return;
         }
-        try { openLocalTranscript(recording.file, recording.title); }
+        try { openLocalDetail(recording.file, recording.title, recordingDetails); }
         catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
     }
 
-    private void openLocalTranscript(File file, String title) throws IOException {
+    private void openLocalDetail(File file, String title, boolean recordingDetails) throws IOException {
         int length = RecordingSession.duration(file);
         stopPlayer();
         discardDraft();
         audio = file;
         duration = length;
-        transcripts.open(file, title, time(length));
+        transcripts.open(file, title, time(length), recordingDetails);
     }
 
     private void refreshRecordings() {
@@ -388,7 +393,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override public void openConversation(ReflectCatalog.Conversation conversation) {
         if (conversation.recording != null) {
-            openRecording(conversation.recording);
+            openLocalDetail(conversation.recording, false);
         } else if (designPreview) transcripts.openPreview(conversation.title);
     }
 

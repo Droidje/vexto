@@ -1,7 +1,6 @@
 package com.vexto.reflect;
 
 import android.content.Intent;
-import android.webkit.MimeTypeMap;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -37,9 +36,9 @@ enum RecordingExport {
         return null;
     }
 
-    Intent createDocument(File audio, String title) {
-        String suffix = this == AUDIO ? audioExtension(audio) : extension;
-        String type = this == AUDIO ? MimeTypeMap.getSingleton().getMimeTypeFromExtension(suffix) : mime;
+    Intent createDocument(RecordingMetadata audio, String title) {
+        String suffix = this == AUDIO ? audio.extension() : extension;
+        String type = this == AUDIO ? audio.mime() : mime;
         String name = title.replaceAll("[\\p{Cntrl}/\\\\:*?\"<>|]", "_").trim();
         if (name.isEmpty() || name.equals(".") || name.equals("..")) name = "vexto";
         if (!name.toLowerCase(Locale.ROOT).endsWith("." + suffix)) name += "." + suffix;
@@ -68,12 +67,6 @@ enum RecordingExport {
             }
             markdown.flush();
         }
-    }
-
-    static String audioExtension(File file) {
-        String name = file.getName();
-        int dot = name.lastIndexOf('.');
-        return dot >= 0 ? name.substring(dot + 1).toLowerCase(Locale.ROOT) : "audio";
     }
 
     private static String timestamp(int millis) {
