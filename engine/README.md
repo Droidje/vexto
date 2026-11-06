@@ -18,6 +18,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 python scripts/install_quality_pack.py --serial <device> --pack-dir .agents/work/quality-pack/quality-508faa2fac36
 ```
 
+`--source-dir` может содержать только готовые файлы (например, `nemotron/Nemotron-3-Diarization.f32.gguf`); при `--download` остальные веса берутся по закреплённым ссылкам.
+
 F32 Nemotron собирается из оригинального pinned `.nemo` через `scripts/convert_nemotron_fullprecision.py`; его нельзя скачать по выдуманной ссылке или восстановить из Q8. См. [рецепт конвертации](../docs/research/nemotron-android.md). `--sources-json` provisioner принимает локальный JSON `model_id → filename`, который следует хранить в `.agents/local/`. Все файлы проверяются по размерам и SHA256 до установки и при подготовке сессии. Сам инференс работает без сети.
 
 `-PvextoNdkPath=<path>` и `-PvextoCmakeVersion=<version>` позволяют использовать существующие инструменты без общих машинных путей. `-PvextoSkipNative=true` предназначен для JVM-тестов, а не поставки приложения. Обычная сборка останавливается, если отсутствуют обязательные native CLI для выбранных ABI.
