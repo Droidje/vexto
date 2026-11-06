@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /** Native conversation detail with a virtualized, scrollable transcript. */
@@ -49,6 +50,7 @@ final class ReflectTranscriptView extends FrameLayout {
     private RecordingMetadata metadata;
     private String title = "", length = "", issue;
     private List<ReflectTranscript.Line> lines = Collections.emptyList();
+    private Map<String, String> speakerNames = Collections.emptyMap();
     private TextView play;
     private ListView list;
 
@@ -81,8 +83,15 @@ final class ReflectTranscriptView extends FrameLayout {
         requestLayout();
     }
 
+    void speakerNames(Map<String, String> names) {
+        if (speakerNames.equals(names)) return;
+        speakerNames = names;
+        refreshStyle();
+    }
+
     void clear() {
         lines = Collections.emptyList();
+        speakerNames = Collections.emptyMap();
         metadata = null;
         removeAllViews();
         list = null;
@@ -309,7 +318,7 @@ final class ReflectTranscriptView extends FrameLayout {
             case "alex" -> "Alex";
             case "michel" -> "MichelYe";
             default -> speaker;
-        } : speaker;
+        } : speakerNames.getOrDefault(speaker, speaker);
     }
 
     private final class ArtView extends View {

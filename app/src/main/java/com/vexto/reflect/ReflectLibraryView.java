@@ -33,6 +33,8 @@ final class ReflectLibraryView extends ViewGroup {
         void openRecording(ReflectCatalog.Recording recording);
         void openConversation(ReflectCatalog.Conversation conversation);
         void inviteSpeakers();
+        void addSpeaker();
+        void openSpeaker(ReflectCatalog.Speaker speaker);
     }
 
     private final ReflectArtwork artwork;
@@ -43,11 +45,13 @@ final class ReflectLibraryView extends ViewGroup {
     private final RowAdapter adapter;
     private final EditText search;
     private final Button invite;
+    private final Button addSpeaker;
     private List<ReflectCatalog.Recording> recordings = Collections.emptyList();
     private List<ReflectCatalog.Speaker> speakers = Collections.emptyList();
     private List<ReflectCatalog.Conversation> conversations = Collections.emptyList();
     private float scale = 1;
     private int measuredWidth = -1;
+    private boolean managingSpeakers;
 
     ReflectLibraryView(Context context, ReflectArtwork artwork, Page page, Actions actions) {
         super(context);
@@ -69,10 +73,12 @@ final class ReflectLibraryView extends ViewGroup {
         scroller.setAdapter(adapter);
 
         search = page == Page.CONVERSATIONS ? null : createSearch(context);
-        invite = page == Page.SPEAKERS ? createInvite(context) : null;
+        invite = page == Page.SPEAKERS ? speakerButton(context, "Отправить ссылку", actions::inviteSpeakers) : null;
+        addSpeaker = page == Page.SPEAKERS ? speakerButton(context, "Добавить спикера", actions::addSpeaker) : null;
         if (search != null) addView(search);
         addView(scroller);
         if (invite != null) addView(invite);
+        if (addSpeaker != null) addView(addSpeaker);
         updateContent();
         requestFocus();
     }
@@ -103,10 +109,10 @@ final class ReflectLibraryView extends ViewGroup {
         return search;
     }
 
-    private Button createInvite(Context context) {
+    private Button speakerButton(Context context, String label, Runnable action) {
         Button invite = new Button(context);
         invite.setAllCaps(false);
-        invite.setText("Отправить ссылку");
+        invite.setText(label);
         invite.setTextColor(0xff040402);
         invite.setTypeface(artwork.medium);
         invite.setLetterSpacing(0);
@@ -114,7 +120,7 @@ final class ReflectLibraryView extends ViewGroup {
         invite.setIncludeFontPadding(false);
         invite.setBackgroundTintList(null);
         invite.setStateListAnimator(null);
-        invite.setOnClickListener(v -> actions.inviteSpeakers());
+        invite.setOnClickListener(v -> action.run());
         return invite;
     }
 
@@ -125,6 +131,11 @@ final class ReflectLibraryView extends ViewGroup {
 
     void setSpeakers(List<ReflectCatalog.Speaker> speakers) {
         this.speakers = speakers;
+        updateContent();
+    }
+
+    void manageSpeakers(boolean enabled) {
+        managingSpeakers = enabled;
         updateContent();
     }
 
@@ -142,6 +153,7 @@ final class ReflectLibraryView extends ViewGroup {
         if (search != null) search.setVisibility(empty ? GONE : VISIBLE);
         scroller.setVisibility(empty ? GONE : VISIBLE);
         if (invite != null) invite.setVisibility(empty ? VISIBLE : GONE);
+        if (addSpeaker != null) addSpeaker.setVisibility(managingSpeakers ? VISIBLE : GONE);
         renderRows(false);
         invalidate();
     }
@@ -207,7 +219,8 @@ final class ReflectLibraryView extends ViewGroup {
 
         @Override public boolean isEnabled(int position) {
             Object item = getItem(position);
-            return item instanceof ReflectCatalog.Recording || item instanceof ReflectCatalog.Conversation;
+            return item instanceof ReflectCatalog.Recording || item instanceof ReflectCatalog.Conversation
+                    || (managingSpeakers && item instanceof ReflectCatalog.Speaker);
         }
 
         @Override public View getView(int position, View recycled, ViewGroup parent) {
@@ -219,7 +232,9 @@ final class ReflectLibraryView extends ViewGroup {
                     actions.openRecording(recording);
                 });
             }
-            if (item instanceof ReflectCatalog.Speaker speaker) return row.speaker(artwork, speaker);
+            if (item instanceof ReflectCatalog.Speaker speaker) {
+                return row.speaker(artwork, speaker, managingSpeakers ? () -> actions.openSpeaker(speaker) : null);
+            }
             if (item instanceof ReflectCatalog.Conversation conversation) {
                 return row.conversation(artwork, conversation, () -> actions.openConversation(conversation));
             }
@@ -238,23 +253,31 @@ final class ReflectLibraryView extends ViewGroup {
                 search.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16 * scale);
                 search.setPadding(px(48), 0, px(12), 0);
             }
-            if (invite != null) {
-                invite.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16 * scale);
-                GradientDrawable pill = new GradientDrawable();
-                pill.setColor(Color.WHITE);
-                pill.setCornerRadius(px(24));
-                invite.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22000000), pill, null));
-            }
+            if (invite != null) styleSpeakerButton(invite);
+            if (addSpeaker != null) styleSpeakerButton(addSpeaker);
         }
         if (search != null && search.getVisibility() != GONE) search.measure(exact(px(361)), exact(px(48)));
-        if (scroller.getVisibility() != GONE) scroller.measure(exact(width), exact(Math.max(0, height - px(scrollTop()))));
+        if (scroller.getVisibility() != GONE) scroller.measure(exact(width),
+                exact(Math.max(0, height - px(scrollTop() + (managingSpeakers ? 72 : 0)))));
         if (invite != null && invite.getVisibility() != GONE) invite.measure(exact(px(195)), exact(px(48)));
+        if (addSpeaker != null && managingSpeakers) addSpeaker.measure(exact(px(195)), exact(px(48)));
     }
 
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         if (search != null && search.getVisibility() != GONE) search.layout(px(16), px(51), px(377), px(99));
-        if (scroller.getVisibility() != GONE) scroller.layout(0, px(scrollTop()), getWidth(), getHeight());
+        if (scroller.getVisibility() != GONE) scroller.layout(0, px(scrollTop()), getWidth(),
+                Math.max(px(scrollTop()), getHeight() - px(managingSpeakers ? 72 : 0)));
         if (invite != null && invite.getVisibility() != GONE) invite.layout(px(100), px(446), px(295), px(494));
+        if (addSpeaker != null && managingSpeakers) addSpeaker.layout(px(100), getHeight() - px(60),
+                px(295), getHeight() - px(12));
+    }
+
+    private void styleSpeakerButton(Button button) {
+        button.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16 * scale);
+        GradientDrawable pill = new GradientDrawable();
+        pill.setColor(Color.WHITE);
+        pill.setCornerRadius(px(24));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22000000), pill, null));
     }
 
     @Override protected void onDraw(Canvas canvas) {

@@ -79,11 +79,26 @@ final class ReflectLibraryRow extends View {
         });
     }
 
-    ReflectLibraryRow speaker(ReflectArtwork art, ReflectCatalog.Speaker item) {
+    ReflectLibraryRow speaker(ReflectArtwork art, ReflectCatalog.Speaker item, Runnable open) {
         Typeface nameFont = item.name.codePoints().anyMatch(cp -> Character.UnicodeScript.of(cp)
                 == Character.UnicodeScript.CYRILLIC) ? art.semibold : art.latinSemibold;
-        return bind(84, item.name + ", " + item.duration, false, null, (canvas, paint) -> {
-            art.image(canvas, item.avatar, 16, 0, 64, 64);
+        return bind(84, item.duration.isEmpty() ? item.name : item.name + ", " + item.duration,
+                false, open, (canvas, paint) -> {
+            if (item.avatar == null) {
+                paint.setColor(0xff2c1740);
+                canvas.drawCircle(48, 32, 32, paint);
+                String initial = item.name.substring(0, item.name.offsetByCodePoints(0, 1));
+                style(paint, 25, 0xffd4baff, art.display, 0);
+                paint.setTextAlign(Paint.Align.CENTER);
+                canvas.drawText(initial, 48, 41, paint);
+            } else art.image(canvas, item.avatar, 16, 0, 64, 64);
+            if (item.duration.isEmpty()) {
+                style(paint, 18, Color.WHITE, nameFont, -.306f);
+                CharSequence name = TextUtils.ellipsize(item.name, paint, 257, TextUtils.TruncateAt.END);
+                text(canvas, paint, name.toString(), 92, 38.5f, 18, Color.WHITE, nameFont, -.306f);
+                if (open != null) chevron(canvas, paint, 373, 33);
+                return;
+            }
             text(canvas, paint, item.name, 92, 38.5f, 18, Color.WHITE, nameFont, -.306f);
             float badgeX = 104 + paint.measureText(item.name);
             style(paint, 14, 0xffae86e8, art.medium, -.42f);

@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
@@ -36,17 +37,21 @@ final class ReflectTranscriptController {
     private final Consumer<String> notice;
     private final IntConsumer playFrom;
     private final Runnable refreshCatalog;
+    private final ReflectBackendSync backend;
+    private final ReflectBackendUi backendUi;
     private File file;
     private ReflectTranscript transcript;
     private RecordingMetadata metadata;
     private String title, length, issue;
     private String previewKey;
+    private String remoteRevision;
     private boolean loading, recordingDetails;
-    private int generation;
+    private int generation, transcriptRequest, durationMs;
 
     ReflectTranscriptController(Activity activity, ReflectView view, ReflectPreferences preferences,
                                 ReflectTranscriptStore store, ExecutorService io, Consumer<String> notice,
-                                IntConsumer playFrom, Runnable refreshCatalog) {
+                                IntConsumer playFrom, Runnable refreshCatalog,
+                                ReflectBackendSync backend, ReflectBackendUi backendUi) {
         this.activity = activity;
         this.view = view;
         this.preferences = preferences;
@@ -55,19 +60,24 @@ final class ReflectTranscriptController {
         this.notice = notice;
         this.playFrom = playFrom;
         this.refreshCatalog = refreshCatalog;
+        this.backend = backend;
+        this.backendUi = backendUi;
     }
 
-    void open(File recording, String fallback, String length, boolean recordingDetails) {
+    void open(File recording, String fallback, String length, int durationMs, boolean recordingDetails) {
         int current = ++generation;
         file = recording;
         title = fallback;
         this.length = length;
+        this.durationMs = durationMs;
         this.recordingDetails = recordingDetails;
         transcript = null;
+        remoteRevision = null;
         metadata = null;
         previewKey = null;
         loading = true;
         issue = null;
+        view.transcriptView().speakerNames(Collections.emptyMap());
         render();
         view.show(ReflectView.Screen.TRANSCRIPT);
         io.execute(() -> {
@@ -81,6 +91,7 @@ final class ReflectTranscriptController {
                     transcript = loaded;
                     loading = false;
                     render();
+                    refreshRemote(current, recording);
                 });
             } catch (IOException | RuntimeException invalid) {
                 deliver(current, () -> {
@@ -89,6 +100,7 @@ final class ReflectTranscriptController {
                     issue = "Не удалось прочитать сохранённый транскрипт. Можно импортировать другой JSON.";
                     loading = false;
                     render();
+                    refreshRemote(current, recording);
                 });
             }
         });
@@ -100,11 +112,13 @@ final class ReflectTranscriptController {
         previewKey = key;
         title = ReflectDesignPreview.transcriptTitle(key);
         transcript = ReflectDesignPreview.transcript(key);
+        remoteRevision = null;
         recordingDetails = false;
         metadata = null;
         length = "";
         loading = false;
         issue = null;
+        view.transcriptView().speakerNames(Collections.emptyMap());
         render();
         view.show(ReflectView.Screen.TRANSCRIPT);
     }
@@ -113,6 +127,7 @@ final class ReflectTranscriptController {
         ++generation;
         file = null;
         transcript = null;
+        remoteRevision = null;
         metadata = null;
         previewKey = null;
         view.transcriptView().clear();
@@ -164,6 +179,8 @@ final class ReflectTranscriptController {
         File recording = file;
         Uri uri = data.getData();
         int current = generation;
+        int duration = durationMs;
+        if (request == PICK_JSON) transcriptRequest++;
         ReflectTranscript snapshot = transcript;
         String exportTitle = title;
         io.execute(() -> {
@@ -175,16 +192,23 @@ final class ReflectTranscriptController {
                         imported = ReflectTranscript.parse(input);
                     }
                     store.save(recording, imported);
+                    boolean queued = backend.onImported(recording, exportTitle, duration, imported);
                     deliver(current, () -> {
                         transcript = imported;
+                        remoteRevision = null;
                         loading = false;
                         issue = null;
+                        view.transcriptView().speakerNames(Collections.emptyMap());
                         render();
-                        notice.accept("Транскрипт импортирован");
+                        notice.accept(!backend.enabled() || queued ? "Транскрипт импортирован"
+                                : "Транскрипт сохранён на устройстве. Не удалось добавить его в очередь");
                     });
                 } else {
                     ReflectTranscript source = snapshot;
-                    if (format != RecordingExport.AUDIO && source == null) source = store.load(recording);
+                    if (format != RecordingExport.AUDIO && source == null) {
+                        source = backend.cachedTranscript(recording);
+                        if (source == null) source = store.load(recording);
+                    }
                     try (OutputStream stream = activity.getContentResolver().openOutputStream(uri, "wt")) {
                         if (stream == null) throw new IOException("No export output");
                         format.write(stream, recording, source, exportTitle);
@@ -204,6 +228,7 @@ final class ReflectTranscriptController {
         if (file != null) {
             menu.option("Переименовать", () -> rename());
             if (!recordingDetails) menu.option("Импортировать транскрипт", this::pick);
+            if (backend.enabled()) menu.option("Отправить запись на сервер", this::sendToBackend);
         }
         if (!recordingDetails) menu.option("Настройки чтения", this::styleOptions);
         menu.show();
@@ -231,6 +256,15 @@ final class ReflectTranscriptController {
         excerpt.setMaxLines(5);
         menu.style.append(menu.root, excerpt, 0, 12);
         if (file != null) menu.option("Прослушать с метки", () -> playFrom.accept(line.startMs));
+        if (file != null && transcript != null && backend.enabled()) {
+            File recording = file;
+            ReflectTranscript visible = transcript;
+            String revision = remoteRevision;
+            int current = generation, request = transcriptRequest;
+            menu.option("Привязать спикера", () -> backendUi.linkSpeaker(recording, visible, revision, line.speakerId,
+                    () -> current == generation && request == transcriptRequest,
+                    () -> { if (current == generation) refreshRemote(current, recording); }));
+        }
         menu.option("Скопировать текст", () -> {
             ClipboardManager clipboard = activity.getSystemService(ClipboardManager.class);
             if (clipboard != null) {
@@ -265,9 +299,11 @@ final class ReflectTranscriptController {
                 return;
             }
             int current = generation;
+            int duration = durationMs;
             io.execute(() -> {
                 try {
                     store.rename(recording, newTitle);
+                    backend.onRenamed(recording, newTitle, duration);
                     deliver(current, () -> {
                         title = newTitle;
                         render();
@@ -286,6 +322,49 @@ final class ReflectTranscriptController {
     private void render() {
         view.transcriptView().content(title, length, transcript, previewKey != null, file != null,
                 loading, issue, recordingDetails, metadata);
+    }
+
+    private void refreshRemote(int current, File recording) {
+        if (!backend.enabled()) return;
+        int request = ++transcriptRequest;
+        backend.pullTranscript(recording, remote -> {
+            if (current != generation || request != transcriptRequest) return;
+            if (!java.util.Objects.equals(remoteRevision, remote.revision())) {
+                view.transcriptView().speakerNames(Collections.emptyMap());
+            }
+            transcript = remote.value();
+            remoteRevision = remote.revision();
+            issue = null;
+            render();
+            refreshSpeakerNames(current, recording);
+        });
+    }
+
+    private void refreshSpeakerNames(int current, File recording) {
+        if (!backend.enabled() || recordingDetails || remoteRevision == null
+                || transcript == null || transcript.lines.isEmpty()) return;
+        int request = transcriptRequest;
+        backendUi.speakerNames(recording, transcript, remoteRevision, names -> {
+            if (current == generation && request == transcriptRequest) view.transcriptView().speakerNames(names);
+        });
+    }
+
+    private void sendToBackend() {
+        File recording = file;
+        if (recording == null) return;
+        String name = title;
+        int duration = durationMs, current = generation;
+        io.execute(() -> {
+            try {
+                ReflectTranscript local = store.load(recording);
+                boolean queued = local != null ? backend.onImported(recording, name, duration, local)
+                        : backend.onSaved(recording, name, duration);
+                deliver(current, () -> notice.accept(queued ? "Запись поставлена в очередь"
+                        : "Не удалось поставить запись в очередь"));
+            } catch (IOException | RuntimeException invalid) {
+                deliver(current, () -> notice.accept("Не удалось поставить запись в очередь"));
+            }
+        });
     }
 
     private void deliver(int current, Runnable result) {

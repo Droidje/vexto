@@ -15,14 +15,17 @@ final class ReflectSettingsView extends ScrollView {
     private final ReflectArtwork artwork;
     private final ReflectPreferences preferences;
     private final Runnable openMicrophoneSettings;
+    private final Runnable openBackendSettings;
+    private String backendStatus = "Сервер не подключён";
     private int layoutWidth;
 
     ReflectSettingsView(Context context, ReflectArtwork artwork, ReflectPreferences preferences,
-                        Runnable openMicrophoneSettings) {
+                        Runnable openMicrophoneSettings, Runnable openBackendSettings) {
         super(context);
         this.artwork = artwork;
         this.preferences = preferences;
         this.openMicrophoneSettings = openMicrophoneSettings;
+        this.openBackendSettings = openBackendSettings;
         setVerticalScrollBarEnabled(false);
         setOverScrollMode(OVER_SCROLL_NEVER);
     }
@@ -30,6 +33,11 @@ final class ReflectSettingsView extends ScrollView {
     void refresh() {
         layoutWidth = 0;
         requestLayout();
+    }
+
+    void backendStatus(boolean enabled) {
+        backendStatus = enabled ? "Сервер настроен" : "Сервер не подключён";
+        refresh();
     }
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
@@ -61,6 +69,16 @@ final class ReflectSettingsView extends ScrollView {
         style.append(display, toggle(style, "Уменьшить движение", preferences.reduceMotion(),
                 preferences::setReduceMotion), 0, 0);
         style.append(root, display, 0, 22);
+
+        section(root, style, "Синхронизация");
+        LinearLayout backend = card(style);
+        TextView connection = style.text("Подключение к серверу  ›", 17, Color.WHITE, artwork.regular);
+        connection.setMinHeight(style.px(44));
+        connection.setBackground(style.pressable(ReflectPageStyle.CARD, 12));
+        connection.setOnClickListener(v -> openBackendSettings.run());
+        style.append(backend, connection, 0, 4);
+        style.append(backend, style.text(backendStatus, 14, ReflectPageStyle.MUTED, artwork.regular), 0, 8);
+        style.append(root, backend, 0, 22);
 
         section(root, style, "Приложение");
         LinearLayout application = card(style);

@@ -52,6 +52,16 @@ final class ReflectTranscript {
         this.lines = Collections.unmodifiableList(ordered);
     }
 
+    boolean sameLines(ReflectTranscript other) {
+        if (other == null || lines.size() != other.lines.size()) return false;
+        for (int i = 0; i < lines.size(); i++) {
+            Line first = lines.get(i), second = other.lines.get(i);
+            if (first.startMs != second.startMs || first.endMs != second.endMs
+                    || !first.speakerId.equals(second.speakerId) || !first.text.equals(second.text)) return false;
+        }
+        return true;
+    }
+
     /** The caller owns the stream. */
     static ReflectTranscript parse(InputStream input) throws IOException {
         Reader utf8 = new InputStreamReader(new LimitedInput(input), StandardCharsets.UTF_8.newDecoder());

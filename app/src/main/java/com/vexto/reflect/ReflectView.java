@@ -41,6 +41,8 @@ final class ReflectView extends ViewGroup {
         void send();
         void toggleSpeakerPreview();
         void openMicrophoneSettings();
+        void openBackendSettings();
+        void refreshSpeakers();
     }
 
     private static final float WIDTH = 393, HEIGHT = 852;
@@ -99,7 +101,8 @@ final class ReflectView extends ViewGroup {
         this.designPreview = designPreview;
         this.preferences = preferences;
         artwork = new ReflectArtwork(context.getAssets());
-        settings = new ReflectSettingsView(context, artwork, preferences, actions::openMicrophoneSettings);
+        settings = new ReflectSettingsView(context, artwork, preferences, actions::openMicrophoneSettings,
+                actions::openBackendSettings);
         transcript = new ReflectTranscriptView(context, artwork, preferences, actions);
         records = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.RECORDS, actions);
         speakers = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.SPEAKERS, actions);
@@ -123,6 +126,10 @@ final class ReflectView extends ViewGroup {
     void trimMemory(int level) { artwork.trimMemory(level); }
     ReflectPageStyle pageStyle() { return new ReflectPageStyle(getContext(), artwork, Math.max(1, Math.round(WIDTH * scale))); }
     void refreshSettings() { settings.refresh(); }
+    void backendEnabled(boolean enabled) {
+        settings.backendStatus(enabled);
+        speakers.manageSpeakers(enabled);
+    }
     void setRecordings(List<ReflectCatalog.Recording> recordings) { records.setRecordings(recordings); }
     void setSpeakers(List<ReflectCatalog.Speaker> entries) { speakers.setSpeakers(entries); }
     void setConversations(List<ReflectCatalog.Conversation> entries) {
@@ -272,7 +279,10 @@ final class ReflectView extends ViewGroup {
             control(screen == Screen.MENU ? "Закрыть меню" : "Добавить", 318, 765, 59, 59, actions::toggleMenu);
             control("Главная", 22, 771, 67, 47, () -> show(Screen.HOME)).setSelected(tab == Screen.HOME);
             control("Записи", 89, 771, 65, 47, () -> show(Screen.RECORDS)).setSelected(tab == Screen.RECORDS);
-            View speakerTab = control("Спикеры", 154, 771, 69, 47, () -> show(Screen.SPEAKERS));
+            View speakerTab = control("Спикеры", 154, 771, 69, 47, () -> {
+                show(Screen.SPEAKERS);
+                actions.refreshSpeakers();
+            });
             speakerTab.setSelected(tab == Screen.SPEAKERS);
             if (designPreview) speakerTab.setOnLongClickListener(v -> {
                 actions.toggleSpeakerPreview();

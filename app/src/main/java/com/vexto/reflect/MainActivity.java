@@ -40,6 +40,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private ReflectPreferences preferences;
     private ReflectTranscriptStore transcriptStore;
     private ReflectTranscriptController transcripts;
+    private ReflectBackendSync backend;
+    private ReflectBackendUi backendUi;
     private File audio;
     private int duration;
     private MediaPlayer player;
@@ -66,8 +68,16 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         preferences = new ReflectPreferences(this);
         view = new ReflectView(this, this, designPreview, preferences);
         transcriptStore = new ReflectTranscriptStore(getFilesDir());
+        backend = new ReflectBackendSync(this);
+        backendUi = new ReflectBackendUi(this, view, backend, this::notice, () -> {
+            view.backendEnabled(!designPreview && backend.enabled());
+            view.setSpeakers(Collections.emptyList());
+            refreshSpeakers();
+            backend.retry();
+        });
         transcripts = new ReflectTranscriptController(this, view, preferences, transcriptStore, imports,
-                this::notice, this::playFrom, this::refreshRecordings);
+                this::notice, this::playFrom, this::refreshRecordings, backend, backendUi);
+        view.backendEnabled(!designPreview && backend.enabled());
         setContentView(view);
         fullscreen();
         refreshRecordings();
@@ -342,6 +352,11 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             stopPlayer();
             discardDraft();
             audio = saved;
+            if (!designPreview && backend.enabled()) {
+                String[] recordings = directory.list((parent, child) -> new File(parent, child).isFile());
+                String title = recordings == null ? "Запись" : "Запись №" + recordings.length;
+                backend.onSaved(saved, title, duration);
+            }
             refreshRecordings();
             return saved;
         } catch (IOException error) {
@@ -370,7 +385,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         discardDraft();
         audio = file;
         duration = length;
-        transcripts.open(file, title, time(length), recordingDetails);
+        transcripts.open(file, title, time(length), length, recordingDetails);
     }
 
     private void refreshRecordings() {
@@ -411,10 +426,15 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         refreshSpeakers();
     }
 
-    private void refreshSpeakers() {
-        view.setSpeakers(designPreview && !previewSpeakersEmpty
-                ? ReflectDesignPreview.speakers() : Collections.emptyList());
+    @Override public void refreshSpeakers() {
+        if (designPreview) {
+            view.setSpeakers(previewSpeakersEmpty ? Collections.emptyList() : ReflectDesignPreview.speakers());
+        } else backendUi.refreshSpeakers();
     }
+
+    @Override public void openBackendSettings() { backendUi.settings(); }
+    @Override public void addSpeaker() { backendUi.addSpeaker(); }
+    @Override public void openSpeaker(ReflectCatalog.Speaker speaker) { backendUi.manageSpeaker(speaker); }
 
     @Override public void inviteSpeakers() {
         String configuredUrl = BuildConfig.REFLECT_INVITE_URL.trim();
@@ -469,6 +489,11 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         super.onStop();
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        if (!designPreview) backend.retry();
+    }
+
     @Override public void onTrimMemory(int level) {
         super.onTrimMemory(level);
         if (view != null) view.trimMemory(level);
@@ -478,6 +503,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         session.cancel();
         if (isFinishing()) discardDraft();
         imports.shutdown();
+        backend.close();
         super.onDestroy();
     }
 }
