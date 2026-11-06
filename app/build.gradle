@@ -1,0 +1,33 @@
+plugins {
+    id 'com.android.application' version '8.7.3'
+}
+
+android {
+    namespace 'com.vexto.reflect'
+    compileSdk 35
+    buildToolsVersion '35.0.0'
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    defaultConfig {
+        applicationId 'com.vexto.reflect'
+        minSdk 28
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0'
+        buildConfigField 'String', 'REFLECT_INVITE_URL',
+                groovy.json.JsonOutput.toJson(providers.gradleProperty('reflectInviteUrl').orElse('').get())
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.caverock:androidsvg-aar:1.4'
+    implementation 'androidx.core:core:1.15.0'
+}

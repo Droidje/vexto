@@ -3,12 +3,20 @@
 /.agents/work/
 
 # Локальные конфиги IDE и окружения
-/.idea/
+.idea/
 .env
 .env.*
 !.env.example
 *.log
 
-# Python benchmark caches
+# Кэши Python
 __pycache__/
 *.py[cod]
+
+# Android и Gradle
+.gradle/
+**/build/
+local.properties
+*.iml
+*.apk
+.DS_Store
