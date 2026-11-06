@@ -76,6 +76,7 @@ final class ReflectView extends ViewGroup {
     private final Path glass = new Path();
     private final Path playGlyph = new Path();
     private final RecordingVisuals recordingVisuals = new RecordingVisuals();
+    private RecordingOrb recordingOrb;
     private Bitmap orbEdgeShade;
     private Screen screen = Screen.HOME;
     private Screen departing = Screen.HOME;
@@ -400,11 +401,16 @@ final class ReflectView extends ViewGroup {
         long now = SystemClock.uptimeMillis();
         c.save();
         c.clipRect(65, 251, 329, 529);
+        float[] vertices = null;
         if (page == Screen.RECORDING || page == Screen.PAUSED) {
-            // Rotate about the center of the visible sphere, not the PNG's transparent padding.
-            c.rotate(recordingVisuals.angle(now), 196.79f, 389.72f);
+            c.rotate(recordingVisuals.angle(now), RecordingOrb.CENTER_X, RecordingOrb.CENTER_Y);
+            float morph = recordingVisuals.morphAmount(now);
+            if (morph > 0) {
+                if (recordingOrb == null) recordingOrb = new RecordingOrb();
+                vertices = recordingOrb.vertices(now, morph);
+            }
         }
-        artwork.image(c, "orb_active", 39.49f, 251, 289.51f, 278);
+        artwork.recordingOrb(c, vertices);
         c.restore();
         c.drawBitmap(orbEdgeShade, 260, 217, null);
         switch (page) {

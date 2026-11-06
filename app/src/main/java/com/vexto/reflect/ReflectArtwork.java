@@ -97,6 +97,16 @@ final class ReflectArtwork {
         drawBitmap(canvas, photo(name, width * scale, height * scale), x, y, width, height);
     }
 
+    void recordingOrb(Canvas canvas, float[] vertices) {
+        Bitmap bitmap = photo("orb_active", RecordingOrb.WIDTH * scale, RecordingOrb.HEIGHT * scale);
+        if (vertices == null) {
+            drawBitmap(canvas, bitmap, RecordingOrb.LEFT, RecordingOrb.TOP,
+                    RecordingOrb.WIDTH, RecordingOrb.HEIGHT);
+        } else {
+            canvas.drawBitmapMesh(bitmap, RecordingOrb.GRID, RecordingOrb.GRID, vertices, 0, null, 0, bitmapPaint);
+        }
+    }
+
     void imagePixels(Canvas canvas, String name, float x, float y, float width, float height) {
         drawBitmap(canvas, photo(name, width, height), x, y, width, height);
     }

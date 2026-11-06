@@ -13,13 +13,14 @@ final class RecordingVisuals {
     private final float[] to = new float[BARS];
     private int newest;
     private long sampledAt, orbitAt;
-    private float origin, settled;
+    private float origin, settled, morphOrigin;
     private boolean orbiting, settling;
 
     static long sampleInterval() { return SAMPLE_MS; }
 
     void start(long now, boolean animateOrbit) {
         origin = animateOrbit ? angle(now) : 0;
+        morphOrigin = animateOrbit ? morphAmount(now) : 0;
         orbitAt = now;
         orbiting = animateOrbit;
         settling = false;
@@ -36,11 +37,12 @@ final class RecordingVisuals {
             return;
         }
         origin = angle(now);
+        morphOrigin = morphAmount(now);
         // Return to the idle orientation over the shorter arc.
         settled = origin > 180 ? 360 : 0;
         orbitAt = now;
         orbiting = false;
-        settling = origin != settled;
+        settling = origin != settled || morphOrigin != 0;
     }
 
     void reset() {
@@ -74,12 +76,21 @@ final class RecordingVisuals {
     float angle(long now) {
         if (orbiting) return (origin + 360f * ((now - orbitAt) % ORBIT_MS) / ORBIT_MS) % 360;
         if (!settling) return 0;
-        float progress = Math.min(1, Math.max(0, (now - orbitAt) / (float) SETTLE_MS));
-        float ease = progress * progress * (3 - 2 * progress);
-        return origin + (settled - origin) * ease;
+        return origin + (settled - origin) * settleProgress(now);
+    }
+
+    float morphAmount(long now) {
+        if (orbiting) return morphOrigin + (1 - morphOrigin) * settleProgress(now);
+        if (settling) return morphOrigin * (1 - settleProgress(now));
+        return 0;
     }
 
     boolean needsFrame(long now) { return orbiting || (settling && now - orbitAt < SETTLE_MS); }
+
+    private float settleProgress(long now) {
+        float progress = Math.min(1, Math.max(0, (now - orbitAt) / (float) SETTLE_MS));
+        return progress * progress * (3 - 2 * progress);
+    }
 
     private static float normalizedPeak(int peak) {
         if (peak <= 0) return 0;
