@@ -63,6 +63,8 @@ python -m uvicorn backend.api:create_app --factory --host 127.0.0.1 --port 8000 
 
 Формат расшифровки совпадает с форматом импорта Android. Таймкоды задаются в целых миллисекундах. При записи реплики упорядочиваются по времени начала.
 
+Если реплика была обработана GigaAM-Emo, в ней есть `emotion_probabilities`: четыре числа от 0 до 1 в порядке **нейтральная, радость, грусть, злость**. Сумма равна 1 с допуском 0,001. В старых расшифровках поля нет.
+
 ```json
 {
   "transcript": [
@@ -70,7 +72,8 @@ python -m uvicorn backend.api:create_app --factory --host 127.0.0.1 --port 8000 
       "speaker_id": "speaker_1",
       "start_ms": 0,
       "end_ms": 1450,
-      "text": "Начинаем обсуждение."
+      "text": "Начинаем обсуждение.",
+      "emotion_probabilities": [0.8, 0.1, 0.07, 0.03]
     }
   ]
 }

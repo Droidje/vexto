@@ -177,7 +177,7 @@ class Store:
 
     def set_transcript(self, workspace: str, recording: str, transcript: Transcript, *, create_only=False) -> int:
         lines = sorted(transcript.transcript, key=lambda line: line.start_ms)
-        body = Transcript(transcript=lines).model_dump_json()
+        body = Transcript(transcript=lines).model_dump_json(exclude_none=True)
         checksum = sha256(body.encode("utf-8")).hexdigest()
         with self.connection(write=True) as db:
             current = self.require_recording(db, workspace, recording)["current_revision"]

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Скачивает AAR sherpa-onnx и модели движка (выбор по замерам bench, см. engine/README.md), проверяет sha256 и пишет манифест.
+# Скачивает нативные зависимости и модели движка, проверяет sha256 и пишет манифест.
 #
 #   scripts/fetch_models.sh [--asr ID] [--emb ID] [--threshold X] [--aar-only]
 #
@@ -62,6 +62,15 @@ cat > "$SHERPA_MAVEN/sherpa-onnx-$SHERPA_VERSION.pom" <<XML
   <packaging>aar</packaging>
 </project>
 XML
+
+# Only headers from the upstream AAR: inference uses Sherpa's already packaged ORT.
+ORT_VERSION=1.28.0
+ORT_LIBS="$ROOT/engine/libs/ort"
+ORT_AAR="onnxruntime-android-$ORT_VERSION.aar"
+fetch "https://repo.maven.apache.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/$ORT_VERSION/$ORT_AAR" \
+  f351a0638696f54b35184290dbc001d66daae17281ad0b548d2c70347d53b8a9 "$ORT_LIBS/$ORT_AAR"
+unzip -oq "$ORT_LIBS/$ORT_AAR" 'headers/onnxruntime_c_api.h' 'headers/onnxruntime_ep_c_api.h' \
+  'headers/onnxruntime_error_code.h' -d "$ORT_LIBS"
 [ "$AAR_ONLY" = 1 ] && exit 0
 
 case "$ASR" in
@@ -108,8 +117,11 @@ fetch "$HF/$REPO/resolve/main/tokens.txt" "$TOK" "$ASSETS/$A/tokens.txt"
 fetch "$GH/asr-models/silero_vad.onnx" \
   9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6 "$ASSETS/vad/silero_vad.onnx"
 fetch "$GH/speaker-recongition-models/$EMB_FILE" "$EMB_SHA" "$ASSETS/diarization/$EMB_FILE"
+EMO_REV=03cf125f754af526260037bc96f4edf0642e963b
+EMO_SHA=5639b328486d5af9c1a7aff2c584df8319250034310c5a4b7ff4eae95d555b02
+fetch "$HF/vvpreo/gigaam-v3-onnx/resolve/$EMO_REV/emo.int8.onnx" "$EMO_SHA" "$ASSETS/emotion/gigaam-emo-v1.int8.onnx"
 
-VERSION=$(printf '%s' "$ENC$DEC$JOIN$TOK$EMB_SHA$THRESHOLD" | shasum -a 256 | cut -c1-12)
+VERSION=$(printf '%s' "$ENC$DEC$JOIN$TOK$EMB_SHA$EMO_SHA$THRESHOLD" | shasum -a 256 | cut -c1-12)
 cat > "$ASSETS/manifest.json" <<JSON
 {
   "version": "$VERSION",
@@ -125,6 +137,7 @@ cat > "$ASSETS/manifest.json" <<JSON
   },
   "vad": "vad/silero_vad.onnx",
   "embedding": "diarization/$EMB_FILE",
+  "emotion": "emotion/gigaam-emo-v1.int8.onnx",
   "clusterThreshold": $THRESHOLD
 }
 JSON
