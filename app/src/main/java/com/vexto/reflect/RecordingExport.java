@@ -38,14 +38,21 @@ enum RecordingExport {
     }
 
     Intent createDocument(RecordingMetadata audio, String title) {
-        String suffix = this == AUDIO ? audio.extension() : extension;
+        return new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                .setType(mime(audio)).putExtra(Intent.EXTRA_TITLE, filename(audio, title));
+    }
+
+    String mime(RecordingMetadata audio) {
         String type = this == AUDIO ? audio.mime() : mime;
+        return type == null ? "application/octet-stream" : type;
+    }
+
+    String filename(RecordingMetadata audio, String title) {
+        String suffix = this == AUDIO ? audio.extension() : extension;
         String name = title.replaceAll("[\\p{Cntrl}/\\\\:*?\"<>|]", "_").trim();
         if (name.isEmpty() || name.equals(".") || name.equals("..")) name = "vexto";
         if (!name.toLowerCase(Locale.ROOT).endsWith("." + suffix)) name += "." + suffix;
-        return new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                .setType(type == null ? "application/octet-stream" : type)
-                .putExtra(Intent.EXTRA_TITLE, name);
+        return name;
     }
 
     void write(OutputStream stream, File audio, ReflectTranscript transcript, String title) throws IOException {
@@ -60,16 +67,24 @@ enum RecordingExport {
         }
         if (transcript == null || transcript.lines.isEmpty()) throw new IOException("No transcript to export");
         if (this == JSON) {
-            stream.write(transcript.encode());
+            transcript.writeExport(stream, names);
         } else {
             Writer markdown = new OutputStreamWriter(stream, StandardCharsets.UTF_8);
             markdown.write("# " + escape(title).replace('\n', ' ').replace('\r', ' ') + "\n\n");
             for (ReflectTranscript.Line line : transcript.lines) {
-                String speaker = escape(names.getOrDefault(line.speakerId, line.speakerId)).replace('\n', ' ').replace('\r', ' ');
+                String name = names.getOrDefault(line.speakerId, line.speakerName);
+                String speaker = escape(name == null ? line.speakerId : name + " (" + line.speakerId + ")")
+                        .replace('\n', ' ').replace('\r', ' ');
                 markdown.write("**" + timestamp(line.startMs) + " – " + timestamp(line.endMs)
                         + " · " + speaker + "**\n\n> ");
                 markdown.write(escape(line.text).replace("\r\n", "\n").replace('\r', '\n').replace("\n", "\n> "));
                 markdown.write("\n\n");
+                if (line.emotionProbabilities != null) {
+                    var emotions = line.emotionProbabilities;
+                    markdown.write("Эмоции (вероятности): нейтральная=" + emotions.getNeutral()
+                            + "; радость=" + emotions.getJoy() + "; грусть=" + emotions.getSadness()
+                            + "; злость=" + emotions.getAnger() + "\n\n");
+                }
             }
             markdown.flush();
         }
