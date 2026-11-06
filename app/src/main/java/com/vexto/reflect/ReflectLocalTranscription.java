@@ -107,7 +107,7 @@ final class ReflectLocalTranscription {
             for (Utterance utterance : output.getUtterances()) {
                 lines.add(new ReflectTranscript.Line(utterance.getSpeakerId(),
                         Math.toIntExact(utterance.getStartMs()), Math.toIntExact(utterance.getEndMs()),
-                        utterance.getText()));
+                        utterance.getText(), utterance.getEmotionProbabilities()));
             }
             ReflectTranscript transcript = new ReflectTranscript(lines);
             if (!store.saveIfAbsent(recording, transcript)) {

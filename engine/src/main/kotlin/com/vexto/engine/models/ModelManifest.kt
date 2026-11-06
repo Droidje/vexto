@@ -17,10 +17,11 @@ data class ModelManifest(
     val embedding: String,
     /** Порог кластеризации спикеров: больше порог, меньше спикеров. */
     val clusterThreshold: Float = 0.35f,
+    val emotion: String? = null,
 ) {
     /** Все файлы относительно каталога моделей. */
     val files: List<String>
-        get() = listOfNotNull(asr.encoder, asr.decoder, asr.joiner, asr.model, asr.tokens, vad, embedding)
+        get() = listOfNotNull(asr.encoder, asr.decoder, asr.joiner, asr.model, asr.tokens, vad, embedding, emotion)
 
     companion object {
         private val JsonFormat = Json { ignoreUnknownKeys = true }

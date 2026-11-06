@@ -352,7 +352,7 @@ final class ReflectTranscriptController {
     }
 
     private void render() {
-        view.transcriptView().content(title, length, transcript, previewKey != null, file != null,
+        view.transcriptView().content(title, length, transcript, file != null,
                 loading, issue, recordingDetails, metadata, local.progress(file));
     }
 

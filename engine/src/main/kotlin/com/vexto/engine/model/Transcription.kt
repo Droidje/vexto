@@ -8,6 +8,7 @@ enum class Stage(val title: String) {
     Recognition("Распознаю речь"),
     Assembly("Собираю расшифровку"),
     Punctuation("Расставляю знаки"),
+    Emotion("Определяю эмоции реплик"),
 }
 
 sealed interface TranscriptionEvent {

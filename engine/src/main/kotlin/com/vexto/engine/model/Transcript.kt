@@ -21,6 +21,7 @@ data class Utterance(
     val endMs: Long,
     val text: String,
     val words: List<Word> = emptyList(),
+    val emotionProbabilities: EmotionProbabilities? = null,
 )
 
 /** Участник разговора. [id] стабилен и уходит в экспорт, [name] задаёт пользователь. */

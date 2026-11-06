@@ -1,17 +1,17 @@
 # engine: офлайн-движок расшифровки
 
-Android-библиотека на Kotlin (`com.vexto.engine`): аудиофайл → русский текст, спикеры и таймкоды. Работает без сети, все модели внутри APK.
+Android-библиотека (`com.vexto.engine`): аудиофайл → русский текст, спикеры, таймкоды и вероятности эмоций по репликам. Работает без сети, все модели внутри APK.
 
 ## Подготовка
 
-AAR sherpa-onnx (49 МБ) и модели (~270 МБ) в git не лежат. Перед первой сборкой:
+AAR sherpa-onnx (49 МБ), заголовки ONNX Runtime и веса (~575 МБ, включая 306 МБ GigaAM-Emo) скачиваются перед сборкой и не хранятся в Git. Установите Android SDK NDK `28.2.13676358` и CMake `3.22.1`:
 
 ```sh
 scripts/fetch_models.sh                 # AAR + модели по умолчанию, sha256 проверяется
 ./gradlew :engine:testDebugUnitTest :app:assembleDebug
 ```
 
-Скачанное кэшируется в `~/.cache/vexto-models`, повторный запуск копирует из кэша. Файлы ложатся в `engine/libs/` и `engine/src/main/assets/models/` (оба пути в `.gitignore`). Скрипт пишет `assets/models/manifest.json`: какие файлы ASR и эмбеддингов брать и порог кластеризации. Смена модели не требует правки кода:
+Скачанное кэшируется в `~/.cache/vexto-models`, повторный запуск копирует из кэша. Файлы ложатся в `engine/libs/` и `engine/src/main/assets/models/` (оба пути в `.gitignore`). Скрипт пишет `assets/models/manifest.json` с набором моделей и порогом кластеризации. Смена ASR и диаризации не требует правки кода:
 
 ```sh
 scripts/fetch_models.sh --asr gigaam-v3-rnnt-punct   # своя пунктуация и регистр
@@ -34,8 +34,9 @@ scripts/fetch_models.sh --emb titanet-small --threshold 0.45
 4. Распознавание: silero VAD (паузы от 0,3 с, поля 0,1 с), сегменты длиннее 20 с режутся в самом тихом месте, GigaAM v3 RNNT по одному сегменту, таймкоды токенов → слова.
 5. Сборка: слово получает спикера с наибольшим перекрытием, соседние слова одного спикера с паузой до 1 с склеиваются в реплику, `speaker_N` нумеруются по первому появлению.
 6. Пунктуация: для ASR без своей пунктуации только заглавная буква и точка в конце реплики, слова не меняются.
+7. Эмоции: [GigaAM-Emo v1, INT8](https://huggingface.co/vvpreo/gigaam-v3-onnx/tree/03cf125f754af526260037bc96f4edf0642e963b) оценивает исходное аудио каждой реплики по её таймкодам, без АРУ. Длинные реплики разбиваются на окна до 8 с, вероятности усредняются по длительности окон. Фрагменты короче 200 мс дополняются тишиной без захвата соседних реплик. При недоступности модели текст сохраняется, у необработанных строк оценок нет. Лицо в чате отображает прогноз модели.
 
-Модели грузятся по одной и освобождаются после своего этапа. Одновременно идёт одна расшифровка, остальные ждут.
+Модели грузятся по одной и освобождаются после своего этапа. Одновременно идёт одна расшифровка, остальные ждут. Для Emo используется C API уже упакованного в sherpa-onnx ONNX Runtime; второй рантайм в APK не включается. [Лицензия GigaAM](src/main/assets/licenses/gigaam-emo.txt) также входит в APK.
 
 Выбор моделей и параметров сделан по замерам на синтетических диалогах (TTS-голоса, сдвиг высоты, шум 10 дБ) и живой речи: WER 8–12 %, DER 10–15 %. Встроенная в sherpa-onnx диаризация pyannote + FastClustering на тех же данных давала DER вдвое выше.
 
@@ -59,8 +60,8 @@ ReflectEngine.Task task = ReflectEngine.transcribe(context, audioUri, new Transc
 
 - Колбэки приходят в главном потоке, вся работа в фоне.
 - `new TranscriptionOptions(2)` задаёт известное число спикеров, по умолчанию оно определяется само.
-- Этапы `Stage`: `Preparing` (копирование моделей, только при первом запуске), `Decoding`, `Diarization`, `Recognition`, `Assembly`, `Punctuation`. У каждого `getTitle()` для экрана.
-- `Transcript.getUtterances()`: `Utterance` с `getSpeakerId()`, `getStartMs()`, `getEndMs()`, `getText()`, `getWords()`. `Transcript.speaker(id).displayName()` даёт «Спикер N» или имя.
+- Этапы `Stage`: `Preparing` (копирование моделей, только при первом запуске), `Decoding`, `Diarization`, `Recognition`, `Assembly`, `Punctuation`, `Emotion`. У каждого `getTitle()` для экрана.
+- `Transcript.getUtterances()`: `Utterance` с `getSpeakerId()`, `getStartMs()`, `getEndMs()`, `getText()`, `getWords()` и `getEmotionProbabilities()` (может быть `null`). `Transcript.speaker(id).displayName()` даёт «Спикер N» или имя.
 - Экспорт: `TranscriptExport.json/text/markdown/srt(transcript)` или `render(transcript, ExportFormat.Srt)`; у `ExportFormat` есть расширение и MIME-тип. JSON всегда с `speaker_N`, имена спикеров туда не попадают.
 - `ProcessingStats`: `getAudioMs()`, `getProcessingMs()`, `getRtf()`, `getStageMs()`, `getPeakMemoryMb()`.
 
@@ -83,6 +84,31 @@ adb logcat -s VextoEval                      # RTF, пик памяти и вр�
 ```
 
 Каталог должно создать само приложение: если создать его через `adb shell mkdir`, приложение не сможет туда писать.
+
+## Raw DER без распознавания текста
+
+В debug-сборке есть `com.vexto.engine.eval.DiarizationEvalActivity`. Она вызывает
+тот же production-декодер, VAD и `Diarizer` с `speakerCount=null`, но сохраняет
+сырой `<stem>.rttm` до ASR, `<stem>.stats.json` и `_done` (`ok N` / `error`).
+Stats содержат SHA256 WAV/RTTM/манифеста, времена этапов и VmHWM процесса.
+
+Intent `--es dir <unique-slug>` выбирает app-owned подкаталог
+`getExternalFilesDir("diar-eval")/<unique-slug>`; `--ei threads 4` задаёт 1–4 потока.
+Пустой каталог делает bootstrap установки моделей. После `ok 0` поместите туда
+тестовые WAV и удалите только `_done` своего bootstrap-запуска перед повторным стартом.
+Готовые RTTM/stats не перезаписываются: следующий независимый прогон использует
+новый slug. Для отдельных замеров запускайте каждый клип в свежем процессе.
+
+После `adb pull` оценка на ноутбуке (reference модели на Android не передаётся):
+
+```sh
+python tools/benchmarks/score_dev_diarization.py --manifest MANIFEST.json --hypotheses-dir HYP_DIR --output SCORE.json
+```
+
+Scorer требует те же хеши русских фикстур, что у сохранённого Nemotron baseline,
+`status=completed`, `forced_speaker_count=null`, `asr_executed=false` и связанный
+хеш RTTM. При неполном/невалидном прогоне успешный pooled DER не публикуется.
+[Результат прямого сравнения dev](../docs/research/russian-diarization.md#прямое-сравнение-с-диаризатором-из-dev-apk).
 
 ## Замеры на эмуляторе
 

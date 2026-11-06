@@ -3,6 +3,7 @@ package com.vexto.reflect;
 import android.util.JsonReader;
 import android.util.JsonToken;
 import android.util.JsonWriter;
+import com.vexto.engine.model.EmotionProbabilities;
 import java.io.ByteArrayOutputStream;
 import java.io.FilterInputStream;
 import java.io.FilterReader;
@@ -17,6 +18,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /** Chronological speaker segments in the portable transcript JSON format. */
 final class ReflectTranscript {
@@ -24,14 +26,20 @@ final class ReflectTranscript {
     private static final int MAX_LINES = 20_000;
     private static final int MAX_SPEAKER_LENGTH = 128;
     private static final int MAX_TEXT_LENGTH = 65_536;
+    private static final Pattern JSON_NUMBER = Pattern.compile("-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?");
 
     static final class Line {
         final String speakerId;
         final int startMs;
         final int endMs;
         final String text;
+        final EmotionProbabilities emotionProbabilities;
 
         Line(String speakerId, int startMs, int endMs, String text) {
+            this(speakerId, startMs, endMs, text, null);
+        }
+
+        Line(String speakerId, int startMs, int endMs, String text, EmotionProbabilities emotionProbabilities) {
             this.speakerId = checkedText(speakerId, MAX_SPEAKER_LENGTH);
             if (startMs < 0 || endMs <= startMs) {
                 throw new IllegalArgumentException("Invalid transcript time range");
@@ -39,6 +47,7 @@ final class ReflectTranscript {
             this.startMs = startMs;
             this.endMs = endMs;
             this.text = checkedText(text, MAX_TEXT_LENGTH);
+            this.emotionProbabilities = emotionProbabilities;
         }
     }
 
@@ -57,7 +66,8 @@ final class ReflectTranscript {
         for (int i = 0; i < lines.size(); i++) {
             Line first = lines.get(i), second = other.lines.get(i);
             if (first.startMs != second.startMs || first.endMs != second.endMs
-                    || !first.speakerId.equals(second.speakerId) || !first.text.equals(second.text)) return false;
+                    || !first.speakerId.equals(second.speakerId) || !first.text.equals(second.text)
+                    || !Objects.equals(first.emotionProbabilities, second.emotionProbabilities)) return false;
         }
         return true;
     }
@@ -89,6 +99,7 @@ final class ReflectTranscript {
     private static Line readLine(JsonReader json) throws IOException {
         String speaker = null, text = null;
         int start = -1, end = -1;
+        EmotionProbabilities emotions = null;
         json.beginObject();
         while (json.hasNext()) {
             String field = json.nextName();
@@ -109,6 +120,13 @@ final class ReflectTranscript {
                     if (text != null) throw new IOException("Duplicate text");
                     text = readString(json);
                     break;
+                case "emotion_probabilities":
+                    if (emotions != null) throw new IOException("Duplicate emotion_probabilities");
+                    json.beginArray();
+                    emotions = new EmotionProbabilities(readProbability(json), readProbability(json),
+                            readProbability(json), readProbability(json));
+                    json.endArray();
+                    break;
                 default:
                     throw new IOException("Unknown transcript line field");
             }
@@ -117,7 +135,7 @@ final class ReflectTranscript {
         if (speaker == null || text == null || start < 0 || end < 0) {
             throw new IOException("Incomplete transcript line");
         }
-        return new Line(speaker, start, end, text);
+        return new Line(speaker, start, end, text, emotions);
     }
 
     private static String readString(JsonReader json) throws IOException {
@@ -134,6 +152,13 @@ final class ReflectTranscript {
         return Integer.parseInt(token);
     }
 
+    private static double readProbability(JsonReader json) throws IOException {
+        if (json.peek() != JsonToken.NUMBER) throw new IOException("Expected an emotion probability");
+        String number = json.nextString();
+        if (!JSON_NUMBER.matcher(number).matches()) throw new IOException("Invalid emotion probability");
+        return Double.parseDouble(number);
+    }
+
     byte[] encode() throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         try (JsonWriter json = new JsonWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8))) {
@@ -143,8 +168,13 @@ final class ReflectTranscript {
                         .name("speaker_id").value(line.speakerId)
                         .name("start_ms").value(line.startMs)
                         .name("end_ms").value(line.endMs)
-                        .name("text").value(line.text)
-                        .endObject();
+                        .name("text").value(line.text);
+                if (line.emotionProbabilities != null) {
+                    json.name("emotion_probabilities").beginArray();
+                    for (Double probability : line.emotionProbabilities.ordered()) json.value(probability);
+                    json.endArray();
+                }
+                json.endObject();
                 json.flush();
                 if (output.size() > MAX_BYTES - 2) throw new IOException("Transcript is too large");
             }
@@ -225,7 +255,7 @@ final class ReflectTranscript {
             } else if (inString) {
                 if (c < 0x20) throw new IOException("Unescaped control character in JSON");
                 if (c == '\\') escaped = true;
-            } else if ("{}[]:,-0123456789 \t\r\n".indexOf(c) < 0) {
+            } else if ("{}[]:,-+.eE0123456789 \t\r\n".indexOf(c) < 0) {
                 throw new IOException("Unexpected character in transcript JSON");
             }
         }
