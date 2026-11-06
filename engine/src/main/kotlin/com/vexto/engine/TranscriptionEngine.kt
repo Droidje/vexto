@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.SystemClock
 import com.vexto.engine.audio.AudioDecoder
 import com.vexto.engine.diarization.Diarizer
+import com.vexto.engine.emotion.UtteranceEmotions
 import com.vexto.engine.model.ProcessingStats
 import com.vexto.engine.model.SimplePunctuation
 import com.vexto.engine.model.Stage
@@ -89,6 +90,12 @@ class TranscriptionEngine(context: Context) {
             var transcript: Transcript = stage(Stage.Assembly) { assembler.assemble(words, turns) }
             if (options.punctuation && !models.manifest.asr.punctuation) {
                 transcript = stage(Stage.Punctuation) { SimplePunctuation.apply(transcript) }
+            }
+            val emotionModel = models.manifest.emotion
+            if (emotionModel != null && transcript.utterances.isNotEmpty()) {
+                transcript = stage(Stage.Emotion) { progress ->
+                    UtteranceEmotions.annotate(models.path(emotionModel), audio, transcript, threads, progress)
+                }
             }
             val stats = ProcessingStats(
                 audioMs = audio.durationMs,
