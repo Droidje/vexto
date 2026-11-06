@@ -135,10 +135,11 @@ class RecordingApiTest(unittest.TestCase):
         guard = {**self.primary, "If-None-Match": "*"}
         generated = self.transcript_with("Результат движка")
         imported = self.transcript_with("Исправлено вручную")
-        self.assertEqual(self.client.put(self.transcript, headers=guard, json=generated).json(), {"revision": 1})
+        self.assertEqual(self.client.post(self.transcript, headers=self.primary, json=generated).json(), {"revision": 1})
         self.assertEqual(self.client.put(self.transcript, headers=guard, json=generated).json(), {"revision": 1})
         self.assertEqual(self.client.put(self.transcript, headers=self.primary, json=imported).json(), {"revision": 2})
         self.assertEqual(self.client.put(self.transcript, headers=guard, json=generated).status_code, 412)
+        self.assertEqual(self.client.post(self.transcript, headers=self.primary, json=generated).status_code, 412)
         self.assertEqual(self.client.get(self.transcript, headers=self.primary).json(), imported)
         self.assertEqual(len(self.client.get(self.transcript + "/revisions",
                                             headers=self.primary).json()["revisions"]), 2)

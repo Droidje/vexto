@@ -200,9 +200,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.put("/v1/recordings/{recording}/transcript", tags=["Transcripts"],
              responses={412: {"description": "Different transcript already exists"}})
-    def save_transcript(recording: UUID, payload: Transcript, identity: Workspace, response: Response,
+    @app.post("/v1/recordings/{recording}/transcript", tags=["Transcripts"],
+              responses={412: {"description": "Different transcript already exists"}})
+    def save_transcript(recording: UUID, payload: Transcript, identity: Workspace, request: Request, response: Response,
                         if_none_match: Annotated[str | None, Header()] = None):
-        revision = store.set_transcript(identity, str(recording), payload, create_only=if_none_match == "*")
+        revision = store.set_transcript(identity, str(recording), payload,
+                                        create_only=request.method == "POST" or if_none_match == "*")
         response.headers[REVISION_HEADER] = str(revision)
         return {"revision": revision}
 
