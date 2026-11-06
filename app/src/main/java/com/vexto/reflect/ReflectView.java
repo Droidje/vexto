@@ -41,7 +41,6 @@ final class ReflectView extends ViewGroup {
         void transcribeReview();
         void toggleSpeakerPreview();
         void openMicrophoneSettings();
-        void openBackendSettings();
         void refreshSpeakers();
     }
 
@@ -101,8 +100,7 @@ final class ReflectView extends ViewGroup {
         this.designPreview = designPreview;
         this.preferences = preferences;
         artwork = new ReflectArtwork(context.getAssets());
-        settings = new ReflectSettingsView(context, artwork, preferences, actions::openMicrophoneSettings,
-                actions::openBackendSettings);
+        settings = new ReflectSettingsView(context, artwork, preferences, actions::openMicrophoneSettings);
         transcript = new ReflectTranscriptView(context, artwork, preferences, actions);
         records = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.RECORDS, actions);
         speakers = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.SPEAKERS, actions);
@@ -126,10 +124,7 @@ final class ReflectView extends ViewGroup {
     void trimMemory(int level) { artwork.trimMemory(level); }
     ReflectPageStyle pageStyle() { return new ReflectPageStyle(getContext(), artwork, Math.max(1, Math.round(WIDTH * scale))); }
     void refreshSettings() { settings.refresh(); }
-    void backendEnabled(boolean enabled) {
-        settings.backendStatus(enabled);
-        speakers.manageSpeakers(enabled);
-    }
+    void manageSpeakers(boolean enabled) { speakers.manageSpeakers(enabled); }
     void setRecordings(List<ReflectCatalog.Recording> recordings) { records.setRecordings(recordings); }
     void setSpeakers(List<ReflectCatalog.Speaker> entries) { speakers.setSpeakers(entries); }
     void setConversations(List<ReflectCatalog.Conversation> entries) {

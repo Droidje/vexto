@@ -1,5 +1,0 @@
-**
-!backend/
-!backend/requirements.txt
-!backend/*.py
-!backend/*.sql

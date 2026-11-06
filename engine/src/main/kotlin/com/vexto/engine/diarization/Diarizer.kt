@@ -6,6 +6,9 @@ import com.vexto.engine.audio.PcmAudio
 import com.vexto.engine.audio.Segment
 import com.vexto.engine.model.SampleRate
 import com.vexto.engine.model.SpeakerTurn
+import com.vexto.engine.model.VoiceEmbedding
+import java.io.File
+import java.security.MessageDigest
 import com.vexto.engine.models.InstalledModels
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -28,16 +31,22 @@ internal object Diarizer {
     /** Кластер с меньшим объёмом речи, секунд, считается осколком другого спикера. */
     private const val MinSpeakerSec = 5f
 
-    suspend fun run(
+    data class Result(val turns: List<SpeakerTurn>, val voices: Map<Int, VoiceEmbedding>)
+
+    suspend fun run(models: InstalledModels, audio: PcmAudio, speech: List<Segment>,
+                    speakerCount: Int?, threads: Int, onProgress: (Float) -> Unit): List<SpeakerTurn> =
+        analyze(models, audio, speech, speakerCount, threads, onProgress).turns
+
+    suspend fun analyze(
         models: InstalledModels,
         audio: PcmAudio,
         speech: List<Segment>,
         speakerCount: Int?,
         threads: Int,
         onProgress: (Float) -> Unit,
-    ): List<SpeakerTurn> {
+    ): Result {
         val windows = windows(speech)
-        if (windows.isEmpty()) return emptyList()
+        if (windows.isEmpty()) return Result(emptyList(), emptyMap())
         val extractor = SpeakerEmbeddingExtractor(
             config = SpeakerEmbeddingExtractorConfig(model = models.path(models.manifest.embedding), numThreads = threads),
         )
@@ -61,7 +70,15 @@ internal object Diarizer {
         val weights = FloatArray(windows.size) { (windows[it].end - windows[it].start).toFloat() / SampleRate }
         var labels = SpeakerClustering.cluster(embeddings, weights, models.manifest.clusterThreshold, speakerCount)
         if (speakerCount == null) labels = SpeakerClustering.absorbSmall(labels, embeddings, weights, MinSpeakerSec)
-        return SpeakerClustering.turns(windows, labels, PcmAudio.FrameSize, SampleRate / 1000)
+        val turns = SpeakerClustering.turns(windows, labels, PcmAudio.FrameSize, SampleRate / 1000)
+        val digest = MessageDigest.getInstance("SHA-256")
+        File(models.path(models.manifest.embedding)).inputStream().buffered().use { source ->
+            val bytes = ByteArray(64 * 1024)
+            while (true) { val n = source.read(bytes); if (n < 0) break; digest.update(bytes, 0, n) }
+        }
+        val modelId = "sherpa-2.0.1:pcm16-16k-agc-v1:l2-centroid-v1:" +
+            digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+        return Result(turns, SpeakerSignatures.build(modelId, embeddings, weights, labels, turns))
     }
 
     private fun windows(speech: List<Segment>): List<Segment> {

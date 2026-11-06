@@ -27,6 +27,7 @@ data class Utterance(
 data class Speaker(
     val id: String,
     val name: String? = null,
+    val voice: VoiceEmbedding? = null,
 ) {
     fun displayName(): String = name ?: "Спикер ${id.substringAfterLast('_')}"
 }
