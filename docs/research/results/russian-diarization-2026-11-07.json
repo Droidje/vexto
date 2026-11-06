@@ -1,0 +1,2389 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-07",
+  "generated_utc": "2026-11-06T21:41:42.286590+00:00",
+  "environment": {
+    "boot_completed": "1",
+    "android_api": "36",
+    "abi_list": "x86_64,arm64-v8a",
+    "meminfo_before": "MemTotal:        4008620 kB\r\nMemFree:           97880 kB\r\nMemAvailable:    2612680 kB\r\nBuffers:           16584 kB\r\nCached:          2729452 kB"
+  },
+  "android_scope": {
+    "avd_ram_mb": 4096,
+    "cpu_vcpus": 4,
+    "budget_bytes": 2000000000,
+    "reserve_bytes": 134217728,
+    "scope": "native model process tree plus shell guard; Android OS excluded",
+    "sample_ms": 150,
+    "hard_limit_guarantee": false,
+    "threads": {
+      "nemotron_sortformer": 4,
+      "sherpa_segmentation": 1,
+      "sherpa_embedding": 1
+    }
+  },
+  "fixtures": [
+    {
+      "id": "pears04-301-331",
+      "duration_seconds": 30,
+      "language": "ru",
+      "sample_rate": 16000,
+      "channels": 1,
+      "audio_sha256": "a38e06480bad82f0344ad208fa2cf12b4ed06e0b4d05e474a0a8a0ad0ad864e8",
+      "rttm_sha256": "bed5db83ed0ebc1786f48f175cb7ddb89ade05b14d493d67b01ffdb52fcc5304",
+      "source_offset_seconds": 301,
+      "source_end_seconds": 331,
+      "source_page": "https://multidiscourse.ru/corpus/?en=1",
+      "annotation_guide": "https://multidiscourse.ru/data/ann/pears_vocal%20annotation_eng.pdf",
+      "title": "Russian Pear Chats and Stories, real shared-room conversation, session 04",
+      "attribution": "Russian Multichannel Discourse research group, Institute of Linguistics, Russian Academy of Sciences",
+      "license": "No explicit open redistribution license located; publicly offered research demo; local research cache only",
+      "redistribute_audio": false,
+      "synthetic": false,
+      "selection_before_inference": true,
+      "selection_rule": "Earliest 1s-grid 30s window within first600s with >=2s retained Words activity for each N/C/R; fixed offsets, no model output used.",
+      "reference_protocol": "Manual Words tier: words and filled pauses; empty intervals, explicit {nonverbal} and (ɥ) inhalations excluded. No pause filling or collar; overlaps retained.",
+      "reference_speaker_ids": [
+        "N",
+        "C",
+        "R"
+      ],
+      "reference_speaker_seconds": {
+        "N": 19.469850210502386,
+        "C": 2.515465856015112,
+        "R": 3.9240375176020166
+      },
+      "reference_segments": 80,
+      "completeness": "Only three primary participant TextGrids are published. Listener is not annotated. Early windows selected to avoid later Listener/retelling stage; extra-voice absence not independently listened/verified.",
+      "listen_validation": "pending independent listening; no listening or model-derived reference claimed",
+      "source_audio_header": {
+        "url": "https://multidiscourse.iling-ran.ru/pears04/Pears04W-au.wav",
+        "content_range": "bytes 0-65535/288145964",
+        "downloaded_bytes": 65536,
+        "sha256": "71b95675d302ae157ce438eae9a22d3c9f7edaf633dd178d610e247489330ac7"
+      },
+      "source_audio_range": {
+        "url": "https://multidiscourse.iling-ran.ru/pears04/Pears04W-au.wav",
+        "content_range": "bytes 57792044-63552043/288145964",
+        "downloaded_bytes": 5760000,
+        "sha256": "ab69d48643d67e97c53fa6fe64b16b3ad0a1d2bb750820317e28585d19f40d98"
+      },
+      "source_annotation_files": [
+        {
+          "url": "https://multidiscourse.iling-ran.ru/pears04/pears04N-voc.TextGrid",
+          "cached": true,
+          "sha256": "708aed85f90d6d017163d2577d197b37de822c1677a92b5d7ebf7fbec83aca0f",
+          "participant": "N",
+          "parsing": {
+            "tier": "Words",
+            "source_intervals": 1543,
+            "kept_intervals": 1257,
+            "excluded_counts": {
+              "silent": 207,
+              "inhalation": 46,
+              "explicit_nonverbal": 33
+            }
+          }
+        },
+        {
+          "url": "https://multidiscourse.iling-ran.ru/pears04/pears04C-voc.TextGrid",
+          "cached": true,
+          "sha256": "c075d59b78db5f5a716f788806d20f14e8aaf0212faabfba951c5a92d1abfcd8",
+          "participant": "C",
+          "parsing": {
+            "tier": "Words",
+            "source_intervals": 1092,
+            "kept_intervals": 846,
+            "excluded_counts": {
+              "silent": 180,
+              "explicit_nonverbal": 32,
+              "inhalation": 34
+            }
+          }
+        },
+        {
+          "url": "https://multidiscourse.iling-ran.ru/pears04/pears04R-voc.TextGrid",
+          "cached": true,
+          "sha256": "4b4cd48f666851452231d2f1c50ed7fe42880f703526d5db0790475f521232a0",
+          "participant": "R",
+          "parsing": {
+            "tier": "Words",
+            "source_intervals": 2195,
+            "kept_intervals": 1649,
+            "excluded_counts": {
+              "silent": 406,
+              "explicit_nonverbal": 76,
+              "inhalation": 64
+            }
+          }
+        }
+      ],
+      "source_full_audio_sha256": null,
+      "changes": "Contiguous original shared-microphone PCM range only; stereo48k downmixed/resampled to mono16k PCM16. Reference cropped and shifted by same source offset."
+    },
+    {
+      "id": "pears22-345-375",
+      "duration_seconds": 30,
+      "language": "ru",
+      "sample_rate": 16000,
+      "channels": 1,
+      "audio_sha256": "95b5330f8d4e45890ae50f6ee5b719cc1e029ef89358ed9cc72b406d1c8271ec",
+      "rttm_sha256": "a7c4192133d0af5c57e754e6a7404f7eb5151c871a83216029a0a286184af4a3",
+      "source_offset_seconds": 345,
+      "source_end_seconds": 375,
+      "source_page": "https://multidiscourse.ru/corpus/?en=1",
+      "annotation_guide": "https://multidiscourse.ru/data/ann/pears_vocal%20annotation_eng.pdf",
+      "title": "Russian Pear Chats and Stories, real shared-room conversation, session 22",
+      "attribution": "Russian Multichannel Discourse research group, Institute of Linguistics, Russian Academy of Sciences",
+      "license": "No explicit open redistribution license located; publicly offered research demo; local research cache only",
+      "redistribute_audio": false,
+      "synthetic": false,
+      "selection_before_inference": true,
+      "selection_rule": "Earliest 1s-grid 30s window within first600s with >=2s retained Words activity for each N/C/R; fixed offsets, no model output used.",
+      "reference_protocol": "Manual Words tier: words and filled pauses; empty intervals, explicit {nonverbal} and (ɥ) inhalations excluded. No pause filling or collar; overlaps retained.",
+      "reference_speaker_ids": [
+        "N",
+        "C",
+        "R"
+      ],
+      "reference_speaker_seconds": {
+        "N": 4.160579912911942,
+        "C": 23.720489549145555,
+        "R": 2.0375105636410353
+      },
+      "reference_segments": 111,
+      "completeness": "Only three primary participant TextGrids are published. Listener is not annotated. Early windows selected to avoid later Listener/retelling stage; extra-voice absence not independently listened/verified.",
+      "listen_validation": "pending independent listening; no listening or model-derived reference claimed",
+      "source_audio_header": {
+        "url": "https://multidiscourse.iling-ran.ru/pears22/Pears22W-au.wav",
+        "content_range": "bytes 0-65535/212705358",
+        "downloaded_bytes": 65536,
+        "sha256": "6e0b0a8f83e85f4c13834e0d5a0f89075ece06d42b21ab13377a1e5e5ab2d73a"
+      },
+      "source_audio_range": {
+        "url": "https://multidiscourse.iling-ran.ru/pears22/Pears22W-au.wav",
+        "content_range": "bytes 66240078-72000077/212705358",
+        "downloaded_bytes": 5760000,
+        "sha256": "6768fd1cec8465b7462d3f2936b1bcbd45a62b2761c1d1e62906d4337a58d625"
+      },
+      "source_annotation_files": [
+        {
+          "url": "https://multidiscourse.iling-ran.ru/pears22/pears22N-voc.TextGrid",
+          "cached": true,
+          "sha256": "8bd3face60880a75be4356310e49b7b02348e042ba2a2c4b74a746f6d2c92497",
+          "participant": "N",
+          "parsing": {
+            "tier": "Words",
+            "source_intervals": 1463,
+            "kept_intervals": 1235,
+            "excluded_counts": {
+              "silent": 130,
+              "inhalation": 61,
+              "explicit_nonverbal": 37
+            }
+          }
+        },
+        {
+          "url": "https://multidiscourse.iling-ran.ru/pears22/pears22C-voc.TextGrid",
+          "cached": true,
+          "sha256": "34cada029d3a5c3f4381908205f23a8e5465f05619858d8d92ebac001d417ea1",
+          "participant": "C",
+          "parsing": {
+            "tier": "Words",
+            "source_intervals": 1202,
+            "kept_intervals": 1005,
+            "excluded_counts": {
+              "silent": 134,
+              "explicit_nonverbal": 11,
+              "inhalation": 52
+            }
+          }
+        },
+        {
+          "url": "https://multidiscourse.iling-ran.ru/pears22/pears22R-voc.TextGrid",
+          "cached": true,
+          "sha256": "9b18a87a470b2ac53fff47960379c86fb93cbe70aa380558f78aeff1704ccace",
+          "participant": "R",
+          "parsing": {
+            "tier": "Words",
+            "source_intervals": 1258,
+            "kept_intervals": 959,
+            "excluded_counts": {
+              "silent": 195,
+              "explicit_nonverbal": 49,
+              "inhalation": 55
+            }
+          }
+        }
+      ],
+      "source_full_audio_sha256": null,
+      "changes": "Contiguous original shared-microphone PCM range only; stereo48k downmixed/resampled to mono16k PCM16. Reference cropped and shifted by same source offset."
+    },
+    {
+      "id": "pears23-382-412",
+      "duration_seconds": 30,
+      "language": "ru",
+      "sample_rate": 16000,
+      "channels": 1,
+      "audio_sha256": "ced9218b27536bdbb137b6901e6e261b534f37dea395d6845ddc99590b6f6732",
+      "rttm_sha256": "a697abac98fd7774ac6d2ac09247b24ba0ac131d9f5d27e8d8178cb44291cc38",
+      "source_offset_seconds": 382,
+      "source_end_seconds": 412,
+      "source_page": "https://multidiscourse.ru/corpus/?en=1",
+      "annotation_guide": "https://multidiscourse.ru/data/ann/pears_vocal%20annotation_eng.pdf",
+      "title": "Russian Pear Chats and Stories, real shared-room conversation, session 23",
+      "attribution": "Russian Multichannel Discourse research group, Institute of Linguistics, Russian Academy of Sciences",
+      "license": "No explicit open redistribution license located; publicly offered research demo; local research cache only",
+      "redistribute_audio": false,
+      "synthetic": false,
+      "selection_before_inference": true,
+      "selection_rule": "Earliest 1s-grid 30s window within first600s with >=2s retained Words activity for each N/C/R; fixed offsets, no model output used.",
+      "reference_protocol": "Manual Words tier: words and filled pauses; empty intervals, explicit {nonverbal} and (ɥ) inhalations excluded. No pause filling or collar; overlaps retained.",
+      "reference_speaker_ids": [
+        "N",
+        "C",
+        "R"
+      ],
+      "reference_speaker_seconds": {
+        "N": 6.903782140069438,
+        "C": 17.599238158315586,
+        "R": 2.7281660299477153
+      },
+      "reference_segments": 102,
+      "completeness": "Only three primary participant TextGrids are published. Listener is not annotated. Early windows selected to avoid later Listener/retelling stage; extra-voice absence not independently listened/verified.",
+      "listen_validation": "pending independent listening; no listening or model-derived reference claimed",
+      "source_audio_header": {
+        "url": "https://multidiscourse.iling-ran.ru/pears23/Pears23W-au.wav",
+        "content_range": "bytes 0-65535/195479084",
+        "downloaded_bytes": 65536,
+        "sha256": "5dd2bff5fbb7791ac8dbc2a786ff6cc31f7c5e565c6205e41fe8abf001194a5f"
+      },
+      "source_audio_range": {
+        "url": "https://multidiscourse.iling-ran.ru/pears23/Pears23W-au.wav",
+        "content_range": "bytes 73344044-79104043/195479084",
+        "downloaded_bytes": 5760000,
+        "sha256": "05f02055236b23152a08c725b75c684e493344eeedeb69d3831e92fcc06e8ec6"
+      },
+      "source_annotation_files": [
+        {
+          "url": "https://multidiscourse.iling-ran.ru/pears23/pears23N-voc.TextGrid",
+          "cached": true,
+          "sha256": "0c5234f4788d4921c1ee21d84ffdcb70f42699ad08df6f97316d5c00fed1dd6f",
+          "participant": "N",
+          "parsing": {
+            "tier": "Words",
+            "source_intervals": 1641,
+            "kept_intervals": 1321,
+            "excluded_counts": {
+              "silent": 230,
+              "inhalation": 63,
+              "explicit_nonverbal": 27
+            }
+          }
+        },
+        {
+          "url": "https://multidiscourse.iling-ran.ru/pears23/pears23C-voc.TextGrid",
+          "cached": true,
+          "sha256": "de8c826a5ca603ce547c1a2f51f1169ea8e8d005f74d8bf310afe82a5e921bf9",
+          "participant": "C",
+          "parsing": {
+            "tier": "Words",
+            "source_intervals": 1022,
+            "kept_intervals": 774,
+            "excluded_counts": {
+              "silent": 178,
+              "inhalation": 46,
+              "explicit_nonverbal": 24
+            }
+          }
+        },
+        {
+          "url": "https://multidiscourse.iling-ran.ru/pears23/pears23R-voc.TextGrid",
+          "cached": true,
+          "sha256": "a79f9aeb5a1243b3ac92c06a0473eabb5fb5ec476d7fd0b72dab6ad126a7791b",
+          "participant": "R",
+          "parsing": {
+            "tier": "Words",
+            "source_intervals": 1440,
+            "kept_intervals": 1095,
+            "excluded_counts": {
+              "silent": 271,
+              "explicit_nonverbal": 33,
+              "inhalation": 41
+            }
+          }
+        }
+      ],
+      "source_full_audio_sha256": null,
+      "changes": "Contiguous original shared-microphone PCM range only; stereo48k downmixed/resampled to mono16k PCM16. Reference cropped and shifted by same source offset."
+    }
+  ],
+  "protocol": {
+    "language": "ru",
+    "duration_per_clip": 30,
+    "collar_seconds": 0,
+    "overlap_scored": true,
+    "uem": "each recording [0,30)",
+    "mapping": "global one-to-one per recording, then pooled speaker-seconds across three recordings",
+    "reference_coverage": "three primary N/C/R manual Words tiers; Listener unannotated, completeness not independently listened/verified",
+    "scope": "diagnostic subset, not a representative Russian benchmark; not directly comparable to prior AMI protocol"
+  },
+  "models": [
+    {
+      "id": "titanet-large",
+      "license": "CC-BY-4.0",
+      "artifacts": [
+        {
+          "filename": "nemo_en_titanet_large.onnx",
+          "size_bytes": 101405493,
+          "sha256": "d51abcf31717ef28162f26acb9d44dd4127c3d44c9b8624f699f3425daca8e77",
+          "url": "https://huggingface.co/csukuangfj/speaker-embedding-models/resolve/0743f301363dec56491a490f6d6cbc9d67f9a3bf/nemo_en_titanet_large.onnx"
+        }
+      ],
+      "revision": "0743f301363dec56491a490f6d6cbc9d67f9a3bf",
+      "source_model_card": "https://huggingface.co/nvidia/speakerverification_en_titanet_large",
+      "android_execution_observed": true
+    },
+    {
+      "id": "nemotron3-f32-conversion",
+      "license": "openmdw-1.1",
+      "artifacts": [
+        {
+          "filename": "Nemotron-3-Diarization.f32.gguf",
+          "size_bytes": 395298848,
+          "sha256": "3339eca67ba8c7bc4a67b68797b60f8956e3ba1a34d5f84b14a0157ca96185b2"
+        }
+      ],
+      "distribution": "locally_converted",
+      "source_artifact": {
+        "filename": "Nemotron-3-Diarization.nemo",
+        "size_bytes": 198676480,
+        "sha256": "867c53f552998f772e5b5e5c082962ae85ee7ca5669c2bc17d7f615133d4e96d",
+        "url": "https://huggingface.co/nvidia/Nemotron-3-Diarization/resolve/f667ed73aee57d40cc39428eb768b4fd87a0a29e/Nemotron-3-Diarization.nemo"
+      },
+      "converter_revision": "536b17a41bef62d2a67a40ed3df61df26a4389fe",
+      "tensor_count": 360,
+      "dtype_tally": {
+        "F32": 359,
+        "F16": 1
+      },
+      "precision_caveat": "Official converter --outtype f32 retains Conv1D kernels F16 due to CPU im2col requirements.",
+      "android_execution_observed": true
+    },
+    {
+      "id": "titanet-small",
+      "license": null,
+      "license_note": "Exact weight license needs retained NGC terms before redistribution; do not infer from NeMo code license.",
+      "source_model_card": "https://catalog.ngc.nvidia.com/orgs/nvidia/teams/nemo/models/titanet_small",
+      "artifacts": [
+        {
+          "filename": "titanet-small.onnx",
+          "size_bytes": 40257283,
+          "sha256": "ad4a1802485d8b34c722d2a9d04249662f2ece5d28a7a039063ca22f515a789e",
+          "url": "https://huggingface.co/csukuangfj/speaker-embedding-models/resolve/0743f301363dec56491a490f6d6cbc9d67f9a3bf/nemo_en_titanet_small.onnx"
+        }
+      ],
+      "android_execution_observed": true
+    },
+    {
+      "id": "pyannote-segmentation-int8",
+      "license": "MIT",
+      "access_conditions_note": "Upstream gated model conditions and attribution remain separate from code license; release export provenance retained in earlier artifacts manifest.",
+      "source_model_card": "https://huggingface.co/pyannote/segmentation-3.0",
+      "artifacts": [
+        {
+          "filename": "model.int8.onnx",
+          "size_bytes": 1540506,
+          "sha256": "d582f4b4c6b48205de7e0643c57df0df5615a3c176189be3fc461e9d18827b5d"
+        }
+      ],
+      "android_execution_observed": true
+    },
+    {
+      "id": "sortformer-v2-q8",
+      "license": "CC-BY-4.0",
+      "license_note": "Official NVIDIA model card CC-BY-4.0.",
+      "source_model_card": "https://huggingface.co/nvidia/diar_streaming_sortformer_4spk-v2",
+      "revision": "84edd514b8ef68004c10086918cd62f2148cbd59",
+      "artifacts": [
+        {
+          "filename": "diar_streaming_sortformer_4spk-v2.q8_0.gguf",
+          "size_bytes": 147075776,
+          "sha256": "0679cfeb1ce356d0dea9470b31274f4bfc7eb927497d82005483770666da998a",
+          "url": "https://huggingface.co/nvidia/diar_streaming_sortformer_4spk-v2/resolve/84edd514b8ef68004c10086918cd62f2148cbd59/diar_streaming_sortformer_4spk-v2.q8_0.gguf"
+        }
+      ],
+      "android_execution_observed": true
+    },
+    {
+      "id": "pyannote-segmentation-fp32",
+      "bytes": 5992913,
+      "sha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079",
+      "source_archive_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2",
+      "source_model_card": "https://huggingface.co/pyannote/segmentation-3.0",
+      "status": "tested_on_android_as_segmentation_component"
+    }
+  ],
+  "android_plans": {
+    "android": {
+      "steps": [
+        {
+          "name": "pears04-301-331-nemotron-f32",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=pipeline2/nemotron/lib:lib:llama/lib",
+            "pipeline2/nemotron/bin/diarize_file",
+            "pipeline2/nemotron/model.f32.gguf",
+            "russian/pears04-301-331.wav",
+            "--gpu",
+            "-1",
+            "--preset",
+            "v3-offline",
+            "--rttm",
+            "pears04-301-331"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears04-301-331-sortformer-v2",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=pipeline2/nemotron/lib:lib:llama/lib",
+            "pipeline2/nemotron/bin/diarize_file",
+            "quick/diar_streaming_sortformer_4spk-v2.q8_0.gguf",
+            "russian/pears04-301-331.wav",
+            "--gpu",
+            "-1",
+            "--preset",
+            "offline",
+            "--rttm",
+            "pears04-301-331"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears04-301-331-titanet-small",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.int8.onnx",
+            "--embedding.model=titanet-small.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears04-301-331.wav"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears04-301-331-titanet-large",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.int8.onnx",
+            "--embedding.model=pipeline2/diarization/nemo_en_titanet_large.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears04-301-331.wav"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears22-345-375-nemotron-f32",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=pipeline2/nemotron/lib:lib:llama/lib",
+            "pipeline2/nemotron/bin/diarize_file",
+            "pipeline2/nemotron/model.f32.gguf",
+            "russian/pears22-345-375.wav",
+            "--gpu",
+            "-1",
+            "--preset",
+            "v3-offline",
+            "--rttm",
+            "pears22-345-375"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears22-345-375-sortformer-v2",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=pipeline2/nemotron/lib:lib:llama/lib",
+            "pipeline2/nemotron/bin/diarize_file",
+            "quick/diar_streaming_sortformer_4spk-v2.q8_0.gguf",
+            "russian/pears22-345-375.wav",
+            "--gpu",
+            "-1",
+            "--preset",
+            "offline",
+            "--rttm",
+            "pears22-345-375"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears22-345-375-titanet-small",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.int8.onnx",
+            "--embedding.model=titanet-small.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears22-345-375.wav"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears22-345-375-titanet-large",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.int8.onnx",
+            "--embedding.model=pipeline2/diarization/nemo_en_titanet_large.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears22-345-375.wav"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears23-382-412-nemotron-f32",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=pipeline2/nemotron/lib:lib:llama/lib",
+            "pipeline2/nemotron/bin/diarize_file",
+            "pipeline2/nemotron/model.f32.gguf",
+            "russian/pears23-382-412.wav",
+            "--gpu",
+            "-1",
+            "--preset",
+            "v3-offline",
+            "--rttm",
+            "pears23-382-412"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears23-382-412-sortformer-v2",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=pipeline2/nemotron/lib:lib:llama/lib",
+            "pipeline2/nemotron/bin/diarize_file",
+            "quick/diar_streaming_sortformer_4spk-v2.q8_0.gguf",
+            "russian/pears23-382-412.wav",
+            "--gpu",
+            "-1",
+            "--preset",
+            "offline",
+            "--rttm",
+            "pears23-382-412"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears23-382-412-titanet-small",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.int8.onnx",
+            "--embedding.model=titanet-small.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears23-382-412.wav"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears23-382-412-titanet-large",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.int8.onnx",
+            "--embedding.model=pipeline2/diarization/nemo_en_titanet_large.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears23-382-412.wav"
+          ],
+          "audio_seconds": 30.0
+        }
+      ]
+    },
+    "gain": {
+      "steps": [
+        {
+          "name": "pears04-301-331-gain-titanet-small",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.int8.onnx",
+            "--embedding.model=titanet-small.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears04-301-331-gain.wav"
+          ],
+          "audio_seconds": 30
+        },
+        {
+          "name": "pears22-345-375-gain-titanet-small",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.int8.onnx",
+            "--embedding.model=titanet-small.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears22-345-375-gain.wav"
+          ],
+          "audio_seconds": 30
+        },
+        {
+          "name": "pears23-382-412-gain-titanet-small",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.int8.onnx",
+            "--embedding.model=titanet-small.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears23-382-412-gain.wav"
+          ],
+          "audio_seconds": 30
+        }
+      ]
+    },
+    "fp32": {
+      "steps": [
+        {
+          "name": "pears04-301-331-fp32-titanet-small",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.fp32.onnx",
+            "--embedding.model=titanet-small.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears04-301-331.wav"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears22-345-375-fp32-titanet-small",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.fp32.onnx",
+            "--embedding.model=titanet-small.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears22-345-375.wav"
+          ],
+          "audio_seconds": 30.0
+        },
+        {
+          "name": "pears23-382-412-fp32-titanet-small",
+          "kind": "diarization",
+          "argv": [
+            "env",
+            "LD_LIBRARY_PATH=lib:llama/lib",
+            "bin/sherpa-onnx-offline-speaker-diarization",
+            "--segmentation.pyannote-model=segmentation.fp32.onnx",
+            "--embedding.model=titanet-small.onnx",
+            "--clustering.cluster-threshold=0.7",
+            "russian/pears23-382-412.wav"
+          ],
+          "audio_seconds": 30.0
+        }
+      ]
+    }
+  },
+  "android_runs": [
+    {
+      "name": "pears04-301-331-nemotron-f32",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "98091edbc9f6d5e65caf684dbed9d50b5a5cda365470a9b2ac9b68ddd5275bfd",
+      "stderr_sha256": "4f93946ccbbe98b5686865ebde0b2d30ab6e7cbae6e63e03b590435c8888e888",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 14,
+        "sampled_peak_tree_rss_kib": 426792,
+        "sampled_peak_tree_pss_kib": 417318,
+        "peak_tree_sum_vmhwm_kib": 426792,
+        "supervisor_peak_vmhwm_kib": 3944,
+        "pss_complete_samples": 14,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 418012,
+      "native_wall_seconds": 3.026404,
+      "conservative_observed_peak_bytes": 437035008,
+      "observed_peak_plus_reserve_bytes": 571252736,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 562262016,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.10088013333333333,
+      "score": {
+        "status": "scored",
+        "der": 0.10957688387269073,
+        "der_percent": 10.957688387269073,
+        "miss_speaker_seconds": 0.3072099069999954,
+        "false_alarm_speaker_seconds": 2.531856322000029,
+        "confusion_speaker_seconds": 0.0,
+        "error_speaker_seconds": 2.8390662290000246,
+        "reference_speaker_seconds": 25.909353584999966,
+        "mapping_hypothesis_to_reference": {
+          "speaker_1": "N",
+          "speaker_2": "R",
+          "speaker_3": "C"
+        },
+        "unmapped_reference_labels": [],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_1",
+          "speaker_2",
+          "speaker_3"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "nemotron-f32",
+      "fixture_id": "pears04-301-331",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears04-301-331-sortformer-v2",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "5e3e9dcfa6911749dccf687dadf43a7184c397fe6b308f5464c7a76dbddfe81d",
+      "stderr_sha256": "b08c224dbee2c19041a7ddaa505f38a7a11a25ae4d3690dc06b47a136eae04ed",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 12,
+        "sampled_peak_tree_rss_kib": 217772,
+        "sampled_peak_tree_pss_kib": 208470,
+        "peak_tree_sum_vmhwm_kib": 217772,
+        "supervisor_peak_vmhwm_kib": 3820,
+        "pss_complete_samples": 12,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 208920,
+      "native_wall_seconds": 2.72766,
+      "conservative_observed_peak_bytes": 222998528,
+      "observed_peak_plus_reserve_bytes": 357216256,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 348151808,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.090922,
+      "score": {
+        "status": "scored",
+        "der": 0.14438835417977622,
+        "der_percent": 14.438835417977621,
+        "miss_speaker_seconds": 0.0,
+        "false_alarm_speaker_seconds": 3.286646415000031,
+        "confusion_speaker_seconds": 0.454362506999999,
+        "error_speaker_seconds": 3.74100892200003,
+        "reference_speaker_seconds": 25.909353584999966,
+        "mapping_hypothesis_to_reference": {
+          "speaker_1": "N",
+          "speaker_2": null,
+          "speaker_3": "R",
+          "speaker_4": "C"
+        },
+        "unmapped_reference_labels": [],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_1",
+          "speaker_2",
+          "speaker_3",
+          "speaker_4"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "sortformer-v2",
+      "fixture_id": "pears04-301-331",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears04-301-331-titanet-small",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "907d7b7d3d71346e52f4363ea7601ae0d0b35e8237dfd583bfaff017357e675c",
+      "stderr_sha256": "e440e478cdf3b47736c8dec0a2cccdabf3628899f75f395dd7de1fbf4e161d97",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 6,
+        "sampled_peak_tree_rss_kib": 234260,
+        "sampled_peak_tree_pss_kib": 209654,
+        "peak_tree_sum_vmhwm_kib": 234260,
+        "supervisor_peak_vmhwm_kib": 3936,
+        "pss_complete_samples": 6,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 228144,
+      "native_wall_seconds": 1.111798,
+      "conservative_observed_peak_bytes": 239882240,
+      "observed_peak_plus_reserve_bytes": 374099968,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 367837184,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.037059933333333336,
+      "score": {
+        "status": "scored",
+        "der": 0.9609407468742915,
+        "der_percent": 96.09407468742916,
+        "miss_speaker_seconds": 24.89735358499997,
+        "false_alarm_speaker_seconds": 0.0,
+        "confusion_speaker_seconds": 0.0,
+        "error_speaker_seconds": 24.89735358499997,
+        "reference_speaker_seconds": 25.909353584999966,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "N"
+        },
+        "unmapped_reference_labels": [
+          "C",
+          "R"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "titanet-small",
+      "fixture_id": "pears04-301-331",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears04-301-331-titanet-large",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "c108857e030ff8c21838eec7a237ecf64e15a5d24748e6cb2c6777dbe92b7052",
+      "stderr_sha256": "b46ce7b3e4e3bd1d9bf3e2361d96c5e089700bb4109454a5fa0dea4bb0648575",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 9,
+        "sampled_peak_tree_rss_kib": 299360,
+        "sampled_peak_tree_pss_kib": 273690,
+        "peak_tree_sum_vmhwm_kib": 299992,
+        "supervisor_peak_vmhwm_kib": 3900,
+        "pss_complete_samples": 9,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 290936,
+      "native_wall_seconds": 1.681463,
+      "conservative_observed_peak_bytes": 307191808,
+      "observed_peak_plus_reserve_bytes": 441409536,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 432136192,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.056048766666666666,
+      "score": {
+        "status": "scored",
+        "der": 0.9609407468742915,
+        "der_percent": 96.09407468742916,
+        "miss_speaker_seconds": 24.89735358499997,
+        "false_alarm_speaker_seconds": 0.0,
+        "confusion_speaker_seconds": 0.0,
+        "error_speaker_seconds": 24.89735358499997,
+        "reference_speaker_seconds": 25.909353584999966,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "N"
+        },
+        "unmapped_reference_labels": [
+          "C",
+          "R"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "titanet-large",
+      "fixture_id": "pears04-301-331",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears22-345-375-nemotron-f32",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "0a53c6c8f9c153905ac4d7f7715de38f052c4524fdfbc03ada4136e2e62c0207",
+      "stderr_sha256": "90500d38c28cdcfd412e95ce38d0ca75ab6bc6db6af91a7dfc2441ec693fc7bd",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 6,
+        "sampled_peak_tree_rss_kib": 426556,
+        "sampled_peak_tree_pss_kib": 417410,
+        "peak_tree_sum_vmhwm_kib": 426556,
+        "supervisor_peak_vmhwm_kib": 3816,
+        "pss_complete_samples": 6,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 417928,
+      "native_wall_seconds": 1.368831,
+      "conservative_observed_peak_bytes": 436793344,
+      "observed_peak_plus_reserve_bytes": 571011072,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 562176000,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.0456277,
+      "score": {
+        "status": "scored",
+        "der": 0.2716928822741954,
+        "der_percent": 27.169288227419543,
+        "miss_speaker_seconds": 0.48682916600000503,
+        "false_alarm_speaker_seconds": 5.9422491430000255,
+        "confusion_speaker_seconds": 1.699586930999999,
+        "error_speaker_seconds": 8.128665240000029,
+        "reference_speaker_seconds": 29.91858002299998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_1": "C",
+          "speaker_2": "N",
+          "speaker_3": "R"
+        },
+        "unmapped_reference_labels": [],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_1",
+          "speaker_2",
+          "speaker_3"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "nemotron-f32",
+      "fixture_id": "pears22-345-375",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears22-345-375-sortformer-v2",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "18a970b85bf43b62e418fc1d14a9db2ef0b9febe2fb5eb08eee13d8e6eed7f9d",
+      "stderr_sha256": "fdcaa796dd13229ef03aa85790b68e5390004e0fa06fdf67e2e2bc78c41c01f2",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 14,
+        "sampled_peak_tree_rss_kib": 218004,
+        "sampled_peak_tree_pss_kib": 208525,
+        "peak_tree_sum_vmhwm_kib": 218004,
+        "supervisor_peak_vmhwm_kib": 3900,
+        "pss_complete_samples": 14,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 209088,
+      "native_wall_seconds": 3.886029,
+      "conservative_observed_peak_bytes": 223236096,
+      "observed_peak_plus_reserve_bytes": 357453824,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 348323840,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.12953430000000002,
+      "score": {
+        "status": "scored",
+        "der": 0.34328800979539753,
+        "der_percent": 34.32880097953975,
+        "miss_speaker_seconds": 6.077370842999991,
+        "false_alarm_speaker_seconds": 3.310790820000009,
+        "confusion_speaker_seconds": 0.8825281290000015,
+        "error_speaker_seconds": 10.270689792000002,
+        "reference_speaker_seconds": 29.91858002299998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_1": "C",
+          "speaker_3": "N"
+        },
+        "unmapped_reference_labels": [
+          "R"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_1",
+          "speaker_3"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "sortformer-v2",
+      "fixture_id": "pears22-345-375",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears22-345-375-titanet-small",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "1272dc19f5ef46d69a1c9822157886d5022809b54f7ec765ebcd12209352b221",
+      "stderr_sha256": "68c0e651e24c177382157c674004d10af62b095396558c7e40acc08b7026a7ba",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 13,
+        "sampled_peak_tree_rss_kib": 248060,
+        "sampled_peak_tree_pss_kib": 222459,
+        "peak_tree_sum_vmhwm_kib": 248060,
+        "supervisor_peak_vmhwm_kib": 3900,
+        "pss_complete_samples": 13,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 239332,
+      "native_wall_seconds": 2.641599,
+      "conservative_observed_peak_bytes": 254013440,
+      "observed_peak_plus_reserve_bytes": 388231168,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 379293696,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.08805329999999999,
+      "score": {
+        "status": "scored",
+        "der": 0.4468253919378199,
+        "der_percent": 44.68253919378199,
+        "miss_speaker_seconds": 9.540399214999985,
+        "false_alarm_speaker_seconds": 2.9928191920000087,
+        "confusion_speaker_seconds": 0.8351628380000022,
+        "error_speaker_seconds": 13.368381244999995,
+        "reference_speaker_seconds": 29.91858002299998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "C",
+          "speaker_01": "R"
+        },
+        "unmapped_reference_labels": [
+          "N"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00",
+          "speaker_01"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "titanet-small",
+      "fixture_id": "pears22-345-375",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears22-345-375-titanet-large",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "095353053888f6c1d49b9513cee0aa2b0a26af8c76a5f0ebe23ff2b23f8a9ba8",
+      "stderr_sha256": "01fe3af2bd54d053fb9581caf1d7faf1960b5053fcdd6e125e6f0754a4053777",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 29,
+        "sampled_peak_tree_rss_kib": 310944,
+        "sampled_peak_tree_pss_kib": 285691,
+        "peak_tree_sum_vmhwm_kib": 310944,
+        "supervisor_peak_vmhwm_kib": 3940,
+        "pss_complete_samples": 29,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 301936,
+      "native_wall_seconds": 5.71303,
+      "conservative_observed_peak_bytes": 318406656,
+      "observed_peak_plus_reserve_bytes": 452624384,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 443400192,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.19043433333333332,
+      "score": {
+        "status": "scored",
+        "der": 0.4468253919378199,
+        "der_percent": 44.68253919378199,
+        "miss_speaker_seconds": 9.540399214999985,
+        "false_alarm_speaker_seconds": 2.9928191920000087,
+        "confusion_speaker_seconds": 0.8351628380000022,
+        "error_speaker_seconds": 13.368381244999995,
+        "reference_speaker_seconds": 29.91858002299998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "C",
+          "speaker_01": "R"
+        },
+        "unmapped_reference_labels": [
+          "N"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00",
+          "speaker_01"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "titanet-large",
+      "fixture_id": "pears22-345-375",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears23-382-412-nemotron-f32",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "8bc22cb43f1299b1d3c31fa9922fb1660721908fa157e15e09f6bcf59cf9812e",
+      "stderr_sha256": "8d19557a72e67478505525c55c35b27b316aa35847c5ff38595f4a3ae8c508be",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 11,
+        "sampled_peak_tree_rss_kib": 426644,
+        "sampled_peak_tree_pss_kib": 417299,
+        "peak_tree_sum_vmhwm_kib": 426644,
+        "supervisor_peak_vmhwm_kib": 3788,
+        "pss_complete_samples": 11,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 417944,
+      "native_wall_seconds": 2.470381,
+      "conservative_observed_peak_bytes": 436883456,
+      "observed_peak_plus_reserve_bytes": 571101184,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 562192384,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.08234603333333333,
+      "score": {
+        "status": "scored",
+        "der": 0.26048233858061626,
+        "der_percent": 26.048233858061625,
+        "miss_speaker_seconds": 0.7678799669999954,
+        "false_alarm_speaker_seconds": 5.7246936430000135,
+        "confusion_speaker_seconds": 0.600669486000001,
+        "error_speaker_seconds": 7.09324309600001,
+        "reference_speaker_seconds": 27.23118632399998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_1": "C",
+          "speaker_2": "N",
+          "speaker_3": "R"
+        },
+        "unmapped_reference_labels": [],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_1",
+          "speaker_2",
+          "speaker_3"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "nemotron-f32",
+      "fixture_id": "pears23-382-412",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears23-382-412-sortformer-v2",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "f212a1b1ba185e5dea1e9bd1034e0817988e98c3d7bd559761c4d19ea1c6a6e5",
+      "stderr_sha256": "353724bf784b7c1786d99c5169eedbef5c072f6441c4a7cf071bdfb07377c5a2",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 14,
+        "sampled_peak_tree_rss_kib": 217944,
+        "sampled_peak_tree_pss_kib": 208577,
+        "peak_tree_sum_vmhwm_kib": 217944,
+        "supervisor_peak_vmhwm_kib": 3912,
+        "pss_complete_samples": 14,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 208900,
+      "native_wall_seconds": 3.773552,
+      "conservative_observed_peak_bytes": 223174656,
+      "observed_peak_plus_reserve_bytes": 357392384,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 348131328,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.12578506666666667,
+      "score": {
+        "status": "scored",
+        "der": 0.48246093676135426,
+        "der_percent": 48.24609367613542,
+        "miss_speaker_seconds": 4.074328926999998,
+        "false_alarm_speaker_seconds": 5.023142603000015,
+        "confusion_speaker_seconds": 4.0405121329999965,
+        "error_speaker_seconds": 13.13798366300001,
+        "reference_speaker_seconds": 27.23118632399998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_1": "C",
+          "speaker_3": "R"
+        },
+        "unmapped_reference_labels": [
+          "N"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_1",
+          "speaker_3"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "sortformer-v2",
+      "fixture_id": "pears23-382-412",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears23-382-412-titanet-small",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "f0e8f71782aec95331c09f8133aba31370913690909a3c9a9a3978b9c5e7e326",
+      "stderr_sha256": "572bdaf4a14b858b9004bda9bb1c3d9c0f86975ada3824b8292b965e9c2b899b",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 13,
+        "sampled_peak_tree_rss_kib": 251112,
+        "sampled_peak_tree_pss_kib": 226152,
+        "peak_tree_sum_vmhwm_kib": 251164,
+        "supervisor_peak_vmhwm_kib": 3804,
+        "pss_complete_samples": 13,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 242412,
+      "native_wall_seconds": 2.536128,
+      "conservative_observed_peak_bytes": 257191936,
+      "observed_peak_plus_reserve_bytes": 391409664,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 382447616,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.0845376,
+      "score": {
+        "status": "scored",
+        "der": 0.5112522867845075,
+        "der_percent": 51.12522867845075,
+        "miss_speaker_seconds": 8.887284282999989,
+        "false_alarm_speaker_seconds": 2.4970979590000084,
+        "confusion_speaker_seconds": 2.537624037999999,
+        "error_speaker_seconds": 13.922006279999996,
+        "reference_speaker_seconds": 27.23118632399998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "C"
+        },
+        "unmapped_reference_labels": [
+          "N",
+          "R"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "titanet-small",
+      "fixture_id": "pears23-382-412",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears23-382-412-titanet-large",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "514f71d628cd3032304a3cbc03bd73cf3872a0e79c964c121e7cce4bd76851ca",
+      "stderr_sha256": "9008e84ae74cc2281ae7f10dda6c2960c74d03c37946d690e20e2db4ab9679d4",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 34,
+        "sampled_peak_tree_rss_kib": 312976,
+        "sampled_peak_tree_pss_kib": 287898,
+        "peak_tree_sum_vmhwm_kib": 313028,
+        "supervisor_peak_vmhwm_kib": 3792,
+        "pss_complete_samples": 34,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 304116,
+      "native_wall_seconds": 6.818092,
+      "conservative_observed_peak_bytes": 320540672,
+      "observed_peak_plus_reserve_bytes": 454758400,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 445632512,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.22726973333333333,
+      "score": {
+        "status": "scored",
+        "der": 0.5112522867845075,
+        "der_percent": 51.12522867845075,
+        "miss_speaker_seconds": 8.887284282999989,
+        "false_alarm_speaker_seconds": 2.4970979590000084,
+        "confusion_speaker_seconds": 2.537624037999999,
+        "error_speaker_seconds": 13.922006279999996,
+        "reference_speaker_seconds": 27.23118632399998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "C"
+        },
+        "unmapped_reference_labels": [
+          "N",
+          "R"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "model_id": "titanet-large",
+      "fixture_id": "pears23-382-412",
+      "execution_location": "android_x86_64"
+    },
+    {
+      "name": "pears04-301-331-gain-titanet-small",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "907d7b7d3d71346e52f4363ea7601ae0d0b35e8237dfd583bfaff017357e675c",
+      "stderr_sha256": "46cb54054c7c64ce8f3a12d04c5b14e33039a0b22929697c731ffc2de757219f",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 6,
+        "sampled_peak_tree_rss_kib": 221996,
+        "sampled_peak_tree_pss_kib": 197094,
+        "peak_tree_sum_vmhwm_kib": 221996,
+        "supervisor_peak_vmhwm_kib": 3764,
+        "pss_complete_samples": 6,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 229856,
+      "native_wall_seconds": 1.134406,
+      "conservative_observed_peak_bytes": 239226880,
+      "observed_peak_plus_reserve_bytes": 373444608,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 369590272,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.037813533333333336,
+      "model_id": "gain-titanet-small",
+      "fixture_id": "pears04-301-331",
+      "execution_location": "android_x86_64",
+      "score": {
+        "status": "scored",
+        "der": 0.9609407468742915,
+        "der_percent": 96.09407468742916,
+        "miss_speaker_seconds": 24.89735358499997,
+        "false_alarm_speaker_seconds": 0.0,
+        "confusion_speaker_seconds": 0.0,
+        "error_speaker_seconds": 24.89735358499997,
+        "reference_speaker_seconds": 25.909353584999966,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "N"
+        },
+        "unmapped_reference_labels": [
+          "C",
+          "R"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      }
+    },
+    {
+      "name": "pears22-345-375-gain-titanet-small",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "950cffc4b23b43c84d66f94436e606f93251ebbf6795eabf4bebae1c70f3c0a6",
+      "stderr_sha256": "69eb9c4356d242cbf44f3282fc53c6d9b18e70e39a7b9e39e4b11806a33851c0",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 11,
+        "sampled_peak_tree_rss_kib": 248368,
+        "sampled_peak_tree_pss_kib": 223142,
+        "peak_tree_sum_vmhwm_kib": 248368,
+        "supervisor_peak_vmhwm_kib": 3936,
+        "pss_complete_samples": 11,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 239740,
+      "native_wall_seconds": 2.034193,
+      "conservative_observed_peak_bytes": 254328832,
+      "observed_peak_plus_reserve_bytes": 388546560,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 379711488,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.06780643333333333,
+      "model_id": "gain-titanet-small",
+      "fixture_id": "pears22-345-375",
+      "execution_location": "android_x86_64",
+      "score": {
+        "status": "scored",
+        "der": 0.4265035718670612,
+        "der_percent": 42.650357186706124,
+        "miss_speaker_seconds": 8.932399214999984,
+        "false_alarm_speaker_seconds": 2.9928191920000087,
+        "confusion_speaker_seconds": 0.8351628380000022,
+        "error_speaker_seconds": 12.760381244999994,
+        "reference_speaker_seconds": 29.91858002299998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "C",
+          "speaker_01": "R"
+        },
+        "unmapped_reference_labels": [
+          "N"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00",
+          "speaker_01"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      }
+    },
+    {
+      "name": "pears23-382-412-gain-titanet-small",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "ef822c6778cf0b1d5e128fea5848fef8046a9a561137ea18d06da9793e339279",
+      "stderr_sha256": "91d364e3c87bb6ac62833b706344aa3d758ac8720a92e5a8aad927ba97a477ab",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 11,
+        "sampled_peak_tree_rss_kib": 262648,
+        "sampled_peak_tree_pss_kib": 237312,
+        "peak_tree_sum_vmhwm_kib": 262648,
+        "supervisor_peak_vmhwm_kib": 3924,
+        "pss_complete_samples": 11,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 257136,
+      "native_wall_seconds": 2.098985,
+      "conservative_observed_peak_bytes": 268951552,
+      "observed_peak_plus_reserve_bytes": 403169280,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 397524992,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.06996616666666666,
+      "model_id": "gain-titanet-small",
+      "fixture_id": "pears23-382-412",
+      "execution_location": "android_x86_64",
+      "score": {
+        "status": "scored",
+        "der": 0.5118765710076674,
+        "der_percent": 51.187657100766735,
+        "miss_speaker_seconds": 8.904284282999988,
+        "false_alarm_speaker_seconds": 2.497097959000011,
+        "confusion_speaker_seconds": 2.537624037999999,
+        "error_speaker_seconds": 13.939006279999997,
+        "reference_speaker_seconds": 27.23118632399998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "C"
+        },
+        "unmapped_reference_labels": [
+          "N",
+          "R"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      }
+    },
+    {
+      "name": "pears04-301-331-fp32-titanet-small",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "7edafc0883a8f9a95e97eb9f45e0b22a59864af82f32a92504b7b41caea3399b",
+      "stderr_sha256": "054ef6e2af2ea097bbfb69325be63ad531966c2b4e127a0695076284ec392c71",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 16,
+        "sampled_peak_tree_rss_kib": 278352,
+        "sampled_peak_tree_pss_kib": 253400,
+        "peak_tree_sum_vmhwm_kib": 278352,
+        "supervisor_peak_vmhwm_kib": 3796,
+        "pss_complete_samples": 15,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 269496,
+      "native_wall_seconds": 2.957407,
+      "conservative_observed_peak_bytes": 285032448,
+      "observed_peak_plus_reserve_bytes": 419250176,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 410181632,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.09858023333333334,
+      "model_id": "fp32-titanet-small",
+      "fixture_id": "pears04-301-331",
+      "execution_location": "android_x86_64",
+      "score": {
+        "status": "scored",
+        "der": 0.34404857059655714,
+        "der_percent": 34.40485705965571,
+        "miss_speaker_seconds": 0.32393979799999784,
+        "false_alarm_speaker_seconds": 5.34558621300003,
+        "confusion_speaker_seconds": 3.244550054999994,
+        "error_speaker_seconds": 8.914076066000021,
+        "reference_speaker_seconds": 25.909353584999966,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "N",
+          "speaker_01": "R",
+          "speaker_02": null,
+          "speaker_03": "C"
+        },
+        "unmapped_reference_labels": [],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00",
+          "speaker_01",
+          "speaker_02",
+          "speaker_03"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      }
+    },
+    {
+      "name": "pears22-345-375-fp32-titanet-small",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "ef3ac4914c6b91c570795fe2560afeca7e917ef2122f4ca9d5e9ff47ab99d268",
+      "stderr_sha256": "9819c0629a072083907315718cb09f361a96b2a1435d5d0c727c78a576f57070",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 14,
+        "sampled_peak_tree_rss_kib": 262272,
+        "sampled_peak_tree_pss_kib": 236937,
+        "peak_tree_sum_vmhwm_kib": 262272,
+        "supervisor_peak_vmhwm_kib": 3892,
+        "pss_complete_samples": 14,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 253268,
+      "native_wall_seconds": 2.658803,
+      "conservative_observed_peak_bytes": 268566528,
+      "observed_peak_plus_reserve_bytes": 402784256,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 393564160,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.08862676666666666,
+      "model_id": "fp32-titanet-small",
+      "fixture_id": "pears22-345-375",
+      "execution_location": "android_x86_64",
+      "score": {
+        "status": "scored",
+        "der": 0.23117852928457597,
+        "der_percent": 23.117852928457598,
+        "miss_speaker_seconds": 1.4461787480000068,
+        "false_alarm_speaker_seconds": 4.215598725000025,
+        "confusion_speaker_seconds": 1.2547558549999982,
+        "error_speaker_seconds": 6.91653332800003,
+        "reference_speaker_seconds": 29.91858002299998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "C",
+          "speaker_01": "N",
+          "speaker_03": "R"
+        },
+        "unmapped_reference_labels": [],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00",
+          "speaker_01",
+          "speaker_03"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      }
+    },
+    {
+      "name": "pears23-382-412-fp32-titanet-small",
+      "kind": "diarization",
+      "audio_seconds": 30.0,
+      "status": "accepted",
+      "accepted": true,
+      "adb_exit_code": 0,
+      "stdout_sha256": "8d1fcc5573f177d50ff1c5872fb6d400cda64ff4c21a204d89ebf743fa23d789",
+      "stderr_sha256": "9fb9824eb9dc7b082bb52560c5d552fa66e60fa4eab2f5f48b146fe644bbfc76",
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 15,
+        "sampled_peak_tree_rss_kib": 268216,
+        "sampled_peak_tree_pss_kib": 243182,
+        "peak_tree_sum_vmhwm_kib": 268264,
+        "supervisor_peak_vmhwm_kib": 3896,
+        "pss_complete_samples": 15,
+        "remaining_owned_processes": 0
+      },
+      "native_peak_rss_kib": 259232,
+      "native_wall_seconds": 2.846225,
+      "conservative_observed_peak_bytes": 274702336,
+      "observed_peak_plus_reserve_bytes": 408920064,
+      "budget_check_passed": true,
+      "native_peak_plus_reserve_bytes": 399671296,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.09487416666666666,
+      "model_id": "fp32-titanet-small",
+      "fixture_id": "pears23-382-412",
+      "execution_location": "android_x86_64",
+      "score": {
+        "status": "scored",
+        "der": 0.29311542038714805,
+        "der_percent": 29.311542038714805,
+        "miss_speaker_seconds": 2.795170167999995,
+        "false_alarm_speaker_seconds": 4.573983844000013,
+        "confusion_speaker_seconds": 0.6127266150000032,
+        "error_speaker_seconds": 7.981880627000011,
+        "reference_speaker_seconds": 27.23118632399998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_00": "C",
+          "speaker_01": "N",
+          "speaker_02": "R"
+        },
+        "unmapped_reference_labels": [],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_00",
+          "speaker_01",
+          "speaker_02"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      }
+    }
+  ],
+  "android_aggregates": {
+    "nemotron-f32": {
+      "miss_speaker_seconds": 1.5619190399999958,
+      "false_alarm_speaker_seconds": 14.198799108000069,
+      "confusion_speaker_seconds": 2.300256417,
+      "error_speaker_seconds": 18.060974565000063,
+      "reference_speaker_seconds": 83.05911993199993,
+      "der_percent": 21.744721807534788,
+      "median_process_seconds": 2.470381,
+      "max_observed_peak_plus_reserve_bytes": 571252736
+    },
+    "sortformer-v2": {
+      "miss_speaker_seconds": 10.15169976999999,
+      "false_alarm_speaker_seconds": 11.620579838000054,
+      "confusion_speaker_seconds": 5.377402768999997,
+      "error_speaker_seconds": 27.149682377000044,
+      "reference_speaker_seconds": 83.05911993199993,
+      "der_percent": 32.68717799951089,
+      "median_process_seconds": 3.773552,
+      "max_observed_peak_plus_reserve_bytes": 357453824
+    },
+    "titanet-small": {
+      "miss_speaker_seconds": 43.32503708299994,
+      "false_alarm_speaker_seconds": 5.489917151000017,
+      "confusion_speaker_seconds": 3.372786876000001,
+      "error_speaker_seconds": 52.18774110999996,
+      "reference_speaker_seconds": 83.05911993199993,
+      "der_percent": 62.83204198735285,
+      "median_process_seconds": 2.536128,
+      "max_observed_peak_plus_reserve_bytes": 391409664
+    },
+    "titanet-large": {
+      "miss_speaker_seconds": 43.32503708299994,
+      "false_alarm_speaker_seconds": 5.489917151000017,
+      "confusion_speaker_seconds": 3.372786876000001,
+      "error_speaker_seconds": 52.18774110999996,
+      "reference_speaker_seconds": 83.05911993199993,
+      "der_percent": 62.83204198735285,
+      "median_process_seconds": 5.71303,
+      "max_observed_peak_plus_reserve_bytes": 454758400
+    },
+    "gain-titanet-small": {
+      "miss_speaker_seconds": 42.73403708299994,
+      "false_alarm_speaker_seconds": 5.48991715100002,
+      "confusion_speaker_seconds": 3.372786876000001,
+      "error_speaker_seconds": 51.59674110999996,
+      "reference_speaker_seconds": 83.05911993199993,
+      "der_percent": 62.120500617201266,
+      "median_process_seconds": 2.034193,
+      "max_observed_peak_plus_reserve_bytes": 403169280
+    },
+    "fp32-titanet-small": {
+      "miss_speaker_seconds": 4.565288713999999,
+      "false_alarm_speaker_seconds": 14.135168782000068,
+      "confusion_speaker_seconds": 5.112032524999996,
+      "error_speaker_seconds": 23.812490021000063,
+      "reference_speaker_seconds": 83.05911993199993,
+      "der_percent": 28.66932618657075,
+      "median_process_seconds": 2.846225,
+      "max_observed_peak_plus_reserve_bytes": 419250176
+    }
+  },
+  "gain_diagnostic": [
+    {
+      "fixture_id": "pears04-301-331",
+      "gain_factor": 3.4534723763035275,
+      "before_peak": 0.27508544921875,
+      "before_rms": 0.02117809921169202,
+      "purpose": "fixed RMS0.1 with peak0.95 headroom, diagnostic; no labels used"
+    },
+    {
+      "fixture_id": "pears22-345-375",
+      "gain_factor": 7.019075535512965,
+      "before_peak": 0.135345458984375,
+      "before_rms": 0.011760947164016662,
+      "purpose": "fixed RMS0.1 with peak0.95 headroom, diagnostic; no labels used"
+    },
+    {
+      "fixture_id": "pears23-382-412",
+      "gain_factor": 2.1430262976731376,
+      "before_peak": 0.44329833984375,
+      "before_rms": 0.01510103427710827,
+      "purpose": "fixed RMS0.1 with peak0.95 headroom, diagnostic; no labels used"
+    }
+  ],
+  "msdd_host": {
+    "location": "Windows host CPU, not Android",
+    "full_cascade": true,
+    "nemo_version": "2.4.0",
+    "model_version": "diar_msdd_telephonic1.0.1",
+    "threads": 4,
+    "oracle_vad": false,
+    "oracle_num_speakers": false,
+    "protocol": "collar0, overlap scored, UEM each 0–30 s; global one-to-one mapping per recording; manually annotated Words-tier references",
+    "limitations": [
+      "Three short excerpts of Russian Pears research demos, not a representative benchmark",
+      "The Words-tier reference may omit unannotated listener/nonlexical vocalizations; exact boundary precision differs from acoustic speech",
+      "Host import/load/Numba cache effects differ between processes; not mobile timing or Android RAM"
+    ],
+    "runs": [
+      {
+        "fixture_id": "pears04-301-331",
+        "status": "completed",
+        "wall_seconds": 38.68799999996554,
+        "sampled_tree_rss_peak_bytes": 1268060160,
+        "largest_process_os_peak_rss_bytes": 1286254592,
+        "import_seconds": 7.39000000001397,
+        "load_seconds": 2.89000000001397,
+        "inference_seconds": 26.75,
+        "speaker_counts": {
+          "reference": 3,
+          "hypothesis": 3
+        },
+        "der": 0.21402804171889653,
+        "der_percent": 21.402804171889652,
+        "miss_speaker_seconds": 4.44833083099999,
+        "false_alarm_speaker_seconds": 0.6289772460000208,
+        "confusion_speaker_seconds": 0.4680201330000031,
+        "error_speaker_seconds": 5.545328210000014,
+        "reference_speaker_seconds": 25.909353584999966
+      },
+      {
+        "fixture_id": "pears22-345-375",
+        "status": "completed",
+        "wall_seconds": 17.265999999945052,
+        "sampled_tree_rss_peak_bytes": 1212313600,
+        "largest_process_os_peak_rss_bytes": 1245351936,
+        "import_seconds": 6.280999999959022,
+        "load_seconds": 2.062999999965541,
+        "inference_seconds": 7.545999999972992,
+        "speaker_counts": {
+          "reference": 3,
+          "hypothesis": 1
+        },
+        "der": 0.3071416991694044,
+        "der_percent": 30.714169916940442,
+        "miss_speaker_seconds": 6.313433517999995,
+        "false_alarm_speaker_seconds": 1.1448534950000162,
+        "confusion_speaker_seconds": 1.7309564920000016,
+        "error_speaker_seconds": 9.189243505000013,
+        "reference_speaker_seconds": 29.91858002299998
+      },
+      {
+        "fixture_id": "pears23-382-412",
+        "status": "completed",
+        "wall_seconds": 16.70400000002701,
+        "sampled_tree_rss_peak_bytes": 1214857216,
+        "largest_process_os_peak_rss_bytes": 1243336704,
+        "import_seconds": 5.829000000027008,
+        "load_seconds": 2.187999999965541,
+        "inference_seconds": 7.281000000075437,
+        "speaker_counts": {
+          "reference": 3,
+          "hypothesis": 2
+        },
+        "der": 0.33767544397784066,
+        "der_percent": 33.767544397784064,
+        "miss_speaker_seconds": 5.510181366999992,
+        "false_alarm_speaker_seconds": 2.203995043000008,
+        "confusion_speaker_seconds": 1.4811265219999967,
+        "error_speaker_seconds": 9.195302931999997,
+        "reference_speaker_seconds": 27.23118632399998
+      }
+    ],
+    "aggregate": {
+      "miss_speaker_seconds": 16.271945715999976,
+      "false_alarm_speaker_seconds": 3.977825784000045,
+      "confusion_speaker_seconds": 3.6801031470000014,
+      "error_speaker_seconds": 23.929874647000023,
+      "reference_speaker_seconds": 83.05911993199993,
+      "der": 0.28810652781526325,
+      "der_percent": 28.810652781526326
+    }
+  },
+  "msdd_sources": {
+    "model": "diar_msdd_telephonic",
+    "ngc_version": "1.0.1",
+    "nemo_version": "2.4.0",
+    "license": "NGC Terms of Use per official model card; no interactive gated terms accepted",
+    "source_model_card": "https://catalog.ngc.nvidia.com/orgs/nvidia/nemo/models/diar_msdd_telephonic/-?_lr=1",
+    "artifacts": [
+      {
+        "file": "diar_msdd_telephonic.nemo",
+        "url": "https://api.ngc.nvidia.com/v2/models/nvidia/nemo/diar_msdd_telephonic/versions/1.0.1/files/diar_msdd_telephonic.nemo",
+        "size_bytes": 107609008,
+        "sha256": "450f6bd279a3f78348f6e883359f9b3b34687dbd15814fd0f10e446ca0f708f6",
+        "download_seconds": 26.5
+      },
+      {
+        "file": "diar_infer_telephonic.yaml",
+        "url": "https://raw.githubusercontent.com/NVIDIA/NeMo/v2.4.0/examples/speaker_tasks/diarization/conf/inference/diar_infer_telephonic.yaml",
+        "size_bytes": 7646,
+        "sha256": "48464d67501409de5bceca31ab96b1a4aa500ba0bae4b5223d3a5c8fec09013c",
+        "download_seconds": 0.4690000000409782
+      },
+      {
+        "file": "vad_multilingual_marblenet.nemo",
+        "url": "https://api.ngc.nvidia.com/v2/models/nvidia/nemo/vad_multilingual_marblenet/versions/1.10.0/files/vad_multilingual_marblenet.nemo",
+        "ngc_version": "1.10.0",
+        "size_bytes": 501760,
+        "sha256": "71de4645391bc800c5e9e91b1a828a3496447a079d8052bdc4db9d52f17f673c"
+      }
+    ],
+    "runtime_note": "Isolated NeMo 2.4.0 PyPI runtime plus cached Torch 2.9.1+cpu / torchaudio 2.9.1+cpu. Host CPU reference only; not Android."
+  },
+  "community1_host": {
+    "location": "host_windows_cpu",
+    "not_android_proof": true,
+    "full_cascade": true,
+    "pipeline": "pyannote/speaker-diarization-community-1",
+    "model_revision": "3533c8cf8e369892e6b79ff1bf80f7b0286a54ee",
+    "generated_utc": "2026-11-06T21:40:41.175946+00:00",
+    "versions": {
+      "pyannote.audio": "4.0.7",
+      "torch": "2.9.1+cpu",
+      "torchaudio": "2.9.1+cpu",
+      "numpy": "2.3.4",
+      "scipy": "1.18.1",
+      "huggingface-hub": "0.36.0",
+      "pytorch-metric-learning": "2.9.0",
+      "pyannote-core": "6.1.0",
+      "pyannote-database": "6.2.0",
+      "pyannote-metrics": "4.2.0",
+      "pyannote-pipeline": "4.1.0",
+      "lightning": "2.6.6",
+      "torchmetrics": "1.9.0",
+      "scikit-learn": "1.9.1",
+      "torchcodec": "0.8.1"
+    },
+    "threads": 4,
+    "interop_threads": 1,
+    "oracle_vad": false,
+    "oracle_num_speakers": false,
+    "batch_controls": "Only public segmentation_batch_size and embedding_batch_size set to4, actual readback checked. Source weights/config unchanged.",
+    "official_config": {
+      "default_segmentation_batch_size": 32,
+      "default_embedding_batch_size": 32,
+      "clustering": "VBxClustering",
+      "threshold": 0.6,
+      "Fa": 0.07,
+      "Fb": 0.8,
+      "embedding_exclude_overlap": true,
+      "min_duration_off": 0.0
+    },
+    "protocol": {
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem_seconds": [
+        0,
+        30
+      ],
+      "primary_output": "regular RTTM",
+      "exclusive_output_scored_as_primary": false,
+      "speaker_mapping": "global one-to-one per recording"
+    },
+    "budget": {
+      "host_budget_bytes": 2000000000,
+      "reserve_bytes_inside_budget": 134217728,
+      "batch4_observed_limit_bytes": 1865782272,
+      "measurement": "process tree including Windows venv launcher and interpreter; sum per-process OS high-water RSS conservative",
+      "sampling_interval_ms": 100,
+      "hard_limit_guarantee": false
+    },
+    "limitations": [
+      "Host CPU reference, not an Android or APK measurement.",
+      "Three short Russian research-demo clips, not a corpus-level model ranking.",
+      "Only primary-role manual vocal annotations; unannotated Listener/extra voices can distort DER.",
+      "No oracle speaker count/VAD, no clustering/threshold changes.",
+      "Exclusive RTTM retained separately; regular overlap-preserving RTTM is scored.",
+      "Default32 profile exceeded2GB; invalid initial launcher-only memory measurement is retained only as a separate attempt."
+    ],
+    "runs": [
+      {
+        "fixture_id": "pears04-301-331",
+        "status": "completed",
+        "profile": "official_pipeline_batch4",
+        "process_wall_seconds": 20.350925100035965,
+        "wall_seconds": 20.350925100035965,
+        "observed_peak_rss_bytes": 848113664,
+        "sampled_tree_rss_peak_bytes": 847708160,
+        "largest_process_os_peak_rss_bytes": 843051008,
+        "tree_sum_individual_peak_rss_bytes": 848113664,
+        "memory_measurement_valid": true,
+        "host_observed_limit_bytes": 1865782272,
+        "observed_peak_plus_reserve_bytes": 982331392,
+        "budget_with_reserve_passed": true,
+        "model_load_seconds": 0.9977004999527708,
+        "load_seconds": 0.9977004999527708,
+        "inference_seconds": 10.06451629998628,
+        "import_and_overhead_seconds": 9.288708300096914,
+        "segmentation_batch_size": 4,
+        "embedding_batch_size": 4,
+        "timeout_seconds": 60.0,
+        "speaker_counts": {
+          "reference": 3,
+          "regular": 2,
+          "exclusive": 1
+        },
+        "regular_rttm_sha256": "98c3f657d10cfc3adb8e8d9dc76bcfb396a80cdf21f89ea71e9bc4a3226ad54c",
+        "exclusive_rttm_sha256": "a32d65a6c32876f0c1b189ef1d9202942dc74bceb63e07d46991eb59bf28d0b7",
+        "reference_rttm_sha256": "bed5db83ed0ebc1786f48f175cb7ddb89ade05b14d493d67b01ffdb52fcc5304",
+        "der": 0.33044842334301827,
+        "der_percent": 33.044842334301826,
+        "miss_speaker_seconds": 0.3229397979999966,
+        "false_alarm_speaker_seconds": 3.5405862130000285,
+        "confusion_speaker_seconds": 4.698179030999992,
+        "error_speaker_seconds": 8.561705042000018,
+        "reference_speaker_seconds": 25.909353584999966
+      },
+      {
+        "fixture_id": "pears22-345-375",
+        "status": "completed",
+        "profile": "official_pipeline_batch4",
+        "process_wall_seconds": 17.840611100080423,
+        "wall_seconds": 17.840611100080423,
+        "observed_peak_rss_bytes": 837726208,
+        "sampled_tree_rss_peak_bytes": 833601536,
+        "largest_process_os_peak_rss_bytes": 832663552,
+        "tree_sum_individual_peak_rss_bytes": 837726208,
+        "memory_measurement_valid": true,
+        "host_observed_limit_bytes": 1865782272,
+        "observed_peak_plus_reserve_bytes": 971943936,
+        "budget_with_reserve_passed": true,
+        "model_load_seconds": 1.031721999985166,
+        "load_seconds": 1.031721999985166,
+        "inference_seconds": 10.279118600068614,
+        "import_and_overhead_seconds": 6.529770500026643,
+        "segmentation_batch_size": 4,
+        "embedding_batch_size": 4,
+        "timeout_seconds": 60.0,
+        "speaker_counts": {
+          "reference": 3,
+          "regular": 2,
+          "exclusive": 1
+        },
+        "regular_rttm_sha256": "9331b9f796006fccfd34820e2cec00fd456327345d4f13beb99c87cf7b50dc2c",
+        "exclusive_rttm_sha256": "33d5bc013c75ef3285c5b46fda8709d8f76eb96e4ed443f3c9bac2421802aa73",
+        "reference_rttm_sha256": "a7c4192133d0af5c57e754e6a7404f7eb5151c871a83216029a0a286184af4a3",
+        "der": 0.2286458832518513,
+        "der_percent": 22.86458832518513,
+        "miss_speaker_seconds": 1.3797601449999999,
+        "false_alarm_speaker_seconds": 2.7971801220000225,
+        "confusion_speaker_seconds": 2.6638198880000017,
+        "error_speaker_seconds": 6.840760155000024,
+        "reference_speaker_seconds": 29.91858002299998
+      },
+      {
+        "fixture_id": "pears23-382-412",
+        "status": "completed",
+        "profile": "official_pipeline_batch4",
+        "process_wall_seconds": 18.01863589999266,
+        "wall_seconds": 18.01863589999266,
+        "observed_peak_rss_bytes": 838426624,
+        "sampled_tree_rss_peak_bytes": 826839040,
+        "largest_process_os_peak_rss_bytes": 833368064,
+        "tree_sum_individual_peak_rss_bytes": 838426624,
+        "memory_measurement_valid": true,
+        "host_observed_limit_bytes": 1865782272,
+        "observed_peak_plus_reserve_bytes": 972644352,
+        "budget_with_reserve_passed": true,
+        "model_load_seconds": 1.0657098999945447,
+        "load_seconds": 1.0657098999945447,
+        "inference_seconds": 10.39628789993003,
+        "import_and_overhead_seconds": 6.556638100068085,
+        "segmentation_batch_size": 4,
+        "embedding_batch_size": 4,
+        "timeout_seconds": 60.0,
+        "speaker_counts": {
+          "reference": 3,
+          "regular": 2,
+          "exclusive": 1
+        },
+        "regular_rttm_sha256": "80bb7f607cf0088d45b26dfc85b3b38e969bad895b904cdd7d3dc1b8f97818fc",
+        "exclusive_rttm_sha256": "690b92eb816a2628c22cf9197c36184f848f53152ab083f55404ac7e3ea6cab9",
+        "reference_rttm_sha256": "a697abac98fd7774ac6d2ac09247b24ba0ac131d9f5d27e8d8178cb44291cc38",
+        "der": 0.42419417632273143,
+        "der_percent": 42.419417632273145,
+        "miss_speaker_seconds": 2.7077610799999925,
+        "false_alarm_speaker_seconds": 3.810574756000012,
+        "confusion_speaker_seconds": 5.032974816999998,
+        "error_speaker_seconds": 11.551310653000002,
+        "reference_speaker_seconds": 27.23118632399998
+      }
+    ],
+    "aggregate": {
+      "completed_runs": 3,
+      "error_speaker_seconds": 26.953775850000042,
+      "reference_speaker_seconds": 83.05911993199993,
+      "weighted_der": 0.32451314042415763,
+      "weighted_der_percent": 32.45131404241576,
+      "total_process_wall_seconds": 56.21017210010905,
+      "max_observed_peak_rss_bytes": 848113664,
+      "all_budget_with_reserve_passed": true
+    },
+    "attempts": [
+      {
+        "fixture_id": "pears04-301-331",
+        "profile": "official_default_batch32",
+        "status": "memory_rejected",
+        "guard_status": "memory_limit",
+        "process_wall_seconds": 8.516444899956696,
+        "observed_peak_rss_bytes": 2029797376,
+        "sampled_tree_rss_peak_bytes": 2026016768,
+        "host_memory_limit_bytes": 2000000000,
+        "timeout_seconds": 40.0,
+        "der_percent": null,
+        "counted_in_aggregate": false
+      },
+      {
+        "fixture_id": "pears22-345-375",
+        "profile": "official_default_batch32",
+        "status": "memory_rejected",
+        "guard_status": "memory_limit",
+        "process_wall_seconds": 8.407570600043982,
+        "observed_peak_rss_bytes": 2051698688,
+        "sampled_tree_rss_peak_bytes": 2048278528,
+        "host_memory_limit_bytes": 2000000000,
+        "timeout_seconds": 40.0,
+        "der_percent": null,
+        "counted_in_aggregate": false
+      },
+      {
+        "fixture_id": "pears23-382-412",
+        "profile": "official_default_batch32",
+        "status": "memory_rejected",
+        "guard_status": "memory_limit",
+        "process_wall_seconds": 8.409315300057642,
+        "observed_peak_rss_bytes": 2043125760,
+        "sampled_tree_rss_peak_bytes": 2041479168,
+        "host_memory_limit_bytes": 2000000000,
+        "timeout_seconds": 40.0,
+        "der_percent": null,
+        "counted_in_aggregate": false
+      },
+      {
+        "fixture_id": "pears04-301-331",
+        "profile": "official_default_batch32",
+        "status": "completed_invalid_memory_measurement",
+        "process_wall_seconds": 17.79731619998347,
+        "observed_peak_rss_bytes": null,
+        "memory_measurement_valid": false,
+        "der_percent": 33.044842334301826,
+        "counted_in_aggregate": false,
+        "limitation": "Inference completed, but the initial monitor observed only Windows venv launcher. Its memory numbers are invalid and excluded."
+      }
+    ]
+  },
+  "community1_sources": {
+    "repository": "pyannote/speaker-diarization-community-1",
+    "revision": "3533c8cf8e369892e6b79ff1bf80f7b0286a54ee",
+    "license": "CC-BY-4.0",
+    "artifacts": [
+      {
+        "filename": "config.yaml",
+        "bytes": 444,
+        "sha256": "5ce2bfa9a938dc132cec1172592d65173cbb8f444ea1e4133f10f9391de155be",
+        "url": "https://huggingface.co/pyannote/speaker-diarization-community-1/resolve/3533c8cf8e369892e6b79ff1bf80f7b0286a54ee/config.yaml"
+      },
+      {
+        "filename": "segmentation/pytorch_model.bin",
+        "bytes": 5906507,
+        "sha256": "7ad24338d844fb95985486eb1a464e32d229f6d7a03c9abe60f978bacf3f816e",
+        "url": "https://huggingface.co/pyannote/speaker-diarization-community-1/resolve/3533c8cf8e369892e6b79ff1bf80f7b0286a54ee/segmentation/pytorch_model.bin"
+      },
+      {
+        "filename": "embedding/pytorch_model.bin",
+        "bytes": 26646242,
+        "sha256": "6f10ff60898a1d185fa22e1d11e0bfa8a92efec811f11bca48cb8cafebefd929",
+        "url": "https://huggingface.co/pyannote/speaker-diarization-community-1/resolve/3533c8cf8e369892e6b79ff1bf80f7b0286a54ee/embedding/pytorch_model.bin"
+      },
+      {
+        "filename": "plda/plda.npz",
+        "bytes": 133852,
+        "sha256": "9b77bcd840692710dd3496f62ecfeed8d8e5f002fd991b785079b244eab7d255",
+        "url": "https://huggingface.co/pyannote/speaker-diarization-community-1/resolve/3533c8cf8e369892e6b79ff1bf80f7b0286a54ee/plda/plda.npz"
+      },
+      {
+        "filename": "plda/xvec_transform.npz",
+        "bytes": 134376,
+        "sha256": "325f1ce8e48f7e55e9c8aa47e05d2766b7c48c4b25b8de8dd751e7a4cc5fbe8f",
+        "url": "https://huggingface.co/pyannote/speaker-diarization-community-1/resolve/3533c8cf8e369892e6b79ff1bf80f7b0286a54ee/plda/xvec_transform.npz"
+      }
+    ]
+  }
+}
