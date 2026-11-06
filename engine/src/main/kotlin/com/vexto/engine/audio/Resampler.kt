@@ -24,6 +24,7 @@ class Resampler(inRate: Int, outRate: Int, zeroCrossings: Int = 16) {
     private var bufferStart = 0L
     private var bufferSize = 0
     private var produced = 0L
+    private val out = FloatArray(1024)
 
     init {
         val g = gcd(inRate, outRate)
@@ -39,6 +40,9 @@ class Resampler(inRate: Int, outRate: Int, zeroCrossings: Int = 16) {
                 (cutoff * sinc(cutoff * d) * blackman(d / (half + 1))).toFloat()
             }
         }
+        // Тишина перед началом записи: первым выходам не нужна проверка границ
+        bufferStart = -(half - 1).toLong()
+        bufferSize = half - 1
     }
 
     /** Добавляет [count] входных отсчётов и отдаёт готовые выходные в [sink]. */
@@ -55,7 +59,6 @@ class Resampler(inRate: Int, outRate: Int, zeroCrossings: Int = 16) {
     }
 
     private fun drain(sink: (FloatArray, Int) -> Unit, flushing: Boolean, inputEnd: Long = Long.MAX_VALUE) {
-        val out = FloatArray(1024)
         var n = 0
         val available = bufferStart + bufferSize
         while (true) {
@@ -65,12 +68,9 @@ class Resampler(inRate: Int, outRate: Int, zeroCrossings: Int = 16) {
             if (flushing && base >= inputEnd) break
             val phase = ((pos % up) * phases / up).toInt()
             val taps = table[phase]
+            val k = (base - half + 1 - bufferStart).toInt()
             var acc = 0f
-            var k = (base - half + 1 - bufferStart).toInt()
-            for (i in taps.indices) {
-                if (k >= 0) acc += taps[i] * buffer[k]
-                k++
-            }
+            for (i in taps.indices) acc += taps[i] * buffer[k + i]
             out[n++] = acc
             produced++
             if (n == out.size) {

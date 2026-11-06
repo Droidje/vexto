@@ -46,7 +46,7 @@ internal object AudioDecoder {
             while (true) {
                 currentCoroutineContext().ensureActive()
                 if (!inputDone) {
-                    val index = codec.dequeueInputBuffer(TimeoutUs)
+                    val index = codec.dequeueInputBuffer(0)
                     if (index >= 0) {
                         val size = extractor.readSampleData(codec.getInputBuffer(index)!!, 0)
                         if (size < 0) {
