@@ -12,3 +12,4 @@ local.properties
 # llama.cpp и модели скачиваются скриптами из scripts/
 llm/third_party/
 *.gguf
+*.gguf.part
