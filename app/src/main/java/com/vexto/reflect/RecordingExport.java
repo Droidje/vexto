@@ -1,0 +1,88 @@
+package com.vexto.reflect;
+
+import android.content.Intent;
+import android.webkit.MimeTypeMap;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.Locale;
+import java.util.regex.Pattern;
+
+/** Documents produced from a saved recording and its optional transcript. */
+enum RecordingExport {
+    JSON(4, "Экспортировать JSON", "application/json", "json"),
+    MARKDOWN(5, "Экспортировать MD", "text/markdown", "md"),
+    AUDIO(6, "Экспортировать звук", null, null);
+
+    private static final Pattern MARKDOWN_PUNCTUATION = Pattern.compile("\\p{Punct}");
+    final int request;
+    final String label;
+    private final String mime, extension;
+
+    RecordingExport(int request, String label, String mime, String extension) {
+        this.request = request;
+        this.label = label;
+        this.mime = mime;
+        this.extension = extension;
+    }
+
+    static RecordingExport forRequest(int request) {
+        for (RecordingExport export : values()) {
+            if (export.request == request) return export;
+        }
+        return null;
+    }
+
+    Intent createDocument(File audio, String title) {
+        String suffix = this == AUDIO ? audioExtension(audio) : extension;
+        String type = this == AUDIO ? MimeTypeMap.getSingleton().getMimeTypeFromExtension(suffix) : mime;
+        String name = title.replaceAll("[\\p{Cntrl}/\\\\:*?\"<>|]", "_").trim();
+        if (name.isEmpty() || name.equals(".") || name.equals("..")) name = "vexto";
+        if (!name.toLowerCase(Locale.ROOT).endsWith("." + suffix)) name += "." + suffix;
+        return new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                .setType(type == null ? "application/octet-stream" : type)
+                .putExtra(Intent.EXTRA_TITLE, name);
+    }
+
+    void write(OutputStream stream, File audio, ReflectTranscript transcript, String title) throws IOException {
+        if (this == AUDIO) {
+            Files.copy(audio.toPath(), stream);
+            return;
+        }
+        if (transcript == null || transcript.lines.isEmpty()) throw new IOException("No transcript to export");
+        if (this == JSON) {
+            stream.write(transcript.encode());
+        } else {
+            Writer markdown = new OutputStreamWriter(stream, StandardCharsets.UTF_8);
+            markdown.write("# " + escape(title).replace('\n', ' ').replace('\r', ' ') + "\n\n");
+            for (ReflectTranscript.Line line : transcript.lines) {
+                String speaker = escape(line.speakerId).replace('\n', ' ').replace('\r', ' ');
+                markdown.write("**" + timestamp(line.startMs) + " – " + timestamp(line.endMs)
+                        + " · " + speaker + "**\n\n> ");
+                markdown.write(escape(line.text).replace("\r\n", "\n").replace('\r', '\n').replace("\n", "\n> "));
+                markdown.write("\n\n");
+            }
+            markdown.flush();
+        }
+    }
+
+    static String audioExtension(File file) {
+        String name = file.getName();
+        int dot = name.lastIndexOf('.');
+        return dot >= 0 ? name.substring(dot + 1).toLowerCase(Locale.ROOT) : "audio";
+    }
+
+    private static String timestamp(int millis) {
+        int seconds = millis / 1000;
+        return String.format(Locale.ROOT, "%02d:%02d:%02d.%03d", seconds / 3600,
+                seconds / 60 % 60, seconds % 60, millis % 1000);
+    }
+
+    private static String escape(String text) {
+        return MARKDOWN_PUNCTUATION.matcher(text).replaceAll("\\\\$0");
+    }
+}

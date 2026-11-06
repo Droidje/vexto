@@ -27,7 +27,7 @@ import java.util.function.IntConsumer;
 
 /** Connects the conversation page to private storage and the system document picker. */
 final class ReflectTranscriptController {
-    private static final int PICK_JSON = 3, EXPORT_JSON = 4;
+    private static final int PICK_JSON = 3;
     private final Activity activity;
     private final ReflectView view;
     private final ReflectPreferences preferences;
@@ -128,24 +128,34 @@ final class ReflectTranscriptController {
         activity.startActivityForResult(picker, PICK_JSON);
     }
 
-    void export() {
-        if (file == null || transcript == null || loading) {
-            notice.accept(previewKey != null ? "Это пример из макета" : "Нет транскрипта для экспорта");
+    void exportOptions() {
+        if (file == null || loading) {
+            notice.accept(previewKey != null ? "Это пример из макета" : "Данные записи ещё загружаются");
             return;
         }
-        Intent output = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                .setType("application/json")
-                .putExtra(Intent.EXTRA_TITLE, activity.getString(R.string.app_name) + "-transcript.json");
-        activity.startActivityForResult(output, EXPORT_JSON);
+        Sheet menu = sheet("Экспорт записи");
+        if (transcript != null && !transcript.lines.isEmpty()) {
+            menu.option(RecordingExport.JSON.label, () -> export(RecordingExport.JSON));
+            menu.option(RecordingExport.MARKDOWN.label, () -> export(RecordingExport.MARKDOWN));
+        }
+        menu.option(RecordingExport.AUDIO.label, () -> export(RecordingExport.AUDIO));
+        menu.show();
+    }
+
+    private void export(RecordingExport format) {
+        if (file == null) return;
+        activity.startActivityForResult(format.createDocument(file, title), format.request);
     }
 
     boolean onActivityResult(int request, int result, Intent data) {
-        if (request != PICK_JSON && request != EXPORT_JSON) return false;
+        RecordingExport format = RecordingExport.forRequest(request);
+        if (request != PICK_JSON && format == null) return false;
         if (result != Activity.RESULT_OK || data == null || data.getData() == null || file == null) return true;
         File recording = file;
         Uri uri = data.getData();
         int current = generation;
         ReflectTranscript snapshot = transcript;
+        String exportTitle = title;
         io.execute(() -> {
             try {
                 if (request == PICK_JSON) {
@@ -163,18 +173,17 @@ final class ReflectTranscriptController {
                         notice.accept("Транскрипт импортирован");
                     });
                 } else {
-                    ReflectTranscript source = snapshot == null ? store.load(recording) : snapshot;
-                    if (source == null) throw new IOException("No transcript to export");
-                    byte[] json = source.encode();
+                    ReflectTranscript source = snapshot;
+                    if (format != RecordingExport.AUDIO && source == null) source = store.load(recording);
                     try (OutputStream stream = activity.getContentResolver().openOutputStream(uri, "wt")) {
-                        if (stream == null) throw new IOException("No transcript output");
-                        stream.write(json);
+                        if (stream == null) throw new IOException("No export output");
+                        format.write(stream, recording, source, exportTitle);
                     }
-                    deliver(current, () -> notice.accept("Транскрипт экспортирован"));
+                    deliver(current, () -> notice.accept("Файл экспортирован"));
                 }
             } catch (IOException | RuntimeException error) {
                 deliver(current, () -> notice.accept(request == PICK_JSON
-                        ? "Не удалось импортировать JSON с репликами" : "Не удалось экспортировать транскрипт"));
+                        ? "Не удалось импортировать JSON с репликами" : "Не удалось экспортировать файл"));
             }
         });
         return true;
@@ -185,7 +194,6 @@ final class ReflectTranscriptController {
         if (file != null) {
             menu.option("Переименовать", () -> rename());
             menu.option("Импортировать транскрипт", this::pick);
-            if (transcript != null) menu.option("Экспортировать JSON", this::export);
         }
         menu.option("Настройки чтения", this::styleOptions);
         menu.show();

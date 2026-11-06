@@ -393,7 +393,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     @Override public void closeTranscript() { closeRecorder(); }
-    @Override public void exportTranscript() { transcripts.export(); }
+    @Override public void openExportOptions() { transcripts.exportOptions(); }
     @Override public void importTranscript() { transcripts.pick(); }
     @Override public void openTranscriptOptions() { transcripts.options(); }
     @Override public void openTranscriptStyle() { transcripts.styleOptions(); }

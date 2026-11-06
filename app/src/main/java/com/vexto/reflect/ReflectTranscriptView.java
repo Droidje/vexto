@@ -30,7 +30,7 @@ import java.util.Set;
 final class ReflectTranscriptView extends FrameLayout {
     interface Actions {
         void closeTranscript();
-        void exportTranscript();
+        void openExportOptions();
         void importTranscript();
         void openTranscriptOptions();
         void openTranscriptStyle();
@@ -122,7 +122,7 @@ final class ReflectTranscriptView extends FrameLayout {
         pill(16, 60, 48, 48, false);
         icon("transcript_back", "Назад", 16, 60, 48, 48, false, actions::closeTranscript);
         pill(281, 60, 96, 48, false);
-        icon("transcript_export", "Экспорт JSON", 281, 60, 48, 48, false, actions::exportTranscript);
+        icon("transcript_export", "Поделиться", 281, 60, 48, 48, false, actions::openExportOptions);
         icon("transcript_more", "Действия разговора", 329, 60, 48, 48, false, actions::openTranscriptOptions);
 
         View shade = new View(getContext());
