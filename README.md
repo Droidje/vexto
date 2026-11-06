@@ -86,4 +86,4 @@ CI дополнительно выполняет `bash -n tools/benchmarks/andro
 
 [Быстрые сравнения на открытых записях, Emo и шумоподавление](docs/research/quick-audio-features.md): короткие AMI train/test проверки с DER, опциональный GigaAM-Emo и полная стенограмма без саммаризации.
 
-[Русские разговоры, Community-1 и полный NeMo MSDD](docs/research/russian-diarization.md): короткие русские пробы, сравнение INT8/FP32 segmentation, отдельные результаты Android и ноутбука.
+[Русские разговоры, Community-1 и полный NeMo MSDD](docs/research/russian-diarization.md): короткие русские пробы, сравнение INT8/FP32 segmentation, отдельные результаты Android и ноутбука. Там же — прямой DER production-диаризатора из dev APK на тех же файлах.
