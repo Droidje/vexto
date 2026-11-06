@@ -240,6 +240,26 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
         } finally { db.endTransaction(); }
     }
 
+    /** An engine-owned refinement uses the same acoustic labels as its provisional transcript. */
+    void retainAcrossRefinement(File recording, ReflectTranscript provisional, ReflectTranscript refined)
+            throws IOException {
+        String key = recordingKey(recording), before = revision(provisional), after = revision(refined);
+        if (before.equals(after)) return;
+        Set<String> localIds = new HashSet<>();
+        for (var line : refined.lines) localIds.add(line.speakerId);
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            for (String localId : localIds) {
+                db.execSQL("INSERT OR IGNORE INTO links(recording, revision, local_id, profile_id) "
+                                + "SELECT recording, ?, local_id, profile_id FROM links "
+                                + "WHERE recording=? AND revision=? AND local_id=?",
+                        new Object[]{after, key, before, localId});
+            }
+            db.setTransactionSuccessful();
+        } finally { db.endTransaction(); }
+    }
+
     private Set<String> profileNames() {
         Set<String> names = new HashSet<>();
         for (Profile profile : list()) names.add(profile.name);

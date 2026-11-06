@@ -149,4 +149,20 @@ public class SpeakerDirectoryTest {
         store.save(first, base);
         assertEquals("legacy-uuid", profiles.assign(first, base).get("speaker_1"));
     }
+
+    @Test public void retainsConfirmedProfileAcrossEngineRefinement() throws Exception {
+        var preliminary = transcript("Первый вариант распознавания");
+        var refined = new ReflectTranscript(List.of(new ReflectTranscript.Line("speaker_1", 0, 5800, "Другой вариант"),
+                new ReflectTranscript.Line("speaker_2", 5900, 7500, "Другая реплика")));
+        store.save(first, preliminary);
+        profiles.assign(first, preliminary);
+        var chosen = profiles.create("Подтверждённый");
+        profiles.link(first, preliminary, "speaker_1", chosen.id());
+        assertTrue(store.replaceIfSame(first, preliminary, refined));
+        profiles.retainAcrossRefinement(first, preliminary, refined);
+        var links = profiles.assign(first, refined);
+        assertEquals(chosen.id(), links.get("speaker_1"));
+        assertNotEquals(chosen.id(), links.get("speaker_2"));
+        assertEquals("Другой вариант", directory.detail(chosen.id()).utterances().get(0).text());
+    }
 }

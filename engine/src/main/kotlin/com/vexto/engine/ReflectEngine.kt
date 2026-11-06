@@ -28,6 +28,10 @@ object ReflectEngine {
         fun onError(error: Throwable)
     }
 
+    interface DetailedListener : Listener {
+        fun onCoreReady(transcript: Transcript, artifactDirectory: String)
+    }
+
     /** Запущенная расшифровка. После [cancel] колбэки больше не приходят. */
     class Task internal constructor(private val job: Job) {
         fun cancel() = job.cancel()
@@ -51,6 +55,7 @@ object ReflectEngine {
                     when (event) {
                         is TranscriptionEvent.Progress -> listener.onProgress(event.stage, event.fraction)
                         is TranscriptionEvent.Partial -> listener.onPartial(event.transcript)
+                        is TranscriptionEvent.CoreReady -> (listener as? DetailedListener)?.onCoreReady(event.transcript, event.artifactDirectory)
                         is TranscriptionEvent.Done -> listener.onDone(event.transcript, event.stats)
                     }
                 }

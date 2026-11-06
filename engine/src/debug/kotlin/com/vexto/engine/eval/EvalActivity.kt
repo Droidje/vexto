@@ -60,6 +60,7 @@ class EvalActivity : Activity() {
                 engine.transcribe(Uri.fromFile(input), TranscriptionOptions(speakerCount = speakers)).collect { event ->
                     when (event) {
                         is TranscriptionEvent.Progress -> show("${input.name}: ${event.stage.title} ${(event.fraction * 100).toInt()}%")
+                        is TranscriptionEvent.CoreReady -> Unit
                         is TranscriptionEvent.Partial -> Unit
                         is TranscriptionEvent.Done -> withContext(Dispatchers.IO) {
                             File(dir, "${input.nameWithoutExtension}.json").writeText(TranscriptExport.json(event.transcript))

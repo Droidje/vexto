@@ -1,7 +1,9 @@
 package com.vexto.engine.model
 
+import kotlinx.serialization.Serializable
+
 /** Local speaker signature. Only vectors with the exact same modelId are comparable. */
-data class VoiceEmbedding(
+@Serializable data class VoiceEmbedding(
     val modelId: String,
     val values: List<Float>,
     val speechMs: Long,

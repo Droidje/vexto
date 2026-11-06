@@ -21,9 +21,9 @@ final class ReflectProcessingView extends ViewGroup {
     private static final int ROW_TOP = 297, ROW_SPACING = 72;
     private static final float ORB_SCALE = 40f / 238f;
     private static final Step[] STEPS = {
-            new Step("Предобработка аудио", Stage.Preparing, Stage.Decoding),
+            new Step("Предобработка аудио", Stage.Preparing, Stage.Denoising),
             new Step("Распознавание речи", Stage.Recognition, Stage.Recognition),
-            new Step("Определение спикеров", Stage.Diarization, Stage.Diarization),
+            new Step("Определение спикеров", Stage.Diarization, Stage.Voiceprints),
             new Step("Умная постобработка", Stage.Assembly, Stage.Emotion)
     };
 
@@ -175,12 +175,16 @@ final class ReflectProcessingView extends ViewGroup {
         if (stage == null) return 100;
         return switch (stage) {
             case Preparing -> part(0, 5, percent);
-            case Decoding -> part(5, 15, percent);
-            case Diarization -> part(15, 40, percent);
-            case Recognition -> part(40, 75, percent);
-            case Assembly -> part(75, 78, percent);
-            case Punctuation -> part(78, 80, percent);
-            case Emotion -> part(80, 99, percent);
+            case Decoding -> part(5, 10, percent);
+            case Denoising -> part(10, 13, percent);
+            case Diarization -> part(13, 20, percent);
+            case Voiceprints -> part(20, 25, percent);
+            case Recognition -> part(25, 40, percent);
+            case Comparison -> part(40, 70, percent);
+            case Selection -> part(70, 93, percent);
+            case Assembly -> part(93, 94, percent);
+            case Punctuation -> part(94, 95, percent);
+            case Emotion -> part(95, 99, percent);
         };
     }
 
