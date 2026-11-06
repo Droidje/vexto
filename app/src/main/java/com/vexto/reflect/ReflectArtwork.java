@@ -21,7 +21,6 @@ final class ReflectArtwork {
     final Typeface regular;
     final Typeface semibold;
     final Typeface duration;
-    final Typeface status = Typeface.create("sans-serif", Typeface.BOLD);
 
     private final Map<String, Bitmap> photos = new HashMap<>();
     private final Map<String, Icon> icons = new HashMap<>();

@@ -226,14 +226,6 @@ final class ReflectView extends ViewGroup {
         } else {
             drawScreen(canvas, screen, menuProgress);
         }
-        String status = switch (screen) {
-            case HOME -> "status_home";
-            case RECORDS, RECORDING -> "status_recording";
-            case REVIEW -> "status_review";
-            default -> "status_menu_ready";
-        };
-        artwork.icon(canvas, status, 276.1f, 21.05f);
-        text(canvas, "9:41", 47.3f, 33.3f, 17.13f, WHITE, artwork.status, false);
         canvas.restore();
     }
 
