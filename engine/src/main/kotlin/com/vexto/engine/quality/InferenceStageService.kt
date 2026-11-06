@@ -58,7 +58,11 @@ class InferenceStageService : Service() {
                 }
             }
             main.post(watchdog)
-            val result = StageDispatcher.run(this, request)
+            val result = StageDispatcher.run(this, request) { fraction ->
+                runCatching { reply.send(Message.obtain(null, Progress).apply {
+                    data = Bundle().apply { putFloat("fraction", fraction) }
+                }) }
+            }
             withContext(Dispatchers.Main) {
                 if (!finished) JobFiles.save(request.stage.resultFile(job), result.copy(completed = true, requestId = request.requestId,
                     elapsedMs = SystemClock.elapsedRealtime() - started, peakCombinedRssBytes = maxOf(peak, result.peakCombinedRssBytes)))
@@ -88,5 +92,5 @@ class InferenceStageService : Service() {
         main.postDelayed({ android.os.Process.killProcess(android.os.Process.myPid()) }, 250)
     }
 
-    companion object { const val Run = 1; const val Done = 2; const val Cancel = 3; const val Shutdown = 4 }
+    companion object { const val Run = 1; const val Done = 2; const val Cancel = 3; const val Shutdown = 4; const val Progress = 5 }
 }

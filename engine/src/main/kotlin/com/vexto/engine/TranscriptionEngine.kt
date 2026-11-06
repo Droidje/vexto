@@ -6,6 +6,7 @@ import android.os.SystemClock
 import com.vexto.engine.audio.AudioDecoder
 import com.vexto.engine.audio.PcmWave
 import com.vexto.engine.model.*
+import com.vexto.engine.model.export.TranscriptExport
 import com.vexto.engine.models.QualityModelStore
 import com.vexto.engine.quality.*
 import com.vexto.engine.review.*
@@ -54,8 +55,8 @@ class TranscriptionEngine(context: Context) {
         val audioMs = PcmWave.inspect(original).sampleCount * 1000 / 16000
         val client = StageClient(context)
         val results = mutableListOf<WorkerResult>()
-        suspend fun worker(kind: WorkerStage, name: Stage, input: String): WorkerResult = stage(name) {
-            client.run(WorkerRequest(kind, job.absolutePath, input)).also { result ->
+        suspend fun worker(kind: WorkerStage, name: Stage, input: String): WorkerResult = stage(name) { progress ->
+            client.run(WorkerRequest(kind, job.absolutePath, input), progress).also { result ->
                 results += result
                 peak = maxOf(peak, result.peakCombinedRssBytes)
                 warnings += result.warnings
@@ -87,6 +88,7 @@ class TranscriptionEngine(context: Context) {
             val core = attachVoices(assembler.assemble(plan, gigaCandidates, turns).transcript)
             // Originals are already durable before this callback. Refinement never destroys this checkpoint.
             JobFiles.write(File(job, "core.txt"), plan.chunks.joinToString("\n") { gigaCandidates.getValue(it.id).text }.toByteArray())
+            JobFiles.write(File(job, "core.json"), TranscriptExport.json(core).toByteArray(Charsets.UTF_8))
             send(TranscriptionEvent.CoreReady(core, job.absolutePath))
         }
         val whisper = worker(WorkerStage.WHISPER, Stage.Comparison, view)
@@ -122,13 +124,27 @@ class TranscriptionEngine(context: Context) {
             .getOrElse { warnings += "EMOTION_MAPPING_FAILED:${it.javaClass.simpleName}"; transcript }
         val unscored = transcript.utterances.count { it.endMs > it.startMs && it.emotionProbabilities == null }
         if (unscored > 0) warnings += "EMOTION_FAILED:unscored_utterances=$unscored"
+        val coverage = PipelineCoverage(plan.chunks.size,
+            all.values.count { it.source == AsrSource.GIGAAM }, all.values.count { it.source == AsrSource.WHISPER },
+            selected.size, choices.values.count { it.status == AsrSelectionStatus.SELECTED_BY_LLM.name }, unresolved)
+        val withinBudget = peak + AppRss.ReserveBytes <= AppRss.BudgetBytes
+        val allStagesSucceeded = results.map { it.stage }.toSet() == WorkerStage.entries.toSet() &&
+            results.all { it.completed && it.error == null }
+        val fullProfile = coverage.fullProfileCompleted(allStagesSucceeded, warnings, withinBudget)
+        val export = File(job, "transcript.json")
+        val metadata = File(job, "transcript.metadata.json")
+        JobFiles.write(export, TranscriptExport.json(transcript).toByteArray(Charsets.UTF_8))
+        JobFiles.write(metadata, TranscriptExport.jsonWithMetadata(transcript).toByteArray(Charsets.UTF_8))
         val stats = ProcessingStats(audioMs, SystemClock.elapsedRealtime() - started, times,
             peak / (1024 * 1024), "GigaAM-v3-e2e+Whisper-large-v3-q5_0; selection-only Qwen3-1.7B-Q4_K_M", 4,
-            artifactDirectory = job.absolutePath, warnings = warnings.distinct(), complete = selected.size == plan.chunks.size,
-            fullProfileCompleted = results.all { it.completed && it.error == null } && warnings.none { it.contains("_FAILED:") || it.startsWith("ASR_MISSING:") },
-            selectionResolved = unresolved == 0)
-        JobFiles.save(File(job, "completion.json"), mapOf("complete" to stats.complete.toString(),
-            "warnings" to stats.warnings.joinToString("\n"), "peak_rss_bytes" to peak.toString()))
+            artifactDirectory = job.absolutePath, warnings = warnings.distinct(), complete = coverage.complete,
+            fullProfileCompleted = fullProfile, selectionResolved = coverage.selectionResolved)
+        JobFiles.save(File(job, "completion.json"), PipelineReport(audioMs = audioMs, processingMs = stats.processingMs,
+            modelProfile = models.manifest.version, coverage = coverage, complete = coverage.complete,
+            fullProfileCompleted = fullProfile, selectionResolved = coverage.selectionResolved,
+            peakRssBytes = peak, reserveBytes = AppRss.ReserveBytes, budgetBytes = AppRss.BudgetBytes,
+            stageMs = times.mapKeys { it.key.name }, stages = results.toList(),
+            transcriptSha256 = JobFiles.sha256(export), metadataSha256 = JobFiles.sha256(metadata), warnings = stats.warnings, modelVerificationReused = models.verificationReused))
         send(TranscriptionEvent.Done(transcript, stats))
     }
 

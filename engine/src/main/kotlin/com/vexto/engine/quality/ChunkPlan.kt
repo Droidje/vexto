@@ -9,7 +9,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AudioChunk(val id: String, val fromSample: Long, val toSample: Long, val wav: String, val inputSha256: String) {
     val startMs: Long get() = fromSample * 1000 / 16000
-    val durationMs: Long get() = (toSample - fromSample) * 1000 / 16000
+    /** Millisecond upper bound for model/word bounds; sample endpoints remain the exact clock. */
+    val durationMs: Long get() = (toSample - fromSample + 15) / 16
 }
 
 @Serializable
@@ -35,13 +36,21 @@ data class ChunkPlan(val sampleCount: Long, val chunks: List<AudioChunk>) {
                 var to = minOf(from + MaxSamples, count)
                 if (to < count) {
                     // Last quiet 200ms in the second half; bound model prompt and RAM to <=10s.
+                    val windowStart = from + MaxSamples / 2
+                    val window = PcmWave.readFloat(input, windowStart, (to - windowStart).toInt())
                     var at = to - 3200
-                    while (at >= from + MaxSamples / 2) {
-                        val samples = PcmWave.readFloat(input, at, 3200)
-                        val energy = samples.fold(0.0) { sum, value -> sum + value * value } / samples.size
+                    while (at >= windowStart) {
+                        val offset = (at - windowStart).toInt()
+                        var sum = 0.0
+                        // Preserve the previous left-to-right Float-square/Double-sum arithmetic.
+                        for (i in offset until offset + 3200) sum += window[i] * window[i]
+                        val energy = sum / 3200
                         if (energy < 0.0001) { to = at + 1600; break }
                         at -= 1600
                     }
+                    // Do not isolate a sub-millisecond terminal WAV. Move the boundary,
+                    // retaining every PCM sample and the existing per-chunk maximum.
+                    if (count - to in 1L..15L) to = count - 16
                 }
                 val id = "chunk_%06d".format(result.size)
                 val relative = "chunks/$id.wav"
