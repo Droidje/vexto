@@ -63,6 +63,21 @@ final class ReflectLibraryRow extends View {
         return row;
     }
 
+    static ReflectLibraryRow speaker(Context context, ReflectArtwork art, ReflectCatalog.Speaker item) {
+        return new ReflectLibraryRow(context, 84, item.name + ", " + item.duration, (canvas, paint) -> {
+            art.image(canvas, item.avatar, 16, 0, 64, 64);
+            Typeface nameFont = item.name.codePoints().anyMatch(cp -> Character.UnicodeScript.of(cp)
+                    == Character.UnicodeScript.CYRILLIC) ? art.semibold : art.latinSemibold;
+            text(canvas, paint, item.name, 92, 38.5f, 18, Color.WHITE, nameFont, -.306f);
+            float badgeX = 104 + paint.measureText(item.name);
+            style(paint, 14, 0xffae86e8, art.medium, -.42f);
+            float badgeWidth = paint.measureText(item.duration) + 16;
+            paint.setColor(0xff220053);
+            canvas.drawRoundRect(badgeX, 19, badgeX + badgeWidth, 45, 10, 10, paint);
+            text(canvas, paint, item.duration, badgeX + 8, 37, 14, 0xffae86e8, art.medium, -.42f);
+        });
+    }
+
     private static void recordingCover(Canvas canvas, ReflectArtwork art, boolean wave, float y) {
         canvas.save();
         Path clip = new Path();

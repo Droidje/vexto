@@ -25,9 +25,9 @@ import java.util.List;
 
 /** Native stage with the design's 393 × 852 coordinate space and Android touch targets. */
 final class ReflectView extends ViewGroup {
-    enum Screen { HOME, RECORDS, MENU, READY, RECORDING, REVIEW }
+    enum Screen { HOME, RECORDS, SPEAKERS, MENU, READY, RECORDING, REVIEW }
 
-    interface Actions {
+    interface Actions extends ReflectLibraryView.Actions {
         void toggleMenu();
         void attach();
         void openRecorder();
@@ -37,7 +37,7 @@ final class ReflectView extends ViewGroup {
         void play();
         void save();
         void send();
-        void openRecording(ReflectCatalog.Recording recording);
+        void toggleSpeakerPreview();
     }
 
     private static final float WIDTH = 393, HEIGHT = 852;
@@ -48,8 +48,9 @@ final class ReflectView extends ViewGroup {
     private static final String[] TAB_NAMES = {"Главная", "Записи", "Спикеры", "Настройки"};
     private static final float[] TAB_CENTERS = {56, 121.5f, 188.5f, 255.5f};
     private final Actions actions;
+    private final boolean designPreview;
     private final ReflectArtwork artwork;
-    private final ReflectLibraryView records;
+    private final ReflectLibraryView records, speakers;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final List<RectF> childAreas = new ArrayList<>();
     private final Path stage = new Path();
@@ -66,11 +67,13 @@ final class ReflectView extends ViewGroup {
     private boolean playing;
     private ValueAnimator animator;
 
-    ReflectView(Context context, Actions actions) {
+    ReflectView(Context context, Actions actions, boolean designPreview) {
         super(context);
         this.actions = actions;
+        this.designPreview = designPreview;
         artwork = new ReflectArtwork(context.getAssets());
-        records = new ReflectLibraryView(context, artwork, actions::openRecording);
+        records = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.RECORDS, actions);
+        speakers = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.SPEAKERS, actions);
         setWillNotDraw(false);
         stage.addRoundRect(0, 0, WIDTH, HEIGHT, 47, 47, Path.Direction.CW);
         glass.addRoundRect(175, 661, 377, 749, 26, 26, Path.Direction.CW);
@@ -87,15 +90,17 @@ final class ReflectView extends ViewGroup {
     Screen screen() { return screen; }
     Screen tab() { return tab; }
     void setRecordings(List<ReflectCatalog.Recording> recordings) { records.setRecordings(recordings); }
+    void setSpeakers(List<ReflectCatalog.Speaker> entries) { speakers.setSpeakers(entries); }
 
     void show(Screen next) {
         if (next == screen) return;
         if (animator != null) animator.cancel();
         if (screen == Screen.RECORDS) records.dismissKeyboard();
+        if (screen == Screen.SPEAKERS) speakers.dismissKeyboard();
         boolean menuOnly = (screen == Screen.MENU && next == tab) || (next == Screen.MENU && screen == tab);
         departing = screen;
         screen = next;
-        if (next == Screen.HOME || next == Screen.RECORDS) tab = next;
+        if (isTab(next)) tab = next;
         float startMenu = menuProgress;
         float endMenu = next == Screen.MENU ? 1 : 0;
         rebuildControls();
@@ -124,9 +129,11 @@ final class ReflectView extends ViewGroup {
         invalidate();
     }
 
-    private static boolean navigation(Screen page) {
-        return page == Screen.HOME || page == Screen.RECORDS || page == Screen.MENU;
+    static boolean isTab(Screen page) {
+        return page == Screen.HOME || page == Screen.RECORDS || page == Screen.SPEAKERS;
     }
+
+    private static boolean navigation(Screen page) { return isTab(page) || page == Screen.MENU; }
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec), height = MeasureSpec.getSize(heightSpec);
@@ -158,16 +165,26 @@ final class ReflectView extends ViewGroup {
         setAccessibilityPaneTitle(switch (screen) {
             case HOME -> "Начните работу с Reflect";
             case RECORDS -> "Ваши записи";
+            case SPEAKERS -> "Спикеры";
             case MENU -> "Добавить аудио";
             case READY -> "Запись аудио";
             case RECORDING -> "Идёт запись";
             case REVIEW -> "Готово";
         });
         if (navigation(screen)) {
-            if (tab == Screen.RECORDS) place(records, 0, 83, 393, screen == Screen.MENU ? 578 : 653);
+            float contentHeight = screen == Screen.MENU ? 578 : 653;
+            if (tab == Screen.RECORDS) place(records, 0, 83, 393, contentHeight);
+            if (tab == Screen.SPEAKERS) place(speakers, 0, 83, 393, contentHeight);
             control(screen == Screen.MENU ? "Закрыть меню" : "Добавить", 318, 765, 59, 59, actions::toggleMenu);
-            control("Главная", 22, 771, 67, 47, () -> show(Screen.HOME));
-            control("Записи", 89, 771, 65, 47, () -> show(Screen.RECORDS));
+            control("Главная", 22, 771, 67, 47, () -> show(Screen.HOME)).setSelected(tab == Screen.HOME);
+            control("Записи", 89, 771, 65, 47, () -> show(Screen.RECORDS)).setSelected(tab == Screen.RECORDS);
+            View speakerTab = control("Спикеры", 154, 771, 69, 47, () -> show(Screen.SPEAKERS));
+            speakerTab.setSelected(tab == Screen.SPEAKERS);
+            if (designPreview) speakerTab.setOnLongClickListener(v -> {
+                actions.toggleSpeakerPreview();
+                show(Screen.SPEAKERS);
+                return true;
+            });
             if (screen == Screen.MENU) {
                 control("Прикрепить файл", 175, 661, 202, 44, actions::attach);
                 control("Записать сейчас", 175, 705, 202, 44, actions::openRecorder);
@@ -187,7 +204,7 @@ final class ReflectView extends ViewGroup {
         }
     }
 
-    private void control(String label, float x, float y, float width, float height, Runnable action) {
+    private View control(String label, float x, float y, float width, float height, Runnable action) {
         View button = new View(getContext()) {
             @Override public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
                 super.onInitializeAccessibilityNodeInfo(info);
@@ -202,6 +219,7 @@ final class ReflectView extends ViewGroup {
         mask.setCornerRadius(80);
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x35aaaaaa), null, mask));
         place(button, x, y, width, height);
+        return button;
     }
 
     private void place(View child, float x, float y, float width, float height) {
@@ -233,7 +251,12 @@ final class ReflectView extends ViewGroup {
         if (navigation(page)) {
             Screen active = page == Screen.MENU ? tab : page;
             if (active == Screen.HOME) drawHome(canvas);
-            drawNavigation(canvas, menu, active == Screen.RECORDS ? 1 : 0);
+            int selected = switch (active) {
+                case RECORDS -> 1;
+                case SPEAKERS -> 2;
+                default -> 0;
+            };
+            drawNavigation(canvas, menu, selected);
         }
         else drawRecorder(canvas, page);
     }

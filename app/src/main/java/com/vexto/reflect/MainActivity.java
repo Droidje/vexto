@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -40,6 +41,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private MediaPlayer player;
     private boolean importing;
     private boolean designPreview;
+    private boolean previewSpeakersEmpty;
     private final Runnable heartbeat = new Runnable() {
         @Override public void run() {
             if (view.screen() == RECORDING) {
@@ -55,12 +57,15 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         designPreview = BuildConfig.DEBUG && getIntent().getBooleanExtra("reflect_preview", false);
-        view = new ReflectView(this, this);
+        previewSpeakersEmpty = state != null && state.getBoolean("previewSpeakersEmpty");
+        view = new ReflectView(this, this, designPreview);
         setContentView(view);
         fullscreen();
         refreshRecordings();
+        refreshSpeakers();
         if (state != null) {
             if (state.getBoolean("records")) view.show(RECORDS);
+            if (state.getBoolean("speakers")) view.show(SPEAKERS);
             String file = state.getString("audio");
             if (file != null && new File(file).isFile()) {
                 try { review(new File(file)); }
@@ -74,6 +79,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         if (audio != null) state.putString("audio", audio.getAbsolutePath());
         state.putBoolean("ready", view.screen() == READY);
         state.putBoolean("records", view.tab() == RECORDS);
+        state.putBoolean("speakers", view.tab() == SPEAKERS);
+        state.putBoolean("previewSpeakersEmpty", previewSpeakersEmpty);
     }
 
     @Override public void onWindowFocusChanged(boolean focused) {
@@ -174,7 +181,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             File ready = imported;
             runOnUiThread(() -> {
                 importing = false;
-                if (isDestroyed() || (view.screen() != HOME && view.screen() != RECORDS && view.screen() != MENU)) ready.delete();
+                if (isDestroyed() || (!ReflectView.isTab(view.screen()) && view.screen() != MENU)) ready.delete();
                 else showReview(ready, length);
             });
         } catch (IOException | RuntimeException error) {
@@ -289,6 +296,31 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         });
     }
 
+    @Override public void toggleSpeakerPreview() {
+        if (!designPreview) return;
+        previewSpeakersEmpty = !previewSpeakersEmpty;
+        refreshSpeakers();
+    }
+
+    private void refreshSpeakers() {
+        view.setSpeakers(designPreview && !previewSpeakersEmpty
+                ? ReflectDesignPreview.speakers() : Collections.emptyList());
+    }
+
+    @Override public void inviteSpeakers() {
+        String configuredUrl = BuildConfig.REFLECT_INVITE_URL.trim();
+        Uri uri = Uri.parse(configuredUrl);
+        if (!"https".equals(uri.getScheme()) || uri.getHost() == null || uri.getHost().isEmpty()
+                || uri.getUserInfo() != null) {
+            notice("Ссылка для приглашения ещё не настроена");
+            return;
+        }
+        Intent invitation = new Intent(Intent.ACTION_SEND)
+                .setType("text/plain")
+                .putExtra(Intent.EXTRA_TEXT, configuredUrl);
+        startActivity(Intent.createChooser(invitation, "Отправить ссылку"));
+    }
+
     private void discardDraft() {
         if (audio != null && getCacheDir().equals(audio.getParentFile())) audio.delete();
         audio = null;
@@ -312,7 +344,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override public void onBackPressed() {
         if (view.screen() == MENU) toggleMenu();
-        else if (view.screen() == RECORDS) view.show(HOME);
+        else if (ReflectView.isTab(view.screen()) && view.screen() != HOME) view.show(HOME);
         else if (view.screen() != HOME) closeRecorder();
         else super.onBackPressed();
     }

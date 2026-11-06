@@ -20,6 +20,7 @@ final class ReflectArtwork {
     final Typeface medium;
     final Typeface regular;
     final Typeface semibold;
+    final Typeface latinSemibold;
     final Typeface duration;
 
     private final Map<String, Bitmap> photos = new HashMap<>();
@@ -31,9 +32,8 @@ final class ReflectArtwork {
         medium = cyrillicFallback(assets, 500);
         regular = cyrillicFallback(assets, 400);
         semibold = cyrillicFallback(assets, 600);
-        duration = new Typeface.Builder(assets, "fonts/dm_sans.ttf")
-                .setFontVariationSettings("'opsz' 14, 'wght' 400")
-                .build();
+        latinSemibold = dmSans(assets, 600);
+        duration = dmSans(assets, 400);
         try {
             for (String file : assets.list("reflect")) {
                 String name = file.substring(0, file.lastIndexOf('.'));
@@ -66,6 +66,13 @@ final class ReflectArtwork {
     private static Typeface cyrillicFallback(AssetManager assets, int weight) {
         return new Typeface.Builder(assets, "fonts/noto_sans.ttf")
                 .setFontVariationSettings("'wdth' 100, 'wght' " + weight)
+                .setWeight(weight)
+                .build();
+    }
+
+    private static Typeface dmSans(AssetManager assets, int weight) {
+        return new Typeface.Builder(assets, "fonts/dm_sans.ttf")
+                .setFontVariationSettings("'opsz' 14, 'wght' " + weight)
                 .setWeight(weight)
                 .build();
     }

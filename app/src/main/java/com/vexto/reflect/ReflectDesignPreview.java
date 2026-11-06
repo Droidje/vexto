@@ -18,4 +18,11 @@ final class ReflectDesignPreview {
                 new ReflectCatalog.Recording(null, "Запись №8", "Сегодня", "8:53", "13 минут",
                         "Выполнено", true, false, first, "Jennifer Colein Алексей Иванов интервью"));
     }
+
+    static List<ReflectCatalog.Speaker> speakers() {
+        return Arrays.asList(
+                new ReflectCatalog.Speaker("jennifer-colein", "Jennifer Colein", "157 минут", "speaker_jennifer"),
+                new ReflectCatalog.Speaker("alexey-ivanov", "Алексей Иванов", "80 минут", "speaker_alexey"),
+                new ReflectCatalog.Speaker("mikhail-gvozdev", "Михаил Гвоздев", "42 минут", "speaker_mikhail"));
+    }
 }

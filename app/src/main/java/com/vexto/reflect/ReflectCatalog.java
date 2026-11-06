@@ -39,6 +39,17 @@ final class ReflectCatalog {
         }
     }
 
+    static final class Speaker {
+        final String id, name, duration, avatar;
+
+        Speaker(String id, String name, String duration, String avatar) {
+            this.id = id;
+            this.name = name;
+            this.duration = duration;
+            this.avatar = avatar;
+        }
+    }
+
     private ReflectCatalog() {}
 
     static List<Recording> localRecordings(File directory) {
