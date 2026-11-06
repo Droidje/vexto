@@ -19,6 +19,7 @@ final class ReflectArtwork {
     final Typeface display;
     final Typeface medium;
     final Typeface regular;
+    final Typeface semibold;
     final Typeface duration;
     final Typeface status = Typeface.create("sans-serif", Typeface.BOLD);
 
@@ -30,6 +31,7 @@ final class ReflectArtwork {
         display = Typeface.createFromAsset(assets, "fonts/murs_gothic.otf");
         medium = cyrillicFallback(assets, 500);
         regular = cyrillicFallback(assets, 400);
+        semibold = cyrillicFallback(assets, 600);
         duration = new Typeface.Builder(assets, "fonts/dm_sans.ttf")
                 .setFontVariationSettings("'opsz' 14, 'wght' 400")
                 .build();

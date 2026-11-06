@@ -23,10 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.text.DateFormat;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Date;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -43,6 +39,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private int duration;
     private MediaPlayer player;
     private boolean importing;
+    private boolean designPreview;
     private final Runnable heartbeat = new Runnable() {
         @Override public void run() {
             if (view.screen() == RECORDING) {
@@ -57,10 +54,13 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        designPreview = BuildConfig.DEBUG && getIntent().getBooleanExtra("reflect_preview", false);
         view = new ReflectView(this, this);
         setContentView(view);
         fullscreen();
+        refreshRecordings();
         if (state != null) {
+            if (state.getBoolean("records")) view.show(RECORDS);
             String file = state.getString("audio");
             if (file != null && new File(file).isFile()) {
                 try { review(new File(file)); }
@@ -73,6 +73,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         super.onSaveInstanceState(state);
         if (audio != null) state.putString("audio", audio.getAbsolutePath());
         state.putBoolean("ready", view.screen() == READY);
+        state.putBoolean("records", view.tab() == RECORDS);
     }
 
     @Override public void onWindowFocusChanged(boolean focused) {
@@ -96,7 +97,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         }
     }
 
-    @Override public void toggleMenu() { view.show(view.screen() == MENU ? HOME : MENU); }
+    @Override public void toggleMenu() { view.show(view.screen() == MENU ? view.tab() : MENU); }
 
     @Override public void openRecorder() { view.show(READY); }
 
@@ -143,7 +144,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         session.cancel();
         stopPlayer();
         discardDraft();
-        view.show(HOME);
+        view.show(view.tab());
     }
 
     @Override public void attach() {
@@ -173,7 +174,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             File ready = imported;
             runOnUiThread(() -> {
                 importing = false;
-                if (isDestroyed() || (view.screen() != HOME && view.screen() != MENU)) ready.delete();
+                if (isDestroyed() || (view.screen() != HOME && view.screen() != RECORDS && view.screen() != MENU)) ready.delete();
                 else showReview(ready, length);
             });
         } catch (IOException | RuntimeException error) {
@@ -254,6 +255,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             stopPlayer();
             discardDraft();
             audio = saved;
+            refreshRecordings();
             return saved;
         } catch (IOException error) {
             saved.delete();
@@ -262,21 +264,29 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         }
     }
 
-    @Override public void openRecordings() {
-        File[] files = new File(getFilesDir(), "recordings").listFiles(File::isFile);
-        if (files == null || files.length == 0) {
-            new AlertDialog.Builder(this).setTitle("Записи").setMessage("Сохранённых записей пока нет")
-                    .setPositiveButton("OK", null).show();
+    @Override public void openRecording(ReflectCatalog.Recording recording) {
+        if (recording.file == null) {
+            new AlertDialog.Builder(this).setTitle(recording.title)
+                    .setMessage(recording.time + " · " + recording.length + "\n" + recording.status)
+                    .setPositiveButton(android.R.string.ok, null).show();
             return;
         }
-        Arrays.sort(files, Comparator.comparingLong(File::lastModified).reversed());
-        DateFormat dates = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT);
-        String[] titles = Arrays.stream(files).map(file -> dates.format(new Date(file.lastModified())))
-                .toArray(String[]::new);
-        new AlertDialog.Builder(this).setTitle("Записи").setItems(titles, (dialog, index) -> {
-            try { review(files[index]); }
-            catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
-        }).show();
+        try { review(recording.file); }
+        catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
+    }
+
+    private void refreshRecordings() {
+        if (designPreview) {
+            view.setRecordings(ReflectDesignPreview.recordings());
+            return;
+        }
+        File directory = new File(getFilesDir(), "recordings");
+        imports.execute(() -> {
+            var recordings = ReflectCatalog.localRecordings(directory);
+            runOnUiThread(() -> {
+                if (!isDestroyed()) view.setRecordings(recordings);
+            });
+        });
     }
 
     private void discardDraft() {
@@ -302,6 +312,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override public void onBackPressed() {
         if (view.screen() == MENU) toggleMenu();
+        else if (view.screen() == RECORDS) view.show(HOME);
         else if (view.screen() != HOME) closeRecorder();
         else super.onBackPressed();
     }

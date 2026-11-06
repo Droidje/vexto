@@ -25,7 +25,7 @@ import java.util.List;
 
 /** Native stage with the design's 393 × 852 coordinate space and Android touch targets. */
 final class ReflectView extends ViewGroup {
-    enum Screen { HOME, MENU, READY, RECORDING, REVIEW }
+    enum Screen { HOME, RECORDS, MENU, READY, RECORDING, REVIEW }
 
     interface Actions {
         void toggleMenu();
@@ -37,7 +37,7 @@ final class ReflectView extends ViewGroup {
         void play();
         void save();
         void send();
-        void openRecordings();
+        void openRecording(ReflectCatalog.Recording recording);
     }
 
     private static final float WIDTH = 393, HEIGHT = 852;
@@ -49,6 +49,7 @@ final class ReflectView extends ViewGroup {
     private static final float[] TAB_CENTERS = {56, 121.5f, 188.5f, 255.5f};
     private final Actions actions;
     private final ReflectArtwork artwork;
+    private final ReflectLibraryView records;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final List<RectF> childAreas = new ArrayList<>();
     private final Path stage = new Path();
@@ -57,6 +58,7 @@ final class ReflectView extends ViewGroup {
     private final Bitmap orbEdgeShade = orbEdgeShade();
     private Screen screen = Screen.HOME;
     private Screen departing = Screen.HOME;
+    private Screen tab = Screen.HOME;
     private float scale = 1, offsetX, offsetY, transition = 1, menuProgress;
     private float liveLevel, playProgress;
     private String elapsed = "0:00";
@@ -68,6 +70,7 @@ final class ReflectView extends ViewGroup {
         super(context);
         this.actions = actions;
         artwork = new ReflectArtwork(context.getAssets());
+        records = new ReflectLibraryView(context, artwork, actions::openRecording);
         setWillNotDraw(false);
         stage.addRoundRect(0, 0, WIDTH, HEIGHT, 47, 47, Path.Direction.CW);
         glass.addRoundRect(175, 661, 377, 749, 26, 26, Path.Direction.CW);
@@ -82,13 +85,17 @@ final class ReflectView extends ViewGroup {
     }
 
     Screen screen() { return screen; }
+    Screen tab() { return tab; }
+    void setRecordings(List<ReflectCatalog.Recording> recordings) { records.setRecordings(recordings); }
 
     void show(Screen next) {
         if (next == screen) return;
         if (animator != null) animator.cancel();
+        if (screen == Screen.RECORDS) records.dismissKeyboard();
+        boolean menuOnly = (screen == Screen.MENU && next == tab) || (next == Screen.MENU && screen == tab);
         departing = screen;
         screen = next;
-        boolean menuOnly = home(departing) && home(next);
+        if (next == Screen.HOME || next == Screen.RECORDS) tab = next;
         float startMenu = menuProgress;
         float endMenu = next == Screen.MENU ? 1 : 0;
         rebuildControls();
@@ -117,7 +124,9 @@ final class ReflectView extends ViewGroup {
         invalidate();
     }
 
-    private static boolean home(Screen page) { return page == Screen.HOME || page == Screen.MENU; }
+    private static boolean navigation(Screen page) {
+        return page == Screen.HOME || page == Screen.RECORDS || page == Screen.MENU;
+    }
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec), height = MeasureSpec.getSize(heightSpec);
@@ -148,14 +157,17 @@ final class ReflectView extends ViewGroup {
         childAreas.clear();
         setAccessibilityPaneTitle(switch (screen) {
             case HOME -> "Начните работу с Reflect";
+            case RECORDS -> "Ваши записи";
             case MENU -> "Добавить аудио";
             case READY -> "Запись аудио";
             case RECORDING -> "Идёт запись";
             case REVIEW -> "Готово";
         });
-        if (home(screen)) {
+        if (navigation(screen)) {
+            if (tab == Screen.RECORDS) place(records, 0, 83, 393, screen == Screen.MENU ? 578 : 653);
             control(screen == Screen.MENU ? "Закрыть меню" : "Добавить", 318, 765, 59, 59, actions::toggleMenu);
-            control("Записи", 89, 771, 65, 47, actions::openRecordings);
+            control("Главная", 22, 771, 67, 47, () -> show(Screen.HOME));
+            control("Записи", 89, 771, 65, 47, () -> show(Screen.RECORDS));
             if (screen == Screen.MENU) {
                 control("Прикрепить файл", 175, 661, 202, 44, actions::attach);
                 control("Записать сейчас", 175, 705, 202, 44, actions::openRecorder);
@@ -216,7 +228,7 @@ final class ReflectView extends ViewGroup {
         }
         String status = switch (screen) {
             case HOME -> "status_home";
-            case RECORDING -> "status_recording";
+            case RECORDS, RECORDING -> "status_recording";
             case REVIEW -> "status_review";
             default -> "status_menu_ready";
         };
@@ -226,9 +238,10 @@ final class ReflectView extends ViewGroup {
     }
 
     private void drawScreen(Canvas canvas, Screen page, float menu) {
-        if (home(page)) {
-            drawHome(canvas);
-            drawNavigation(canvas, menu, 0);
+        if (navigation(page)) {
+            Screen active = page == Screen.MENU ? tab : page;
+            if (active == Screen.HOME) drawHome(canvas);
+            drawNavigation(canvas, menu, active == Screen.RECORDS ? 1 : 0);
         }
         else drawRecorder(canvas, page);
     }
