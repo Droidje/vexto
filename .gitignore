@@ -15,8 +15,13 @@ __pycache__/
 
 # Android и Gradle
 .gradle/
+.kotlin/
 **/build/
 local.properties
 *.iml
 *.apk
 .DS_Store
+
+# Локальные артефакты офлайн-движка
+/engine/libs/
+/engine/src/main/assets/models/

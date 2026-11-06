@@ -130,6 +130,20 @@ class RecordingApiTest(unittest.TestCase):
         revisions = self.client.get(self.transcript + "/revisions", headers=self.primary).json()["revisions"]
         self.assertEqual([(r["revision"], r["current"]) for r in revisions], [(1, False), (2, True)])
 
+    def test_automatic_transcript_only_fills_missing_recording(self):
+        self.assertEqual(self.upload().status_code, 201)
+        guard = {**self.primary, "If-None-Match": "*"}
+        generated = self.transcript_with("Результат движка")
+        imported = self.transcript_with("Исправлено вручную")
+        self.assertEqual(self.client.post(self.transcript, headers=self.primary, json=generated).json(), {"revision": 1})
+        self.assertEqual(self.client.put(self.transcript, headers=guard, json=generated).json(), {"revision": 1})
+        self.assertEqual(self.client.put(self.transcript, headers=self.primary, json=imported).json(), {"revision": 2})
+        self.assertEqual(self.client.put(self.transcript, headers=guard, json=generated).status_code, 412)
+        self.assertEqual(self.client.post(self.transcript, headers=self.primary, json=generated).status_code, 412)
+        self.assertEqual(self.client.get(self.transcript, headers=self.primary).json(), imported)
+        self.assertEqual(len(self.client.get(self.transcript + "/revisions",
+                                            headers=self.primary).json()["revisions"]), 2)
+
     def test_speaker_crud_and_revision_scoped_links(self):
         self.assertEqual(self.upload().status_code, 201)
         first = self.transcript_with("Реплика")

@@ -22,6 +22,10 @@ class Gone(Exception):
     pass
 
 
+class PreconditionFailed(Exception):
+    pass
+
+
 def now() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -171,16 +175,18 @@ class Store:
             )
             return self.recording_dict(self.require_recording(db, workspace, recording))
 
-    def set_transcript(self, workspace: str, recording: str, transcript: Transcript) -> int:
+    def set_transcript(self, workspace: str, recording: str, transcript: Transcript, *, create_only=False) -> int:
         lines = sorted(transcript.transcript, key=lambda line: line.start_ms)
         body = Transcript(transcript=lines).model_dump_json()
         checksum = sha256(body.encode("utf-8")).hexdigest()
         with self.connection(write=True) as db:
-            self.require_recording(db, workspace, recording)
+            current = self.require_recording(db, workspace, recording)["current_revision"]
             prior = db.execute(
                 "SELECT revision FROM transcripts WHERE workspace=? AND recording_id=? AND checksum=?",
                 (workspace, recording, checksum),
             ).fetchone()
+            if create_only and current is not None and (prior is None or prior["revision"] != current):
+                raise PreconditionFailed("A transcript is already available")
             if prior:
                 return prior["revision"]
             revision = db.execute(

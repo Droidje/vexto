@@ -122,9 +122,10 @@ final class ReflectBackendClient {
         sendJson("PUT", recording(id) + "/metadata", value, null);
     }
 
-    void uploadTranscript(String id, ReflectTranscript transcript) throws IOException {
+    void uploadTranscript(String id, ReflectTranscript transcript, boolean createOnly) throws IOException {
         byte[] json = transcript.encode();
-        request("PUT", recording(id) + "/transcript", JSON, json.length, out -> out.write(json), null);
+        request(createOnly ? "POST" : "PUT", recording(id) + "/transcript", JSON, json.length,
+                out -> out.write(json), null);
     }
 
     record TranscriptResponse(ReflectTranscript value, String revision) {}

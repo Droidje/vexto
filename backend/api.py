@@ -19,7 +19,7 @@ from .schemas import (
     AUDIO_TYPE, JSON_LIMIT, Metadata, Recording, RecordingList, Speaker, SpeakerCreate, SpeakerLink,
     SpeakerLinks, SpeakerList, SpeakerName, Transcript, TranscriptHistory,
 )
-from .storage import Conflict, Gone, Missing, Store
+from .storage import Conflict, Gone, Missing, PreconditionFailed, Store
 
 LIMIT = Annotated[int, Query(ge=1, le=1000)]
 OFFSET = Annotated[int, Query(ge=0, le=2_147_483_647)]
@@ -124,6 +124,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def gone(_request: Request, error: Gone):
         return JSONResponse({"detail": str(error)}, status_code=410)
 
+    @app.exception_handler(PreconditionFailed)
+    async def precondition(_request: Request, error: PreconditionFailed):
+        return JSONResponse({"detail": str(error)}, status_code=412)
+
     @app.exception_handler(RequestValidationError)
     async def invalid(_request: Request, _error: RequestValidationError):
         # Default FastAPI errors can echo the submitted recording metadata or transcript.
@@ -194,9 +198,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(503, "Stored audio is unavailable") from error
         return AudioResponse(source, details)
 
-    @app.put("/v1/recordings/{recording}/transcript", tags=["Transcripts"])
-    def save_transcript(recording: UUID, payload: Transcript, identity: Workspace, response: Response):
-        revision = store.set_transcript(identity, str(recording), payload)
+    @app.put("/v1/recordings/{recording}/transcript", tags=["Transcripts"],
+             responses={412: {"description": "Different transcript already exists"}})
+    @app.post("/v1/recordings/{recording}/transcript", tags=["Transcripts"],
+              responses={412: {"description": "Different transcript already exists"}})
+    def save_transcript(recording: UUID, payload: Transcript, identity: Workspace, request: Request, response: Response,
+                        if_none_match: Annotated[str | None, Header()] = None):
+        revision = store.set_transcript(identity, str(recording), payload,
+                                        create_only=request.method == "POST" or if_none_match == "*")
         response.headers[REVISION_HEADER] = str(revision)
         return {"revision": revision}
 
