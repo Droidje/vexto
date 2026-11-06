@@ -20,6 +20,7 @@ import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -34,6 +35,8 @@ final class ReflectTranscriptView extends FrameLayout {
         void closeTranscript();
         void openExportOptions();
         void importTranscript();
+        void transcribeRecording();
+        void cancelTranscription();
         void openTranscriptOptions();
         void openTranscriptStyle();
         void playTranscriptAudio();
@@ -47,11 +50,15 @@ final class ReflectTranscriptView extends FrameLayout {
     private int layoutWidth;
     private boolean refresh = true;
     private boolean preview, loading, hasAudio, playing, recordingDetails;
+    private boolean hasTranscript;
     private RecordingMetadata metadata;
     private String title = "", length = "", issue;
     private List<ReflectTranscript.Line> lines = Collections.emptyList();
     private Map<String, String> speakerNames = Collections.emptyMap();
     private TextView play;
+    private TextView progressText;
+    private ProgressBar progressBar;
+    private ReflectLocalTranscription.Progress transcription;
     private ListView list;
 
     ReflectTranscriptView(Context context, ReflectArtwork artwork, ReflectPreferences preferences, Actions actions) {
@@ -63,7 +70,7 @@ final class ReflectTranscriptView extends FrameLayout {
 
     void content(String title, String length, ReflectTranscript transcript, boolean preview,
                  boolean hasAudio, boolean loading, String issue, boolean recordingDetails,
-                 RecordingMetadata metadata) {
+                 RecordingMetadata metadata, ReflectLocalTranscription.Progress transcription) {
         if (!title.equals(this.title)) list = null;
         this.title = title;
         this.length = length;
@@ -73,9 +80,19 @@ final class ReflectTranscriptView extends FrameLayout {
         this.issue = issue;
         this.recordingDetails = recordingDetails;
         this.metadata = metadata;
+        this.transcription = transcription;
+        hasTranscript = transcript != null;
         lines = recordingDetails || transcript == null ? Collections.emptyList() : transcript.lines;
         refresh = true;
         requestLayout();
+    }
+
+    void transcription(ReflectLocalTranscription.Progress value) {
+        boolean rebuild = transcription == null || value == null
+                || transcription.cancellable() != value.cancellable();
+        transcription = value;
+        if (rebuild) refreshStyle();
+        else updateProgress();
     }
 
     void refreshStyle() {
@@ -96,6 +113,9 @@ final class ReflectTranscriptView extends FrameLayout {
         removeAllViews();
         list = null;
         play = null;
+        progressText = null;
+        progressBar = null;
+        transcription = null;
         refresh = true;
     }
 
@@ -121,6 +141,8 @@ final class ReflectTranscriptView extends FrameLayout {
         int offset = list == null || list.getChildCount() == 0 ? 0 : list.getChildAt(0).getTop();
         removeAllViews();
         play = null;
+        progressText = null;
+        progressBar = null;
         list = new ListView(getContext());
         list.setDivider(null);
         list.setVerticalScrollBarEnabled(false);
@@ -172,17 +194,7 @@ final class ReflectTranscriptView extends FrameLayout {
         if (recordingDetails) {
             addInset(header, metadataCard(), 8, 12);
         } else if (lines.isEmpty()) {
-            LinearLayout empty = style.column();
-            empty.setBackground(style.rounded(ReflectPageStyle.CARD, 24));
-            empty.setPadding(style.px(16), style.px(16), style.px(16), style.px(16));
-            style.append(empty, style.text(loading ? "Загружаем транскрипт" : "Транскрипта пока нет",
-                    17, Color.WHITE, artwork.semibold), 0, 8);
-            String message = issue != null ? issue : "Импортируйте JSON с репликами, спикерами и таймкодами.";
-            if (!loading) {
-                style.append(empty, style.text(message, 15, ReflectPageStyle.MUTED, artwork.regular), 0, 12);
-                if (hasAudio) style.append(empty, button("Импортировать JSON", actions::importTranscript), 0, 0);
-            }
-            addInset(header, empty, 8, 12);
+            addInset(header, transcriptionCard(), 8, 12);
         } else {
             View divider = new ArtView("transcript_divider", false);
             FrameLayout dividerBox = new FrameLayout(getContext());
@@ -192,6 +204,47 @@ final class ReflectTranscriptView extends FrameLayout {
             header.addView(dividerBox, dividerParams);
         }
         return header;
+    }
+
+    private LinearLayout transcriptionCard() {
+        LinearLayout card = style.column();
+        card.setBackground(style.rounded(ReflectPageStyle.CARD, 24));
+        card.setPadding(style.px(16), style.px(16), style.px(16), style.px(16));
+        if (transcription != null) {
+            style.append(card, style.text("Расшифровываем на устройстве", 17, Color.WHITE, artwork.semibold), 0, 8);
+            progressText = style.text("", 15, ReflectPageStyle.MUTED, artwork.regular);
+            progressBar = new ProgressBar(getContext(), null, android.R.attr.progressBarStyleHorizontal);
+            progressBar.setMax(100);
+            progressBar.setProgressTintList(ColorStateList.valueOf(ReflectPageStyle.ACCENT));
+            style.append(card, progressText, 0, 8);
+            style.append(card, progressBar, 0, 12);
+            updateProgress();
+            if (transcription.cancellable()) {
+                style.append(card, button("Отменить расшифровку", actions::cancelTranscription), 0, 0);
+            }
+            return card;
+        }
+
+        String heading = loading ? "Загружаем транскрипт"
+                : hasTranscript ? "В транскрипте нет реплик" : "Транскрипта пока нет";
+        style.append(card, style.text(heading, 17, Color.WHITE, artwork.semibold), 0, 8);
+        if (!loading) {
+            String message = issue != null ? issue : hasAudio && !hasTranscript
+                    ? "Распознайте речь на устройстве или импортируйте JSON."
+                    : "Импортируйте JSON с репликами, спикерами и таймкодами.";
+            style.append(card, style.text(message, 15, ReflectPageStyle.MUTED, artwork.regular), 0, 12);
+            if (hasAudio && !hasTranscript) {
+                style.append(card, button("Расшифровать на устройстве", actions::transcribeRecording), 0, 8);
+            }
+            if (hasAudio) style.append(card, button("Импортировать JSON", actions::importTranscript), 0, 0);
+        }
+        return card;
+    }
+
+    private void updateProgress() {
+        if (progressText == null || progressBar == null) return;
+        progressText.setText(transcription.stage() + " · " + transcription.percent() + "%");
+        progressBar.setProgress(transcription.percent());
     }
 
     private LinearLayout metadataCard() {

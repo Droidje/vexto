@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
@@ -39,7 +41,9 @@ final class ReflectTranscriptController {
     private final Runnable refreshCatalog;
     private final ReflectBackendSync backend;
     private final ReflectBackendUi backendUi;
+    private final ReflectLocalTranscription local;
     private File file;
+    private final Set<File> importing = new HashSet<>();
     private ReflectTranscript transcript;
     private RecordingMetadata metadata;
     private String title, length, issue;
@@ -62,9 +66,17 @@ final class ReflectTranscriptController {
         this.refreshCatalog = refreshCatalog;
         this.backend = backend;
         this.backendUi = backendUi;
+        local = new ReflectLocalTranscription(activity, store, backend, io, this::processingChanged,
+                this::transcriptionFinished);
+        backend.onGeneratedConflict(this::generatedConflict);
     }
 
     void open(File recording, String fallback, String length, int durationMs, boolean recordingDetails) {
+        open(recording, fallback, length, durationMs, recordingDetails, false);
+    }
+
+    void open(File recording, String fallback, String length, int durationMs, boolean recordingDetails,
+              boolean startImmediately) {
         int current = ++generation;
         file = recording;
         title = fallback;
@@ -92,6 +104,7 @@ final class ReflectTranscriptController {
                     loading = false;
                     render();
                     refreshRemote(current, recording);
+                    if (startImmediately && loaded == null) transcribe();
                 });
             } catch (IOException | RuntimeException invalid) {
                 deliver(current, () -> {
@@ -133,6 +146,21 @@ final class ReflectTranscriptController {
         view.transcriptView().clear();
     }
 
+    void destroy() { local.close(); }
+
+    void transcribe() {
+        if (file == null || loading || recordingDetails || transcript != null) return;
+        if (local.busy() || importing.contains(file)) {
+            if (local.progress(file) == null) notice.accept("Дождитесь завершения текущей обработки.");
+            return;
+        }
+        issue = null;
+        render();
+        local.start(file, title, durationMs);
+    }
+
+    void cancelTranscription() { local.cancel(file); }
+
     void saveState(Bundle state) {
         if (view.screen() != ReflectView.Screen.TRANSCRIPT) return;
         state.putBoolean("transcript", true);
@@ -145,6 +173,10 @@ final class ReflectTranscriptController {
     void pick() {
         if (file == null || loading) {
             if (previewKey != null) notice.accept("Откройте локальную запись, чтобы импортировать транскрипт");
+            return;
+        }
+        if (local.progress(file) != null || importing.contains(file)) {
+            notice.accept("Дождитесь завершения текущей обработки.");
             return;
         }
         Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
@@ -180,7 +212,10 @@ final class ReflectTranscriptController {
         Uri uri = data.getData();
         int current = generation;
         int duration = durationMs;
-        if (request == PICK_JSON) transcriptRequest++;
+        if (request == PICK_JSON) {
+            if (local.progress(recording) != null || !importing.add(recording)) return true;
+            transcriptRequest++;
+        }
         ReflectTranscript snapshot = transcript;
         String exportTitle = title;
         io.execute(() -> {
@@ -218,6 +253,8 @@ final class ReflectTranscriptController {
             } catch (IOException | RuntimeException error) {
                 deliver(current, () -> notice.accept(request == PICK_JSON
                         ? "Не удалось импортировать JSON с репликами" : "Не удалось экспортировать файл"));
+            } finally {
+                if (request == PICK_JSON) activity.runOnUiThread(() -> importing.remove(recording));
             }
         });
         return true;
@@ -321,7 +358,31 @@ final class ReflectTranscriptController {
 
     private void render() {
         view.transcriptView().content(title, length, transcript, previewKey != null, file != null,
-                loading, issue, recordingDetails, metadata);
+                loading, issue, recordingDetails, metadata, local.progress(file));
+    }
+
+    private void processingChanged(File recording) {
+        if (recording.equals(file) && !recordingDetails) view.transcriptView().transcription(local.progress(file));
+    }
+
+    private void transcriptionFinished(ReflectLocalTranscription.Result result) {
+        if (result.recording().equals(file)) {
+            if (remoteRevision == null && transcript == null) {
+                transcript = result.transcript();
+                issue = transcript == null ? result.message() : null;
+                if (transcript != null) refreshRemote(generation, file);
+            }
+            render();
+        }
+        if (result.transcript() != null || !result.recording().equals(file)) {
+            notice.accept(result.message() == null ? "Расшифровка готова" : result.message());
+        }
+    }
+
+    private void generatedConflict(File recording) {
+        if (!recording.equals(file) || activity.isDestroyed()) return;
+        refreshRemote(generation, recording);
+        notice.accept("На сервере уже есть расшифровка. Локальный результат сохранён.");
     }
 
     private void refreshRemote(int current, File recording) {
@@ -329,6 +390,11 @@ final class ReflectTranscriptController {
         int request = ++transcriptRequest;
         backend.pullTranscript(recording, remote -> {
             if (current != generation || request != transcriptRequest) return;
+            var progress = local.progress(recording);
+            if (progress != null && progress.cancellable()) {
+                local.cancel(recording);
+                notice.accept("Открыта готовая расшифровка с сервера");
+            }
             if (!java.util.Objects.equals(remoteRevision, remote.revision())) {
                 view.transcriptView().speakerNames(Collections.emptyMap());
             }
@@ -353,11 +419,12 @@ final class ReflectTranscriptController {
         File recording = file;
         if (recording == null) return;
         String name = title;
+        String scope = backend.syncScope();
         int duration = durationMs, current = generation;
         io.execute(() -> {
             try {
                 ReflectTranscript local = store.load(recording);
-                boolean queued = local != null ? backend.onImported(recording, name, duration, local)
+                boolean queued = local != null ? backend.onGenerated(recording, name, duration, scope)
                         : backend.onSaved(recording, name, duration);
                 deliver(current, () -> notice.accept(queued ? "Запись поставлена в очередь"
                         : "Не удалось поставить запись в очередь"));

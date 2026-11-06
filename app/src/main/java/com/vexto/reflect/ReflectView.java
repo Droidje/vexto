@@ -38,6 +38,7 @@ final class ReflectView extends ViewGroup {
         void closeRecorder();
         void play();
         void save();
+        void transcribeReview();
         void send();
         void toggleSpeakerPreview();
         void openMicrophoneSettings();
@@ -305,7 +306,8 @@ final class ReflectView extends ViewGroup {
                 case PAUSED: control("Продолжить запись", 245, 765, 59, 59, actions::startRecording); break;
                 case REVIEW:
                     control("Воспроизвести или приостановить", 16, 578, 361, 44, actions::play);
-                    control("Расшифровать позже", 84, 75, 222, 48, actions::save);
+                    control("Расшифровать сейчас", 84, 75, 222, 48, actions::transcribeReview);
+                    control("Расшифровать позже", 84, 133, 222, 48, actions::save);
                     control("Поделиться записью", 245, 765, 59, 59, actions::send);
                     break;
                 default: break;
@@ -460,7 +462,9 @@ final class ReflectView extends ViewGroup {
 
     private void drawReview(Canvas c) {
         rounded(c, 84, 75, 306, 123, 24, WHITE);
-        text(c, "Расшифровать позже", 195, 104.8f, 16, BACKGROUND, artwork.medium, true);
+        text(c, "Расшифровать сейчас", 195, 104.8f, 16, BACKGROUND, artwork.medium, true);
+        rounded(c, 84, 133, 306, 181, 24, 0xff2c2c2a);
+        text(c, "Расшифровать позже", 195, 162.8f, 16, WHITE, artwork.medium, true);
         rounded(c, 16, 578, 377, 622, 22, 0xff090908);
         outline(c, 16, 578, 377, 622, 22, REVIEW_EDGE);
         rounded(c, 23, 585, 53, 615, 15, 0x1f767680);
@@ -472,8 +476,8 @@ final class ReflectView extends ViewGroup {
         waveform(c, REVIEW_WAVE, 63, 306, 600, 0xff999999, 0, playProgress);
         rounded(c, 316, 588, 370, 612, 12, 0x1f767680);
         text(c, duration, 343, 604.7f, 13, WHITE, artwork.duration, true);
-        text(c, "Отправьте аудио и получите готовую", 196.5f, 657.3f, 16, 0xff999999, artwork.medium, true);
-        text(c, "расшифровку по спикерам", 196.5f, 678.3f, 16, 0xff999999, artwork.medium, true);
+        text(c, "Расшифровка выполняется", 196.5f, 657.3f, 16, 0xff999999, artwork.medium, true);
+        text(c, "на устройстве", 196.5f, 678.3f, 16, 0xff999999, artwork.medium, true);
     }
 
     private void waveform(Canvas c, int[] bars, float left, float right, float center, int color,

@@ -52,6 +52,7 @@ final class ReflectBackendSync implements AutoCloseable {
     };
     private boolean networkRegistered;
     private volatile ReflectBackendClient.Config config;
+    private Consumer<File> generatedConflict;
     private volatile boolean closed;
     private ScheduledFuture<?> scheduled;
     private long scheduleId;
@@ -85,6 +86,13 @@ final class ReflectBackendSync implements AutoCloseable {
 
     boolean enabled() { return config != null; }
 
+    String syncScope() {
+        var selected = config;
+        return selected == null ? null : selected.scope;
+    }
+
+    void onGeneratedConflict(Consumer<File> listener) { generatedConflict = listener; }
+
     String configuredUrl() {
         var selected = config;
         return selected == null ? "" : selected.url;
@@ -109,15 +117,21 @@ final class ReflectBackendSync implements AutoCloseable {
     }
 
     boolean onSaved(File audio, String title, int durationMs) {
-        return enqueue(audio, title, durationMs, false, false);
+        return enqueue(config, audio, title, durationMs, false, false, false);
     }
 
     boolean onRenamed(File audio, String title, int durationMs) {
-        return enqueue(audio, title, durationMs, false, true);
+        return enqueue(config, audio, title, durationMs, false, false, true);
     }
 
     boolean onImported(File audio, String title, int durationMs, ReflectTranscript imported) {
-        return imported != null && enqueue(audio, title, durationMs, true, false);
+        return imported != null && enqueue(config, audio, title, durationMs, true, false, false);
+    }
+
+    boolean onGenerated(File audio, String title, int durationMs, String scope) {
+        var selected = config;
+        return selected != null && selected.scope.equals(scope)
+                && enqueue(selected, audio, title, durationMs, true, true, false);
     }
 
     int pendingCount() {
@@ -132,9 +146,8 @@ final class ReflectBackendSync implements AutoCloseable {
         return count;
     }
 
-    private boolean enqueue(File audio, String title, int durationMs, boolean transcriptChanged,
-                            boolean requirePrevious) {
-        var selected = config;
+    private boolean enqueue(ReflectBackendClient.Config selected, File audio, String title, int durationMs,
+                            boolean transcriptChanged, boolean createOnly, boolean requirePrevious) {
         if (selected == null || !isSaved(audio) || durationMs <= 0) return false;
         String key = key(selected, audio);
         synchronized (OUTBOX_LOCK) {
@@ -143,7 +156,8 @@ final class ReflectBackendSync implements AutoCloseable {
             String edit = UUID.randomUUID().toString();
             Job next = new Job(audio.getName(), title, durationMs, previous != null && previous.audioSent, edit,
                     transcriptChanged ? edit : previous == null ? "" : previous.transcriptEdit,
-                    transcriptChanged ? edit : previous == null ? "" : previous.lastImport);
+                    transcriptChanged ? edit : previous == null ? "" : previous.lastImport,
+                    transcriptChanged ? createOnly : previous != null && previous.transcriptCreateOnly);
             if (!persist(key, next)) return false;
         }
         if (transcriptChanged) {
@@ -206,12 +220,19 @@ final class ReflectBackendSync implements AutoCloseable {
                 if (!job.transcriptEdit.isEmpty() && active(selected)) {
                     ReflectTranscript transcript = transcripts.load(audio);
                     if (transcript != null) {
-                        client.uploadTranscript(id, transcript);
+                        client.uploadTranscript(id, transcript, job.transcriptCreateOnly);
                         acknowledge(key, job, false, false, true);
                     }
                 }
             } catch (ReflectBackendClient.HttpError failure) {
-                temporaryFailure |= failure.transientFailure();
+                if (job.transcriptCreateOnly && failure.status == 412) {
+                    boolean cleared = acknowledge(key, job, false, false, true);
+                    if (cleared) main.post(() -> {
+                        if (active(selected) && canReadTranscript(selected, key, job.lastImport)
+                                && generatedConflict != null) generatedConflict.accept(audio);
+                    });
+                    else temporaryFailure = true;
+                } else temporaryFailure |= failure.transientFailure();
             } catch (IOException networkOrFile) {
                 temporaryFailure = true;
             } catch (RuntimeException invalidFile) {
@@ -231,14 +252,15 @@ final class ReflectBackendSync implements AutoCloseable {
         }
     }
 
-    private void acknowledge(String key, Job sent, boolean audio, boolean metadata, boolean transcript) {
+    private boolean acknowledge(String key, Job sent, boolean audio, boolean metadata, boolean transcript) {
         synchronized (OUTBOX_LOCK) {
             Job current = load(key);
-            if (current == null) return;
-            persist(key, new Job(current.filename, current.title, current.durationMs, current.audioSent || audio,
+            if (current == null) return false;
+            boolean clearTranscript = transcript && current.transcriptEdit.equals(sent.transcriptEdit);
+            return persist(key, new Job(current.filename, current.title, current.durationMs, current.audioSent || audio,
                     metadata && current.metadataEdit.equals(sent.metadataEdit) ? "" : current.metadataEdit,
-                    transcript && current.transcriptEdit.equals(sent.transcriptEdit) ? "" : current.transcriptEdit,
-                    current.lastImport));
+                    clearTranscript ? "" : current.transcriptEdit, current.lastImport,
+                    !clearTranscript && current.transcriptCreateOnly)) && clearTranscript;
         }
     }
 
@@ -450,7 +472,7 @@ final class ReflectBackendSync implements AutoCloseable {
             JSONObject job = new JSONObject(raw);
             return new Job(job.getString("filename"), job.getString("title"), job.getInt("duration"),
                     job.getBoolean("audio"), job.getString("metadata"), job.getString("transcript"),
-                    job.getString("lastImport"));
+                    job.getString("lastImport"), job.optBoolean("transcriptCreateOnly"));
         } catch (JSONException invalid) {
             return null;
         }
@@ -461,7 +483,8 @@ final class ReflectBackendSync implements AutoCloseable {
             String value = new JSONObject().put("filename", job.filename).put("title", job.title)
                     .put("duration", job.durationMs).put("audio", job.audioSent)
                     .put("metadata", job.metadataEdit).put("transcript", job.transcriptEdit)
-                    .put("lastImport", job.lastImport).toString();
+                    .put("lastImport", job.lastImport).put("transcriptCreateOnly", job.transcriptCreateOnly)
+                    .toString();
             if (outbox.edit().putString(key, value).commit()) return true;
             Log.w(TAG, "Cannot save synchronization state");
         } catch (JSONException invalid) {
@@ -481,7 +504,7 @@ final class ReflectBackendSync implements AutoCloseable {
     }
 
     private record Job(String filename, String title, int durationMs, boolean audioSent, String metadataEdit,
-                       String transcriptEdit, String lastImport) {
+                       String transcriptEdit, String lastImport, boolean transcriptCreateOnly) {
         boolean pending() { return !audioSent || !metadataEdit.isEmpty() || !transcriptEdit.isEmpty(); }
     }
 

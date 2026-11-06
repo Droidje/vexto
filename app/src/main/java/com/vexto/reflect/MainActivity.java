@@ -326,6 +326,15 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         notice("Запись сохранена");
     }
 
+    @Override public void transcribeReview() {
+        if (view.screen() != REVIEW) return;
+        File saved = saveAudio();
+        if (saved == null) return;
+        stopPlayer();
+        view.show(HOME);
+        transcripts.open(saved, defaultRecordingTitle(saved.getParentFile()), time(duration), duration, false, true);
+    }
+
     @Override public void send() {
         File saved = saveAudio();
         if (saved == null) return;
@@ -353,9 +362,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             discardDraft();
             audio = saved;
             if (!designPreview && backend.enabled()) {
-                String[] recordings = directory.list((parent, child) -> new File(parent, child).isFile());
-                String title = recordings == null ? "Запись" : "Запись №" + recordings.length;
-                backend.onSaved(saved, title, duration);
+                backend.onSaved(saved, defaultRecordingTitle(directory), duration);
             }
             refreshRecordings();
             return saved;
@@ -364,6 +371,11 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             notice("Не удалось сохранить запись");
             return null;
         }
+    }
+
+    private static String defaultRecordingTitle(File directory) {
+        String[] recordings = directory.list((parent, child) -> new File(parent, child).isFile());
+        return recordings == null ? "Запись" : "Запись №" + recordings.length;
     }
 
     @Override public void openRecording(ReflectCatalog.Recording recording) {
@@ -415,6 +427,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override public void closeTranscript() { closeRecorder(); }
     @Override public void openExportOptions() { transcripts.exportOptions(); }
     @Override public void importTranscript() { transcripts.pick(); }
+    @Override public void transcribeRecording() { transcripts.transcribe(); }
+    @Override public void cancelTranscription() { transcripts.cancelTranscription(); }
     @Override public void openTranscriptOptions() { transcripts.options(); }
     @Override public void openTranscriptStyle() { transcripts.styleOptions(); }
     @Override public void playTranscriptAudio() { play(); }
@@ -502,6 +516,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override protected void onDestroy() {
         session.cancel();
         if (isFinishing()) discardDraft();
+        transcripts.destroy();
         imports.shutdown();
         backend.close();
         super.onDestroy();

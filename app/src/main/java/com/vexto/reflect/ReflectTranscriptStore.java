@@ -14,6 +14,7 @@ import java.nio.file.StandardCopyOption;
 /** Private sidecar files keyed by the saved recording filename. */
 final class ReflectTranscriptStore {
     private static final int MAX_TITLE_LENGTH = 200;
+    private static final Object TRANSCRIPT_WRITE_LOCK = new Object();
     private final File filesDirectory;
 
     ReflectTranscriptStore(File filesDirectory) {
@@ -30,7 +31,20 @@ final class ReflectTranscriptStore {
 
     void save(File recording, ReflectTranscript transcript) throws IOException {
         File path = sidecar(recording, ".json");
-        writeAtomically(path, transcript.encode());
+        byte[] data = transcript.encode();
+        synchronized (TRANSCRIPT_WRITE_LOCK) {
+            writeAtomically(path, data);
+        }
+    }
+
+    boolean saveIfAbsent(File recording, ReflectTranscript transcript) throws IOException {
+        File path = sidecar(recording, ".json");
+        byte[] data = transcript.encode();
+        synchronized (TRANSCRIPT_WRITE_LOCK) {
+            if (path.exists()) return false;
+            writeAtomically(path, data);
+            return true;
+        }
     }
 
     String title(File recording, String fallback) {
