@@ -22,12 +22,6 @@ object ModelStore {
         throw IOException("В APK нет моделей: перед сборкой запустите scripts/fetch_models.sh", e)
     }
 
-    @JvmStatic
-    fun isInstalled(context: Context): Boolean {
-        val dir = File(context.filesDir, AssetDir)
-        return File(dir, Marker).takeIf { it.exists() }?.readText() == manifest(context).version
-    }
-
     suspend fun install(context: Context, onProgress: (Float) -> Unit): InstalledModels {
         val manifest = manifest(context)
         val dir = File(context.filesDir, AssetDir)

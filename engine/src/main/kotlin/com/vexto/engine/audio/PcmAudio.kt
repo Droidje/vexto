@@ -40,8 +40,6 @@ class PcmAudio internal constructor(
         return out
     }
 
-    fun readAll(agc: Boolean = false): FloatArray = read(0, sampleCount, agc)
-
     /**
      * Усиление по окну [AgcWindowFrames] кадров: target / rms, но не меньше 1 и не больше
      * [AgcMaxGain]. Громкие участки не трогаются, тихий собеседник подтягивается к громкому.
