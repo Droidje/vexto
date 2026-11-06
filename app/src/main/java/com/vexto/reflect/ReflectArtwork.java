@@ -2,12 +2,14 @@ package com.vexto.reflect;
 
 import android.content.ComponentCallbacks2;
 import android.content.res.AssetManager;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
 import android.util.LruCache;
 import com.caverock.androidsvg.SVG;
 import com.caverock.androidsvg.SVGParseException;
@@ -119,6 +121,13 @@ final class ReflectArtwork {
     void centeredIcon(Canvas canvas, String name, float x, float y) {
         Icon icon = loadIcon(name);
         drawBitmap(canvas, icon.bitmap, x - icon.width / 2, y - icon.height / 2, icon.width, icon.height);
+    }
+
+    BitmapDrawable iconDrawable(Resources resources, String name, int size) {
+        BitmapDrawable drawable = new BitmapDrawable(resources, loadIcon(name).bitmap);
+        drawable.setBounds(0, 0, size, size);
+        drawable.setFilterBitmap(true);
+        return drawable;
     }
 
     private void drawBitmap(Canvas canvas, Bitmap bitmap, float x, float y, float width, float height) {

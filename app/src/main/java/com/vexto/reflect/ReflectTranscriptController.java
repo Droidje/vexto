@@ -192,10 +192,10 @@ final class ReflectTranscriptController {
         }
         Sheet menu = sheet("Экспорт записи");
         if (transcript != null && !transcript.lines.isEmpty()) {
-            menu.option(RecordingExport.JSON.label, () -> export(RecordingExport.JSON));
-            menu.option(RecordingExport.MARKDOWN.label, () -> export(RecordingExport.MARKDOWN));
+            menu.exportOption(RecordingExport.JSON);
+            menu.exportOption(RecordingExport.MARKDOWN);
         }
-        menu.option(RecordingExport.AUDIO.label, () -> export(RecordingExport.AUDIO));
+        menu.exportOption(RecordingExport.AUDIO);
         menu.show();
     }
 
@@ -456,9 +456,22 @@ final class ReflectTranscriptController {
         }
 
         void option(String title, Runnable action) {
+            option(title, null, action);
+        }
+
+        void exportOption(RecordingExport format) {
+            option(format.label, format.icon, () -> export(format));
+        }
+
+        private void option(String title, String icon, Runnable action) {
             TextView button = style.text(title, 16, Color.WHITE, style.art.regular);
             button.setMinHeight(style.px(44));
             button.setPadding(style.px(10), 0, style.px(10), 0);
+            if (icon != null) {
+                button.setCompoundDrawablesRelative(
+                        style.art.iconDrawable(activity.getResources(), icon, style.px(22)), null, null, null);
+                button.setCompoundDrawablePadding(style.px(10));
+            }
             button.setBackground(style.pressable(0xff303030, 14));
             button.setOnClickListener(v -> { dialog.dismiss(); action.run(); });
             style.append(root, button, 4, 0);

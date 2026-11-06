@@ -13,18 +13,19 @@ import java.util.regex.Pattern;
 
 /** Documents produced from a saved recording and its optional transcript. */
 enum RecordingExport {
-    JSON(4, "Экспортировать JSON", "application/json", "json"),
-    MARKDOWN(5, "Экспортировать MD", "text/markdown", "md"),
-    AUDIO(6, "Экспортировать звук", null, null);
+    JSON(4, "Экспортировать JSON", "export_braces", "application/json", "json"),
+    MARKDOWN(5, "Экспортировать MD", "export_file", "text/markdown", "md"),
+    AUDIO(6, "Экспортировать звук", "export_voice", null, null);
 
     private static final Pattern MARKDOWN_PUNCTUATION = Pattern.compile("\\p{Punct}");
     final int request;
-    final String label;
+    final String label, icon;
     private final String mime, extension;
 
-    RecordingExport(int request, String label, String mime, String extension) {
+    RecordingExport(int request, String label, String icon, String mime, String extension) {
         this.request = request;
         this.label = label;
+        this.icon = icon;
         this.mime = mime;
         this.extension = extension;
     }
