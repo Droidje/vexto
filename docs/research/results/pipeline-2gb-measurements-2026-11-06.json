@@ -1,0 +1,2852 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-06",
+  "generated_utc": "2026-11-06T19:26:22.012852+00:00",
+  "environment": {
+    "execution": "Android native x86_64 CPU emulator",
+    "avd_ram_mib": 4096
+  },
+  "memory_policy": {
+    "limit_bytes": 2000000000,
+    "reserve_bytes": 134217728,
+    "reserve_inside_limit": true,
+    "os_memory_excluded": true,
+    "hard_limit_guarantee": false
+  },
+  "selected_pipeline": {
+    "report_id": "quality-final-clean",
+    "status": "completed",
+    "all_steps_accepted": true,
+    "conservative_observed_peak_bytes": 1830166528,
+    "reserve_bytes": 134217728,
+    "observed_peak_plus_reserve_bytes": 1964384256,
+    "budget_bytes": 2000000000,
+    "step_ids": [
+      "quality-final-clean:diarization",
+      "quality-final-clean:giga-asr",
+      "quality-final-clean:whisper-comparison",
+      "quality-final-clean:build-prompt",
+      "quality-final-clean:llm-metadata",
+      "quality-final-clean:export-transcript",
+      "quality-final-clean:validate-metadata"
+    ]
+  },
+  "reports": [
+    {
+      "id": "asr-upgrade-guard",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "asr-upgrade-guard:giga-v3-clean-denoised",
+        "asr-upgrade-guard:giga-v3-noise-raw",
+        "asr-upgrade-guard:giga-v3-noise-denoised"
+      ]
+    },
+    {
+      "id": "cpp-large-bounded-guard",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "cpp-large-bounded-guard:cpp-large-q5-beam2"
+      ]
+    },
+    {
+      "id": "cpp-quality-guard",
+      "status": "completed_with_failures",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": false,
+      "step_ids": [
+        "cpp-quality-guard:cpp-large-fa-q5-t4",
+        "cpp-quality-guard:cpp-turbo-nfa-q5-t4"
+      ]
+    },
+    {
+      "id": "cpp-whisper-guard",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "cpp-whisper-guard:whisper-cpp-turbo-q5"
+      ]
+    },
+    {
+      "id": "denoise-guard",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "denoise-guard:gtcrn-clean",
+        "denoise-guard:gtcrn-noise"
+      ]
+    },
+    {
+      "id": "diar-refinement",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "diar-refinement:diar-small-fp32-fp32-repeat4",
+        "diar-refinement:diar-large-fp32-fp32-repeat4",
+        "diar-refinement:diar-small-th09-int8-repeat4",
+        "diar-refinement:diar-large-th09-int8-repeat4"
+      ]
+    },
+    {
+      "id": "diar-stress",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "diar-stress:diar-small-test2-noise10db",
+        "diar-stress:diar-small-test2-repeat4",
+        "diar-stress:diar-large-test2-noise10db",
+        "diar-stress:diar-large-test2-repeat4",
+        "diar-stress:diar-resnet293-threshold-0-2",
+        "diar-stress:diar-resnet293-threshold-0-3"
+      ]
+    },
+    {
+      "id": "guard-smoke",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "guard-smoke:vad-smoke"
+      ]
+    },
+    {
+      "id": "java-smoke-fixed",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "java-smoke-fixed:java-export-smoke",
+        "java-smoke-fixed:java-prompt-smoke",
+        "java-smoke-fixed:java-metadata-smoke"
+      ]
+    },
+    {
+      "id": "java-smoke-guard",
+      "status": "completed_with_failures",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": false,
+      "step_ids": [
+        "java-smoke-guard:java-export-smoke",
+        "java-smoke-guard:java-prompt-smoke",
+        "java-smoke-guard:java-metadata-smoke"
+      ]
+    },
+    {
+      "id": "llm-guard",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "llm-guard:qwen3-1-7b-q4-metadata"
+      ]
+    },
+    {
+      "id": "nemotron-f32-guard",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "nemotron-f32-guard:nemotron3-clean-f32",
+        "nemotron-f32-guard:nemotron3-noise-f32",
+        "nemotron-f32-guard:nemotron3-repeat4-f32",
+        "nemotron-f32-guard:nemotron3-recording1-f32"
+      ]
+    },
+    {
+      "id": "nemotron-guard",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "nemotron-guard:nemotron3-clean",
+        "nemotron-guard:nemotron3-noise",
+        "nemotron-guard:nemotron3-repeat4"
+      ]
+    },
+    {
+      "id": "nemotron-long-guard",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "nemotron-long-guard:nemotron3-repeat14",
+        "nemotron-long-guard:nemotron3-repeat86",
+        "nemotron-long-guard:nemotron3-recording1"
+      ]
+    },
+    {
+      "id": "quality-final-clean",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "quality-final-clean:diarization",
+        "quality-final-clean:giga-asr",
+        "quality-final-clean:whisper-comparison",
+        "quality-final-clean:build-prompt",
+        "quality-final-clean:llm-metadata",
+        "quality-final-clean:export-transcript",
+        "quality-final-clean:validate-metadata"
+      ]
+    },
+    {
+      "id": "quality-final-recording1",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "quality-final-recording1:diarization",
+        "quality-final-recording1:giga-asr",
+        "quality-final-recording1:whisper-comparison",
+        "quality-final-recording1:build-prompt",
+        "quality-final-recording1:llm-metadata",
+        "quality-final-recording1:export-transcript",
+        "quality-final-recording1:validate-metadata"
+      ]
+    },
+    {
+      "id": "quality-r1",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "quality-r1:diarization",
+        "quality-r1:giga-asr",
+        "quality-r1:whisper-comparison",
+        "quality-r1:build-prompt",
+        "quality-r1:llm-metadata",
+        "quality-r1:export-transcript",
+        "quality-r1:validate-metadata"
+      ]
+    },
+    {
+      "id": "whisper-medium-guard",
+      "status": "completed_with_failures",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": false,
+      "step_ids": [
+        "whisper-medium-guard:whisper-medium-raw"
+      ]
+    },
+    {
+      "id": "whisper-turbo-guard",
+      "status": "completed",
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "sampling_interval_ms": 150,
+      "hard_limit_guarantee": false,
+      "all_steps_accepted": true,
+      "step_ids": [
+        "whisper-turbo-guard:whisper-turbo-raw"
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "id": "asr-upgrade-guard:giga-v3-clean-denoised",
+      "report_id": "asr-upgrade-guard",
+      "step": "giga-v3-clean-denoised",
+      "kind": "asr",
+      "model_ids": [
+        "gigaam-v3-e2e-rnnt"
+      ],
+      "fixture_category": "private_short_denoised",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 1.847027,
+      "conservative_observed_peak_bytes": 375955456,
+      "observed_peak_plus_reserve_bytes": 510173184,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.08790343613173425,
+      "native_peak_rss_bytes": 366800896,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 10,
+        "pss_complete_samples": 10,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 374931456,
+        "sampled_peak_tree_pss_bytes": 337707008,
+        "peak_tree_sum_vmhwm_bytes": 375955456,
+        "supervisor_peak_vmhwm_bytes": 3919872
+      },
+      "raw_log_sha256": {
+        "stdout": "16710104a07f8ce1cdce469bb32bf3834812745f57c87b65496040fdadbfeda9",
+        "stderr": "12df9aa15c04c99d6f8f2d5410da26f6f5f8e08668fda2a5b2240b288ca6fdb5"
+      },
+      "configuration": {
+        "threads": 2,
+        "feature_dim": 64
+      }
+    },
+    {
+      "id": "asr-upgrade-guard:giga-v3-noise-raw",
+      "report_id": "asr-upgrade-guard",
+      "step": "giga-v3-noise-raw",
+      "kind": "asr",
+      "model_ids": [
+        "gigaam-v3-e2e-rnnt"
+      ],
+      "fixture_category": "private_short_synthetic_noise",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 1.600614,
+      "conservative_observed_peak_bytes": 375451648,
+      "observed_peak_plus_reserve_bytes": 509669376,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.07617618503712165,
+      "native_peak_rss_bytes": 366993408,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 9,
+        "pss_complete_samples": 9,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 375451648,
+        "sampled_peak_tree_pss_bytes": 337928192,
+        "peak_tree_sum_vmhwm_bytes": 375451648,
+        "supervisor_peak_vmhwm_bytes": 4042752
+      },
+      "raw_log_sha256": {
+        "stdout": "770b269fa5044c295efff15e2f7e052baa42a5213e540fe0c548912fc433f9b2",
+        "stderr": "44a9a6a0a878d9e09636ad86103e9274b0b2aaf76b6beb0129d3462695ba521f"
+      },
+      "configuration": {
+        "threads": 2,
+        "feature_dim": 64
+      }
+    },
+    {
+      "id": "asr-upgrade-guard:giga-v3-noise-denoised",
+      "report_id": "asr-upgrade-guard",
+      "step": "giga-v3-noise-denoised",
+      "kind": "asr",
+      "model_ids": [
+        "gigaam-v3-e2e-rnnt"
+      ],
+      "fixture_category": "private_short_synthetic_noise_denoised",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 1.749848,
+      "conservative_observed_peak_bytes": 375681024,
+      "observed_peak_plus_reserve_bytes": 509898752,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.08327850751951266,
+      "native_peak_rss_bytes": 366628864,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 9,
+        "pss_complete_samples": 9,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 375681024,
+        "sampled_peak_tree_pss_bytes": 338763776,
+        "peak_tree_sum_vmhwm_bytes": 375681024,
+        "supervisor_peak_vmhwm_bytes": 3895296
+      },
+      "raw_log_sha256": {
+        "stdout": "2d6600339466204bd6c632c654861e9f67b09ef4257355cf5c1a9a8b79b3dfed",
+        "stderr": "755411f4eb3f91320f675fbb669a32598c804e57e0c87fe7ec97a192840d1854"
+      },
+      "configuration": {
+        "threads": 2,
+        "feature_dim": 64
+      }
+    },
+    {
+      "id": "cpp-large-bounded-guard:cpp-large-q5-beam2",
+      "report_id": "cpp-large-bounded-guard",
+      "step": "cpp-large-q5-beam2",
+      "kind": "asr",
+      "model_ids": [
+        "whisper-large-v3-q5"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 46.59229,
+      "conservative_observed_peak_bytes": 1826500608,
+      "observed_peak_plus_reserve_bytes": 1960718336,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 2.2174133828288594,
+      "native_peak_rss_bytes": 1817288704,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 163,
+        "pss_complete_samples": 163,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 1824927744,
+        "sampled_peak_tree_pss_bytes": 1815156736,
+        "peak_tree_sum_vmhwm_bytes": 1826500608,
+        "supervisor_peak_vmhwm_bytes": 3936256
+      },
+      "raw_log_sha256": {
+        "stdout": "463d2de2e3f20a78bcb112c3220d59767520e03ba36c36ee1c274679b9b66a79",
+        "stderr": "58c99f1ffcf36fdbb78c85ebc796424d2a845424553135faedf2fd8ede2bbb35"
+      },
+      "configuration": {
+        "threads": 4,
+        "processors": 1,
+        "beam_size": 2,
+        "best_of": 2,
+        "flash_attention": true
+      }
+    },
+    {
+      "id": "cpp-quality-guard:cpp-large-fa-q5-t4",
+      "report_id": "cpp-quality-guard",
+      "step": "cpp-large-fa-q5-t4",
+      "kind": "asr",
+      "model_ids": [
+        "whisper-large-v3-q5"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "memory_rejected",
+      "accepted": false,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 19.702073,
+      "conservative_observed_peak_bytes": 2061590528,
+      "observed_peak_plus_reserve_bytes": 2195808256,
+      "budget_check_passed": false,
+      "native_budget_check_passed": false,
+      "process_rtf": 0.9376581477251094,
+      "native_peak_rss_bytes": 2057617408,
+      "guard": {
+        "model_exit_code": 15,
+        "memory_rejected": 1,
+        "timed_out": 0,
+        "samples": 78,
+        "pss_complete_samples": 78,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 1944625152,
+        "sampled_peak_tree_pss_bytes": 1938280448,
+        "peak_tree_sum_vmhwm_bytes": 1944625152,
+        "supervisor_peak_vmhwm_bytes": 3973120
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "511c8dd9f5b343b3c8393438eec695b44dcc012bcc916f9d04a6937c333b8bec"
+      },
+      "configuration": {
+        "threads": 4,
+        "flash_attention": true
+      }
+    },
+    {
+      "id": "cpp-quality-guard:cpp-turbo-nfa-q5-t4",
+      "report_id": "cpp-quality-guard",
+      "step": "cpp-turbo-nfa-q5-t4",
+      "kind": "asr",
+      "model_ids": [
+        "whisper-large-v3-turbo-q5"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 32.312327,
+      "conservative_observed_peak_bytes": 1083256832,
+      "observed_peak_plus_reserve_bytes": 1217474560,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 1.537803493241957,
+      "native_peak_rss_bytes": 1074098176,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 118,
+        "pss_complete_samples": 118,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 1080238080,
+        "sampled_peak_tree_pss_bytes": 1070540800,
+        "peak_tree_sum_vmhwm_bytes": 1083256832,
+        "supervisor_peak_vmhwm_bytes": 3960832
+      },
+      "raw_log_sha256": {
+        "stdout": "2a9b343d70bf8f70937177e59a24179754f70b10c41352eb728d7fd51981553f",
+        "stderr": "156129e6deee999befb0e335230d3982b4724f73512ac46284fd84f9a247b1a9"
+      },
+      "configuration": {
+        "threads": 4,
+        "flash_attention": false
+      }
+    },
+    {
+      "id": "cpp-whisper-guard:whisper-cpp-turbo-q5",
+      "report_id": "cpp-whisper-guard",
+      "step": "whisper-cpp-turbo-q5",
+      "kind": "asr",
+      "model_ids": [
+        "whisper-large-v3-turbo-q5"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 29.594743,
+      "conservative_observed_peak_bytes": 842313728,
+      "observed_peak_plus_reserve_bytes": 976531456,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 1.4084686369693509,
+      "native_peak_rss_bytes": 833220608,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 149,
+        "pss_complete_samples": 149,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 840740864,
+        "sampled_peak_tree_pss_bytes": 830984192,
+        "peak_tree_sum_vmhwm_bytes": 842313728,
+        "supervisor_peak_vmhwm_bytes": 3944448
+      },
+      "raw_log_sha256": {
+        "stdout": "913585f7b24c266308e28434fde7078f1950fd1400d50a0605231cf0225a0e5f",
+        "stderr": "e0db2b2178ce617cc997625003d5daaad7eee1a934df1779685bbb178168428d"
+      },
+      "configuration": {
+        "threads": 2,
+        "flash_attention": true
+      }
+    },
+    {
+      "id": "denoise-guard:gtcrn-clean",
+      "report_id": "denoise-guard",
+      "step": "gtcrn-clean",
+      "kind": "denoiser",
+      "model_ids": [
+        "gtcrn"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 0.973783,
+      "conservative_observed_peak_bytes": 90456064,
+      "observed_peak_plus_reserve_bytes": 224673792,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.04634413668379973,
+      "native_peak_rss_bytes": 84684800,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 5,
+        "pss_complete_samples": 5,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 89673728,
+        "sampled_peak_tree_pss_bytes": 52482048,
+        "peak_tree_sum_vmhwm_bytes": 90456064,
+        "supervisor_peak_vmhwm_bytes": 3944448
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "9a1b24585920284ef797237ebe81b2c9b5311185ba1787444b9690f0a79a50f3"
+      }
+    },
+    {
+      "id": "denoise-guard:gtcrn-noise",
+      "report_id": "denoise-guard",
+      "step": "gtcrn-noise",
+      "kind": "denoiser",
+      "model_ids": [
+        "gtcrn"
+      ],
+      "fixture_category": "private_short_synthetic_noise",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 0.771706,
+      "conservative_observed_peak_bytes": 90562560,
+      "observed_peak_plus_reserve_bytes": 224780288,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.036726917951646676,
+      "native_peak_rss_bytes": 84926464,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 4,
+        "pss_complete_samples": 4,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 89632768,
+        "sampled_peak_tree_pss_bytes": 51960832,
+        "peak_tree_sum_vmhwm_bytes": 90562560,
+        "supervisor_peak_vmhwm_bytes": 3977216
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "36c94f6a3da8e55f36ad55eccd91e56fef7045dbb6eb1e6123c27ee5ff79e3b5"
+      }
+    },
+    {
+      "id": "diar-refinement:diar-small-fp32-fp32-repeat4",
+      "report_id": "diar-refinement",
+      "step": "diar-small-fp32-fp32-repeat4",
+      "kind": "diarization",
+      "model_ids": [
+        "baseline-pyannote-segmentation-fp32",
+        "baseline-titanet-small"
+      ],
+      "fixture_category": "private_synthetic_repetition_stress",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 84.048,
+      "native_wall_seconds": 9.697706,
+      "conservative_observed_peak_bytes": 283570176,
+      "observed_peak_plus_reserve_bytes": 417787904,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.11538294783932991,
+      "native_peak_rss_bytes": 274972672,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 51,
+        "pss_complete_samples": 50,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 283570176,
+        "sampled_peak_tree_pss_bytes": 246853632,
+        "peak_tree_sum_vmhwm_bytes": 283570176,
+        "supervisor_peak_vmhwm_bytes": 3837952
+      },
+      "raw_log_sha256": {
+        "stdout": "20e7fce6d16ba222f8ec19d9b7e931819e93417dc2e3a6df737c43d5a589628c",
+        "stderr": "023cedd1458b2f09fc5e3c1d762c317f101666948c574f8e5e3cc67e44ababc8"
+      },
+      "configuration": {
+        "cluster_threshold": 0.7
+      }
+    },
+    {
+      "id": "diar-refinement:diar-large-fp32-fp32-repeat4",
+      "report_id": "diar-refinement",
+      "step": "diar-large-fp32-fp32-repeat4",
+      "kind": "diarization",
+      "model_ids": [
+        "baseline-pyannote-segmentation-fp32",
+        "titanet-large"
+      ],
+      "fixture_category": "private_synthetic_repetition_stress",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 84.048,
+      "native_wall_seconds": 29.083843,
+      "conservative_observed_peak_bytes": 340975616,
+      "observed_peak_plus_reserve_bytes": 475193344,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.3460384899105273,
+      "native_peak_rss_bytes": 332316672,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 149,
+        "pss_complete_samples": 149,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 340975616,
+        "sampled_peak_tree_pss_bytes": 304377856,
+        "peak_tree_sum_vmhwm_bytes": 340975616,
+        "supervisor_peak_vmhwm_bytes": 3887104
+      },
+      "raw_log_sha256": {
+        "stdout": "babd6de3b6269712b8840565e6b1460cae30431a8978825e0d0c04309d4b6d6c",
+        "stderr": "afd35e75e81834c43041cf16245431572b754022a18b4382bef4c4689724c6c7"
+      },
+      "configuration": {
+        "cluster_threshold": 0.7
+      }
+    },
+    {
+      "id": "diar-refinement:diar-small-th09-int8-repeat4",
+      "report_id": "diar-refinement",
+      "step": "diar-small-th09-int8-repeat4",
+      "kind": "diarization",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "baseline-titanet-small"
+      ],
+      "fixture_category": "private_synthetic_repetition_stress",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 84.048,
+      "native_wall_seconds": 8.352122,
+      "conservative_observed_peak_bytes": 277737472,
+      "observed_peak_plus_reserve_bytes": 411955200,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.09937323910146582,
+      "native_peak_rss_bytes": 269131776,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 43,
+        "pss_complete_samples": 43,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 277676032,
+        "sampled_peak_tree_pss_bytes": 240574464,
+        "peak_tree_sum_vmhwm_bytes": 277737472,
+        "supervisor_peak_vmhwm_bytes": 3944448
+      },
+      "raw_log_sha256": {
+        "stdout": "0d8fd284118b3db65ccb8ad260bd2401bf2603778e45d0a9fdf7e8bf11cb5e22",
+        "stderr": "adeac7e95315075e892e49768189f16004e4695f78407267b0255c37749c636b"
+      },
+      "configuration": {
+        "cluster_threshold": 0.9
+      }
+    },
+    {
+      "id": "diar-refinement:diar-large-th09-int8-repeat4",
+      "report_id": "diar-refinement",
+      "step": "diar-large-th09-int8-repeat4",
+      "kind": "diarization",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "titanet-large"
+      ],
+      "fixture_category": "private_synthetic_repetition_stress",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 84.048,
+      "native_wall_seconds": 27.607106,
+      "conservative_observed_peak_bytes": 335515648,
+      "observed_peak_plus_reserve_bytes": 469733376,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.3284683276223111,
+      "native_peak_rss_bytes": 326598656,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 141,
+        "pss_complete_samples": 141,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 335491072,
+        "sampled_peak_tree_pss_bytes": 298237952,
+        "peak_tree_sum_vmhwm_bytes": 335515648,
+        "supervisor_peak_vmhwm_bytes": 3829760
+      },
+      "raw_log_sha256": {
+        "stdout": "4ec2c49168d5c7bc40d5bebb7f3900dd75c945f8913061f38d982f861ed5355a",
+        "stderr": "3491ee72b67af89a4015ae85ca558f57923bd97095d2cb24fc1d12462fb604c5"
+      },
+      "configuration": {
+        "cluster_threshold": 0.9
+      }
+    },
+    {
+      "id": "diar-stress:diar-small-test2-noise10db",
+      "report_id": "diar-stress",
+      "step": "diar-small-test2-noise10db",
+      "kind": "diarization",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "baseline-titanet-small"
+      ],
+      "fixture_category": "private_short_synthetic_noise",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 1.817008,
+      "conservative_observed_peak_bytes": 220180480,
+      "observed_peak_plus_reserve_bytes": 354398208,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.08647477631829431,
+      "native_peak_rss_bytes": 211124224,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 10,
+        "pss_complete_samples": 10,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 216186880,
+        "sampled_peak_tree_pss_bytes": 179075072,
+        "peak_tree_sum_vmhwm_bytes": 220180480,
+        "supervisor_peak_vmhwm_bytes": 3993600
+      },
+      "raw_log_sha256": {
+        "stdout": "4b638cc8e637452d50629775107712dcd03efe50dbe56eb8c179174485749208",
+        "stderr": "bb866bbe96cc42d2678f55986a42c8ea143ccb1a91305e31cb91f96f672cc748"
+      },
+      "configuration": {
+        "cluster_threshold": 0.7
+      }
+    },
+    {
+      "id": "diar-stress:diar-small-test2-repeat4",
+      "report_id": "diar-stress",
+      "step": "diar-small-test2-repeat4",
+      "kind": "diarization",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "baseline-titanet-small"
+      ],
+      "fixture_category": "private_synthetic_repetition_stress",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 84.048,
+      "native_wall_seconds": 8.608733,
+      "conservative_observed_peak_bytes": 278880256,
+      "observed_peak_plus_reserve_bytes": 413097984,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.10242638730249382,
+      "native_peak_rss_bytes": 269688832,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 45,
+        "pss_complete_samples": 45,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 277811200,
+        "sampled_peak_tree_pss_bytes": 240592896,
+        "peak_tree_sum_vmhwm_bytes": 278880256,
+        "supervisor_peak_vmhwm_bytes": 4034560
+      },
+      "raw_log_sha256": {
+        "stdout": "18939f5c8da029afc43afb52c52fd1bf24c6e6e21a32c6bf1423b12d55c88b49",
+        "stderr": "cf3b223926e430343dcd0733903c51f665fd120f01a560aea938febf1d385a6c"
+      },
+      "configuration": {
+        "cluster_threshold": 0.7
+      }
+    },
+    {
+      "id": "diar-stress:diar-large-test2-noise10db",
+      "report_id": "diar-stress",
+      "step": "diar-large-test2-noise10db",
+      "kind": "diarization",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "titanet-large"
+      ],
+      "fixture_category": "private_short_synthetic_noise",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 5.233875,
+      "conservative_observed_peak_bytes": 280252416,
+      "observed_peak_plus_reserve_bytes": 414470144,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.24908980582524273,
+      "native_peak_rss_bytes": 271097856,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 27,
+        "pss_complete_samples": 27,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 280125440,
+        "sampled_peak_tree_pss_bytes": 242789376,
+        "peak_tree_sum_vmhwm_bytes": 280252416,
+        "supervisor_peak_vmhwm_bytes": 3891200
+      },
+      "raw_log_sha256": {
+        "stdout": "b3761987950a4137683c4354ab35740770ace07a7d3f9a04f65bffbb53c49e2d",
+        "stderr": "937f5d9b6f24fd8b13b4034b714a5b74b92641314ee1ee96b6849a68b0d1d6d2"
+      },
+      "configuration": {
+        "cluster_threshold": 0.7
+      }
+    },
+    {
+      "id": "diar-stress:diar-large-test2-repeat4",
+      "report_id": "diar-stress",
+      "step": "diar-large-test2-repeat4",
+      "kind": "diarization",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "titanet-large"
+      ],
+      "fixture_category": "private_synthetic_repetition_stress",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 84.048,
+      "native_wall_seconds": 30.116353,
+      "conservative_observed_peak_bytes": 335601664,
+      "observed_peak_plus_reserve_bytes": 469819392,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.3583232557586141,
+      "native_peak_rss_bytes": 327495680,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 150,
+        "pss_complete_samples": 150,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 335577088,
+        "sampled_peak_tree_pss_bytes": 298103808,
+        "peak_tree_sum_vmhwm_bytes": 335601664,
+        "supervisor_peak_vmhwm_bytes": 4055040
+      },
+      "raw_log_sha256": {
+        "stdout": "88253cf9498ad9112c22e112d66f64f6bea86be6bf18f159d28b3a4e7928575c",
+        "stderr": "024e60f0aa5f3cdb9545002aedd0443f6008357c1845049423f3c65662b5ef74"
+      },
+      "configuration": {
+        "cluster_threshold": 0.7
+      }
+    },
+    {
+      "id": "diar-stress:diar-resnet293-threshold-0-2",
+      "report_id": "diar-stress",
+      "step": "diar-resnet293-threshold-0-2",
+      "kind": "diarization",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "wespeaker-resnet293-lm"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 33.874834,
+      "conservative_observed_peak_bytes": 341221376,
+      "observed_peak_plus_reserve_bytes": 475439104,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 1.6121660955644392,
+      "native_peak_rss_bytes": 332075008,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 164,
+        "pss_complete_samples": 163,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 340828160,
+        "sampled_peak_tree_pss_bytes": 303932416,
+        "peak_tree_sum_vmhwm_bytes": 341221376,
+        "supervisor_peak_vmhwm_bytes": 3997696
+      },
+      "raw_log_sha256": {
+        "stdout": "55604adec1109b10dc3dd6af2873fccf28d5b8240eed04ccb8e83e8a62876eb2",
+        "stderr": "42c181a7b52603cb1ac76af8ae55dce31befc9013c7980afc188a86006949d0e"
+      },
+      "configuration": {
+        "cluster_threshold": 0.2
+      }
+    },
+    {
+      "id": "diar-stress:diar-resnet293-threshold-0-3",
+      "report_id": "diar-stress",
+      "step": "diar-resnet293-threshold-0-3",
+      "kind": "diarization",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "wespeaker-resnet293-lm"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 29.635594,
+      "conservative_observed_peak_bytes": 341958656,
+      "observed_peak_plus_reserve_bytes": 476176384,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 1.4104128117266324,
+      "native_peak_rss_bytes": 332935168,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 150,
+        "pss_complete_samples": 150,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 341565440,
+        "sampled_peak_tree_pss_bytes": 304266240,
+        "peak_tree_sum_vmhwm_bytes": 341958656,
+        "supervisor_peak_vmhwm_bytes": 3858432
+      },
+      "raw_log_sha256": {
+        "stdout": "8126c258f9a35440b268b70bfb67e72c16be6a52b71eae9ca5844814d129e6d2",
+        "stderr": "e4f846bbe763310c6532d90a8bb4bb7256f01f736c852d214e82c9a2a086ed9d"
+      },
+      "configuration": {
+        "cluster_threshold": 0.3
+      }
+    },
+    {
+      "id": "guard-smoke:vad-smoke",
+      "report_id": "guard-smoke",
+      "step": "vad-smoke",
+      "kind": "vad",
+      "model_ids": [
+        "baseline-silero-vad"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 0.381555,
+      "conservative_observed_peak_bytes": 86978560,
+      "observed_peak_plus_reserve_bytes": 221196288,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.01815890919474586,
+      "native_peak_rss_bytes": 79986688,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 2,
+        "pss_complete_samples": 2,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 86061056,
+        "sampled_peak_tree_pss_bytes": 49184768,
+        "peak_tree_sum_vmhwm_bytes": 86978560,
+        "supervisor_peak_vmhwm_bytes": 3928064
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "72970ddafd5f7d9d926624c744a048b4807cf9e85f8cde993267ad666bac05bf"
+      }
+    },
+    {
+      "id": "java-smoke-fixed:java-export-smoke",
+      "report_id": "java-smoke-fixed",
+      "step": "java-export-smoke",
+      "kind": "export",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 1.23816,
+      "conservative_observed_peak_bytes": 157278208,
+      "observed_peak_plus_reserve_bytes": 291495936,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 148131840,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 6,
+        "pss_complete_samples": 6,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 157278208,
+        "sampled_peak_tree_pss_bytes": 79428608,
+        "peak_tree_sum_vmhwm_bytes": 157278208,
+        "supervisor_peak_vmhwm_bytes": 3891200
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "81cd7bbb4b884cbeed25797465dae159fc762eaa9554eb25fa6108f341917491"
+      }
+    },
+    {
+      "id": "java-smoke-fixed:java-prompt-smoke",
+      "report_id": "java-smoke-fixed",
+      "step": "java-prompt-smoke",
+      "kind": "prompt",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 1.103164,
+      "conservative_observed_peak_bytes": 152629248,
+      "observed_peak_plus_reserve_bytes": 286846976,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 143446016,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 5,
+        "pss_complete_samples": 5,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 152629248,
+        "sampled_peak_tree_pss_bytes": 76280832,
+        "peak_tree_sum_vmhwm_bytes": 152629248,
+        "supervisor_peak_vmhwm_bytes": 3878912
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "adb48618e0e6de9d26ab0657e81af0d52b6a3d830731e12cf215935ba8dc7486"
+      }
+    },
+    {
+      "id": "java-smoke-fixed:java-metadata-smoke",
+      "report_id": "java-smoke-fixed",
+      "step": "java-metadata-smoke",
+      "kind": "metadata",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 1.050057,
+      "conservative_observed_peak_bytes": 157433856,
+      "observed_peak_plus_reserve_bytes": 291651584,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 148074496,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 5,
+        "pss_complete_samples": 5,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 157433856,
+        "sampled_peak_tree_pss_bytes": 79177728,
+        "peak_tree_sum_vmhwm_bytes": 157433856,
+        "supervisor_peak_vmhwm_bytes": 4083712
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "b2c2d3d5251fc7afbe597466be763c67246711d003cf7440e9fadce6329b1268"
+      }
+    },
+    {
+      "id": "java-smoke-guard:java-export-smoke",
+      "report_id": "java-smoke-guard",
+      "step": "java-export-smoke",
+      "kind": "export",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "failed",
+      "accepted": false,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 0.733776,
+      "conservative_observed_peak_bytes": 147632128,
+      "observed_peak_plus_reserve_bytes": 281849856,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 140222464,
+      "guard": {
+        "model_exit_code": 9,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 4,
+        "pss_complete_samples": 4,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 147632128,
+        "sampled_peak_tree_pss_bytes": 70584320,
+        "peak_tree_sum_vmhwm_bytes": 147632128,
+        "supervisor_peak_vmhwm_bytes": 4009984
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "85c7456da9dd97cf69ae832387ff5be6aee27aa80ef7bf7bc58d1d2e7511a41f"
+      }
+    },
+    {
+      "id": "java-smoke-guard:java-prompt-smoke",
+      "report_id": "java-smoke-guard",
+      "step": "java-prompt-smoke",
+      "kind": "prompt",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "failed",
+      "accepted": false,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 0.142283,
+      "conservative_observed_peak_bytes": 145555456,
+      "observed_peak_plus_reserve_bytes": 279773184,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 141598720,
+      "guard": {
+        "model_exit_code": 9,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 1,
+        "pss_complete_samples": 1,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 50962432,
+        "sampled_peak_tree_pss_bytes": 15183872,
+        "peak_tree_sum_vmhwm_bytes": 50962432,
+        "supervisor_peak_vmhwm_bytes": 3956736
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "050e6a521d0f28050323223067d598daca657a330c1a07247a6b63253b4fcdc3"
+      }
+    },
+    {
+      "id": "java-smoke-guard:java-metadata-smoke",
+      "report_id": "java-smoke-guard",
+      "step": "java-metadata-smoke",
+      "kind": "metadata",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "failed",
+      "accepted": false,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 0.124104,
+      "conservative_observed_peak_bytes": 145219584,
+      "observed_peak_plus_reserve_bytes": 279437312,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 141193216,
+      "guard": {
+        "model_exit_code": 9,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 1,
+        "pss_complete_samples": 1,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 43790336,
+        "sampled_peak_tree_pss_bytes": 13962240,
+        "peak_tree_sum_vmhwm_bytes": 43790336,
+        "supervisor_peak_vmhwm_bytes": 4026368
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "9cd20972d1d9123a5897c684c053b7224894b383ae2dd6803d997087964392bd"
+      }
+    },
+    {
+      "id": "llm-guard:qwen3-1-7b-q4-metadata",
+      "report_id": "llm-guard",
+      "step": "qwen3-1-7b-q4-metadata",
+      "kind": "llm",
+      "model_ids": [
+        "qwen3-1.7b-q4-k-m"
+      ],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 39.89904,
+      "conservative_observed_peak_bytes": 1475579904,
+      "observed_peak_plus_reserve_bytes": 1609797632,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 1.8988692175899484,
+      "native_peak_rss_bytes": 1466466304,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 187,
+        "pss_complete_samples": 187,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 1475579904,
+        "sampled_peak_tree_pss_bytes": 1465987072,
+        "peak_tree_sum_vmhwm_bytes": 1475579904,
+        "supervisor_peak_vmhwm_bytes": 4001792
+      },
+      "raw_log_sha256": {
+        "stdout": "ab0cd918938ea620299fda0ee06624b6c0d8f3680fcbce180aaeefa9d2943528",
+        "stderr": "77d89efaab9457c21a0dfb0f913f4641a0ba60f2b7b4029c0c20784cf73b1424"
+      },
+      "configuration": {
+        "threads": 2,
+        "llm_context_tokens": 1024
+      }
+    },
+    {
+      "id": "nemotron-f32-guard:nemotron3-clean-f32",
+      "report_id": "nemotron-f32-guard",
+      "step": "nemotron3-clean-f32",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-f32-conversion"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 0.565117,
+      "conservative_observed_peak_bytes": 431616000,
+      "observed_peak_plus_reserve_bytes": 565833728,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.026894964782029317,
+      "native_peak_rss_bytes": 423055360,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 3,
+        "pss_complete_samples": 3,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 431616000,
+        "sampled_peak_tree_pss_bytes": 422180864,
+        "peak_tree_sum_vmhwm_bytes": 431616000,
+        "supervisor_peak_vmhwm_bytes": 3932160
+      },
+      "raw_log_sha256": {
+        "stdout": "f7c043b3e30a5e6df2d4418356c8103ca23cdc27953327fcdbd3c8959f5d232c",
+        "stderr": "1cd7af4c916df902b71f41a616c12308874371633fdbfd031f70b34443482457"
+      }
+    },
+    {
+      "id": "nemotron-f32-guard:nemotron3-noise-f32",
+      "report_id": "nemotron-f32-guard",
+      "step": "nemotron3-noise-f32",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-f32-conversion"
+      ],
+      "fixture_category": "private_short_synthetic_noise",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 0.613917,
+      "conservative_observed_peak_bytes": 432111616,
+      "observed_peak_plus_reserve_bytes": 566329344,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.029217447173043976,
+      "native_peak_rss_bytes": 422961152,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 3,
+        "pss_complete_samples": 3,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 277970944,
+        "sampled_peak_tree_pss_bytes": 268295168,
+        "peak_tree_sum_vmhwm_bytes": 432111616,
+        "supervisor_peak_vmhwm_bytes": 3903488
+      },
+      "raw_log_sha256": {
+        "stdout": "f8606fa145fb97d7b2650105180f37f60d8a82ce2f5c3e3390a1f6d12f916fc4",
+        "stderr": "d1e1c00c658ed9a8c93a9d5a0ad2bdd59d168f32818cdd0e08a7b558117478bf"
+      }
+    },
+    {
+      "id": "nemotron-f32-guard:nemotron3-repeat4-f32",
+      "report_id": "nemotron-f32-guard",
+      "step": "nemotron3-repeat4-f32",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-f32-conversion"
+      ],
+      "fixture_category": "private_synthetic_repetition_stress",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 84.048,
+      "native_wall_seconds": 5.11446,
+      "conservative_observed_peak_bytes": 449122304,
+      "observed_peak_plus_reserve_bytes": 583340032,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.060851656196459165,
+      "native_peak_rss_bytes": 440573952,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 18,
+        "pss_complete_samples": 18,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 449122304,
+        "sampled_peak_tree_pss_bytes": 439482368,
+        "peak_tree_sum_vmhwm_bytes": 449122304,
+        "supervisor_peak_vmhwm_bytes": 3842048
+      },
+      "raw_log_sha256": {
+        "stdout": "bc9589582c96e7a2b866c8e2892010b31477af478cf35b8039b8f3f348acbbc6",
+        "stderr": "e7ef7d11001a40ad19a3633d3a287cb06e625bb49a2cdc6a8a3a3b45a7d19eb4"
+      }
+    },
+    {
+      "id": "nemotron-f32-guard:nemotron3-recording1-f32",
+      "report_id": "nemotron-f32-guard",
+      "step": "nemotron3-recording1-f32",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-f32-conversion"
+      ],
+      "fixture_category": "private_three_speaker_recording",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 28.948,
+      "native_wall_seconds": 1.798433,
+      "conservative_observed_peak_bytes": 436391936,
+      "observed_peak_plus_reserve_bytes": 570609664,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.06212632997098245,
+      "native_peak_rss_bytes": 427655168,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 7,
+        "pss_complete_samples": 7,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 436391936,
+        "sampled_peak_tree_pss_bytes": 426895360,
+        "peak_tree_sum_vmhwm_bytes": 436391936,
+        "supervisor_peak_vmhwm_bytes": 3911680
+      },
+      "raw_log_sha256": {
+        "stdout": "d8affcccfe5d744cf369bdc04b74a797f119c30df4d836a4857f5b98fc768990",
+        "stderr": "595b59ae9d311e9188a93c5e3949559b8a0535673ad80dfb6e751636f0fbffbd"
+      }
+    },
+    {
+      "id": "nemotron-guard:nemotron3-clean",
+      "report_id": "nemotron-guard",
+      "step": "nemotron3-clean",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-q8"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 0.475784,
+      "conservative_observed_peak_bytes": 138985472,
+      "observed_peak_plus_reserve_bytes": 273203200,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.022643441842756518,
+      "native_peak_rss_bytes": 134979584,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 2,
+        "pss_complete_samples": 2,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 105484288,
+        "sampled_peak_tree_pss_bytes": 95926272,
+        "peak_tree_sum_vmhwm_bytes": 105484288,
+        "supervisor_peak_vmhwm_bytes": 4005888
+      },
+      "raw_log_sha256": {
+        "stdout": "087c85973701afcdd568b5ad91b495fc16f9ea868f629bf26eaff480048ba1b1",
+        "stderr": "50b4c00d0d698f2a54df57f26eaa2db7f27a9d6a1d1195b1496a029c919126fd"
+      }
+    },
+    {
+      "id": "nemotron-guard:nemotron3-noise",
+      "report_id": "nemotron-guard",
+      "step": "nemotron3-noise",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-q8"
+      ],
+      "fixture_category": "private_short_synthetic_noise",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 0.505686,
+      "conservative_observed_peak_bytes": 144408576,
+      "observed_peak_plus_reserve_bytes": 278626304,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.024066533409480294,
+      "native_peak_rss_bytes": 135274496,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 3,
+        "pss_complete_samples": 3,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 142319616,
+        "sampled_peak_tree_pss_bytes": 132835328,
+        "peak_tree_sum_vmhwm_bytes": 144408576,
+        "supervisor_peak_vmhwm_bytes": 3997696
+      },
+      "raw_log_sha256": {
+        "stdout": "f8606fa145fb97d7b2650105180f37f60d8a82ce2f5c3e3390a1f6d12f916fc4",
+        "stderr": "942a63b18ddfe4e3dbf6e4029ea1ad88a934fcf910781388881ea9b9f7cdf528"
+      }
+    },
+    {
+      "id": "nemotron-guard:nemotron3-repeat4",
+      "report_id": "nemotron-guard",
+      "step": "nemotron3-repeat4",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-q8"
+      ],
+      "fixture_category": "private_synthetic_repetition_stress",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 84.048,
+      "native_wall_seconds": 3.292364,
+      "conservative_observed_peak_bytes": 161316864,
+      "observed_peak_plus_reserve_bytes": 295534592,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.03917242528079193,
+      "native_peak_rss_bytes": 152907776,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 14,
+        "pss_complete_samples": 14,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 161316864,
+        "sampled_peak_tree_pss_bytes": 152096768,
+        "peak_tree_sum_vmhwm_bytes": 161316864,
+        "supervisor_peak_vmhwm_bytes": 3825664
+      },
+      "raw_log_sha256": {
+        "stdout": "4e8379c09c04f2c8b96d66d555b8ca4c89af4ac4bd88b954ba0895c8ed1f9cfe",
+        "stderr": "d1bc123eed5e076f0f28e79452561c9336d770f6dcf917b2aca7ec22d290b371"
+      }
+    },
+    {
+      "id": "nemotron-long-guard:nemotron3-repeat14",
+      "report_id": "nemotron-long-guard",
+      "step": "nemotron3-repeat14",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-q8"
+      ],
+      "fixture_category": "private_synthetic_repetition_stress",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 294.168,
+      "native_wall_seconds": 13.150536,
+      "conservative_observed_peak_bytes": 175108096,
+      "observed_peak_plus_reserve_bytes": 309325824,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.04470416904625928,
+      "native_peak_rss_bytes": 166727680,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 54,
+        "pss_complete_samples": 54,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 175108096,
+        "sampled_peak_tree_pss_bytes": 165642240,
+        "peak_tree_sum_vmhwm_bytes": 175108096,
+        "supervisor_peak_vmhwm_bytes": 3923968
+      },
+      "raw_log_sha256": {
+        "stdout": "e376790a1e606a3a907f156b381b1044d3104ba94ab873d30693c34841ec4b83",
+        "stderr": "b9825629b1b4b1f0ba39f31a06fc0a40b4c508aa7aeb6e1ddcc675c4e38c72c6"
+      }
+    },
+    {
+      "id": "nemotron-long-guard:nemotron3-repeat86",
+      "report_id": "nemotron-long-guard",
+      "step": "nemotron3-repeat86",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-q8"
+      ],
+      "fixture_category": "private_synthetic_repetition_stress",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 1807.0320000000002,
+      "native_wall_seconds": 108.424008,
+      "conservative_observed_peak_bytes": 275554304,
+      "observed_peak_plus_reserve_bytes": 409772032,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.060001155485901736,
+      "native_peak_rss_bytes": 266440704,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 388,
+        "pss_complete_samples": 388,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 275161088,
+        "sampled_peak_tree_pss_bytes": 265512960,
+        "peak_tree_sum_vmhwm_bytes": 275554304,
+        "supervisor_peak_vmhwm_bytes": 3862528
+      },
+      "raw_log_sha256": {
+        "stdout": "bdec6ca19ed9d59fbaf8e7825c9619e864bc0a455f70bb2ad7bf1648083d7621",
+        "stderr": "a765a44bccfcfe21057d5e4c1f7f9eaf987834544a9a8cdcd0b2c71f241cf7d6"
+      }
+    },
+    {
+      "id": "nemotron-long-guard:nemotron3-recording1",
+      "report_id": "nemotron-long-guard",
+      "step": "nemotron3-recording1",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-q8"
+      ],
+      "fixture_category": "private_three_speaker_recording",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 28.948,
+      "native_wall_seconds": 1.684706,
+      "conservative_observed_peak_bytes": 148787200,
+      "observed_peak_plus_reserve_bytes": 283004928,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.058197664778223024,
+      "native_peak_rss_bytes": 139821056,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 6,
+        "pss_complete_samples": 6,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 148787200,
+        "sampled_peak_tree_pss_bytes": 139133952,
+        "peak_tree_sum_vmhwm_bytes": 148787200,
+        "supervisor_peak_vmhwm_bytes": 4038656
+      },
+      "raw_log_sha256": {
+        "stdout": "25db04de34fff6373e8e6a8b9272d110dd535998fb22b294523eedb827de8fd8",
+        "stderr": "56caa7cc8d495d56a8a4f6816fc82cc98202ba8c1ad3631ff83633b1197983c4"
+      }
+    },
+    {
+      "id": "quality-final-clean:diarization",
+      "report_id": "quality-final-clean",
+      "step": "diarization",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-f32-conversion"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 0.553688,
+      "conservative_observed_peak_bytes": 427155456,
+      "observed_peak_plus_reserve_bytes": 561373184,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.02635103750237959,
+      "native_peak_rss_bytes": 423309312,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 2,
+        "pss_complete_samples": 2,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 328253440,
+        "sampled_peak_tree_pss_bytes": 315705344,
+        "peak_tree_sum_vmhwm_bytes": 328253440,
+        "supervisor_peak_vmhwm_bytes": 3846144
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "eed32c5b80f741647fab24fb1cf6790a3aa6ab97419a0de9b27444b3ab769f2e"
+      }
+    },
+    {
+      "id": "quality-final-clean:giga-asr",
+      "report_id": "quality-final-clean",
+      "step": "giga-asr",
+      "kind": "asr",
+      "model_ids": [
+        "gigaam-v3-e2e-rnnt"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 1.906858,
+      "conservative_observed_peak_bytes": 379777024,
+      "observed_peak_plus_reserve_bytes": 513994752,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.09075090424519322,
+      "native_peak_rss_bytes": 366809088,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 9,
+        "pss_complete_samples": 9,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 379777024,
+        "sampled_peak_tree_pss_bytes": 339881984,
+        "peak_tree_sum_vmhwm_bytes": 379777024,
+        "supervisor_peak_vmhwm_bytes": 4022272
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "c82769be7e0b75a6f40f22849a31c7447d39a1cfdcaac03de1d616ed364128b9"
+      },
+      "configuration": {
+        "threads": 2,
+        "feature_dim": 64
+      }
+    },
+    {
+      "id": "quality-final-clean:whisper-comparison",
+      "report_id": "quality-final-clean",
+      "step": "whisper-comparison",
+      "kind": "asr-comparison",
+      "model_ids": [
+        "whisper-large-v3-q5"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 35.054044,
+      "conservative_observed_peak_bytes": 1830166528,
+      "observed_peak_plus_reserve_bytes": 1964384256,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 1.668286883685513,
+      "native_peak_rss_bytes": 1817198592,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 124,
+        "pss_complete_samples": 124,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 1828593664,
+        "sampled_peak_tree_pss_bytes": 1815855104,
+        "peak_tree_sum_vmhwm_bytes": 1830166528,
+        "supervisor_peak_vmhwm_bytes": 4001792
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "762067c4eaed023d72dac52b095ee32e5f0bbfac33c5a3df28e5af6ce23b19ef"
+      },
+      "configuration": {
+        "threads": 4,
+        "processors": 1,
+        "beam_size": 2,
+        "best_of": 2,
+        "flash_attention": true
+      }
+    },
+    {
+      "id": "quality-final-clean:build-prompt",
+      "report_id": "quality-final-clean",
+      "step": "build-prompt",
+      "kind": "postprocess",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 1.066379,
+      "conservative_observed_peak_bytes": 157147136,
+      "observed_peak_plus_reserve_bytes": 291364864,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 147857408,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 6,
+        "pss_complete_samples": 6,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 157147136,
+        "sampled_peak_tree_pss_bytes": 78957568,
+        "peak_tree_sum_vmhwm_bytes": 157147136,
+        "supervisor_peak_vmhwm_bytes": 4034560
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "ce49fa51709b76accdd67d62568a3ab2938cd3b1664a6df8c84b97dd64a09924"
+      }
+    },
+    {
+      "id": "quality-final-clean:llm-metadata",
+      "report_id": "quality-final-clean",
+      "step": "llm-metadata",
+      "kind": "llm",
+      "model_ids": [
+        "qwen3-1.7b-q4-k-m"
+      ],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 96.651192,
+      "conservative_observed_peak_bytes": 1479176192,
+      "observed_peak_plus_reserve_bytes": 1613393920,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 1466265600,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 406,
+        "pss_complete_samples": 406,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 1479176192,
+        "sampled_peak_tree_pss_bytes": 1466735616,
+        "peak_tree_sum_vmhwm_bytes": 1479176192,
+        "supervisor_peak_vmhwm_bytes": 4022272
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "eff274e84f3abc3b6e4c1990acd3972ed96431d91d0a20520f1d3c755ca7731d"
+      },
+      "configuration": {
+        "threads": 2,
+        "llm_context_tokens": 1024
+      }
+    },
+    {
+      "id": "quality-final-clean:export-transcript",
+      "report_id": "quality-final-clean",
+      "step": "export-transcript",
+      "kind": "postprocess",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 0.946859,
+      "conservative_observed_peak_bytes": 157937664,
+      "observed_peak_plus_reserve_bytes": 292155392,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 148869120,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 5,
+        "pss_complete_samples": 5,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 157937664,
+        "sampled_peak_tree_pss_bytes": 76698624,
+        "peak_tree_sum_vmhwm_bytes": 157937664,
+        "supervisor_peak_vmhwm_bytes": 3923968
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "88c8dbff2d40626884f7cfbdc54a2b3889038de50f7aa912a2b7938f39e44495"
+      }
+    },
+    {
+      "id": "quality-final-clean:validate-metadata",
+      "report_id": "quality-final-clean",
+      "step": "validate-metadata",
+      "kind": "postprocess",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 0.947965,
+      "conservative_observed_peak_bytes": 157741056,
+      "observed_peak_plus_reserve_bytes": 291958784,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 148766720,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 5,
+        "pss_complete_samples": 5,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 157741056,
+        "sampled_peak_tree_pss_bytes": 76811264,
+        "peak_tree_sum_vmhwm_bytes": 157741056,
+        "supervisor_peak_vmhwm_bytes": 3833856
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "eb52543b0b5710757f00d1d098643352dd65089f3245aa8ba0979d0610775ff9"
+      }
+    },
+    {
+      "id": "quality-final-recording1:diarization",
+      "report_id": "quality-final-recording1",
+      "step": "diarization",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-f32-conversion"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 28.948,
+      "native_wall_seconds": 2.224581,
+      "conservative_observed_peak_bytes": 439992320,
+      "observed_peak_plus_reserve_bytes": 574210048,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.07684748514577865,
+      "native_peak_rss_bytes": 427446272,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 10,
+        "pss_complete_samples": 10,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 439992320,
+        "sampled_peak_tree_pss_bytes": 427665408,
+        "peak_tree_sum_vmhwm_bytes": 439992320,
+        "supervisor_peak_vmhwm_bytes": 3932160
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "3ea14bfbb6d9d8cb19bc7f2c04d5e78bca8ae66219225b7596fe188f2aa528e7"
+      }
+    },
+    {
+      "id": "quality-final-recording1:giga-asr",
+      "report_id": "quality-final-recording1",
+      "step": "giga-asr",
+      "kind": "asr",
+      "model_ids": [
+        "gigaam-v3-e2e-rnnt"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 28.948,
+      "native_wall_seconds": 2.14975,
+      "conservative_observed_peak_bytes": 399597568,
+      "observed_peak_plus_reserve_bytes": 533815296,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.07426247063700428,
+      "native_peak_rss_bytes": 388124672,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 10,
+        "pss_complete_samples": 10,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 399597568,
+        "sampled_peak_tree_pss_bytes": 359376896,
+        "peak_tree_sum_vmhwm_bytes": 399597568,
+        "supervisor_peak_vmhwm_bytes": 3969024
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "fb0ff2a5881010b9d7fa526dc8ff570018f7164653d506d4d5dfad8e1eb5bcd4"
+      },
+      "configuration": {
+        "threads": 2,
+        "feature_dim": 64
+      }
+    },
+    {
+      "id": "quality-final-recording1:whisper-comparison",
+      "report_id": "quality-final-recording1",
+      "step": "whisper-comparison",
+      "kind": "asr-comparison",
+      "model_ids": [
+        "whisper-large-v3-q5"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 28.948,
+      "native_wall_seconds": 33.472696,
+      "conservative_observed_peak_bytes": 1822564352,
+      "observed_peak_plus_reserve_bytes": 1956782080,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 1.156304269725024,
+      "native_peak_rss_bytes": 1809522688,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 112,
+        "pss_complete_samples": 112,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 1819901952,
+        "sampled_peak_tree_pss_bytes": 1806148608,
+        "peak_tree_sum_vmhwm_bytes": 1822564352,
+        "supervisor_peak_vmhwm_bytes": 3997696
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "9ea4d38e656f8438c0bb26c11405d9284906c1dbc01a8ed5392f3b7b34a4040e"
+      },
+      "configuration": {
+        "threads": 4,
+        "processors": 1,
+        "beam_size": 2,
+        "best_of": 2,
+        "flash_attention": true
+      }
+    },
+    {
+      "id": "quality-final-recording1:build-prompt",
+      "report_id": "quality-final-recording1",
+      "step": "build-prompt",
+      "kind": "postprocess",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 1.420754,
+      "conservative_observed_peak_bytes": 155807744,
+      "observed_peak_plus_reserve_bytes": 290025472,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 146661376,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 8,
+        "pss_complete_samples": 7,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 155807744,
+        "sampled_peak_tree_pss_bytes": 89313280,
+        "peak_tree_sum_vmhwm_bytes": 155807744,
+        "supervisor_peak_vmhwm_bytes": 3870720
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "854f9188db2e7bed2bfd913abed2f0e6737360bff534d5f9a1c7de908259c04d"
+      }
+    },
+    {
+      "id": "quality-final-recording1:llm-metadata",
+      "report_id": "quality-final-recording1",
+      "step": "llm-metadata",
+      "kind": "llm",
+      "model_ids": [
+        "qwen3-1.7b-q4-k-m"
+      ],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 91.753784,
+      "conservative_observed_peak_bytes": 1479327744,
+      "observed_peak_plus_reserve_bytes": 1613545472,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 1466183680,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 395,
+        "pss_complete_samples": 395,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 1479327744,
+        "sampled_peak_tree_pss_bytes": 1466749952,
+        "peak_tree_sum_vmhwm_bytes": 1479327744,
+        "supervisor_peak_vmhwm_bytes": 3989504
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "de4c6f40cedd06cad985c17af02513fd0d552336d625f55ad6281647247d3b85"
+      },
+      "configuration": {
+        "threads": 2,
+        "llm_context_tokens": 1024
+      }
+    },
+    {
+      "id": "quality-final-recording1:export-transcript",
+      "report_id": "quality-final-recording1",
+      "step": "export-transcript",
+      "kind": "postprocess",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 0.987462,
+      "conservative_observed_peak_bytes": 157470720,
+      "observed_peak_plus_reserve_bytes": 291688448,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 148451328,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 5,
+        "pss_complete_samples": 5,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 157470720,
+        "sampled_peak_tree_pss_bytes": 90762240,
+        "peak_tree_sum_vmhwm_bytes": 157470720,
+        "supervisor_peak_vmhwm_bytes": 3837952
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "c14c5e00e5591a0e21e8f0bd439b8d7d59373f474d28ac4385c85760eb3d4792"
+      }
+    },
+    {
+      "id": "quality-final-recording1:validate-metadata",
+      "report_id": "quality-final-recording1",
+      "step": "validate-metadata",
+      "kind": "postprocess",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 1.060572,
+      "conservative_observed_peak_bytes": 157736960,
+      "observed_peak_plus_reserve_bytes": 291954688,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 148426752,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 5,
+        "pss_complete_samples": 5,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 157736960,
+        "sampled_peak_tree_pss_bytes": 90741760,
+        "peak_tree_sum_vmhwm_bytes": 157736960,
+        "supervisor_peak_vmhwm_bytes": 3944448
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "bfe658f6e59290ef703261daf4b7a0934c0f6d1f2426b48d7e078b844f3986bc"
+      }
+    },
+    {
+      "id": "quality-r1:diarization",
+      "report_id": "quality-r1",
+      "step": "diarization",
+      "kind": "diarization",
+      "model_ids": [
+        "nemotron3-q8"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 0.597942,
+      "conservative_observed_peak_bytes": 145543168,
+      "observed_peak_plus_reserve_bytes": 279760896,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.028457167332952598,
+      "native_peak_rss_bytes": 134725632,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 3,
+        "pss_complete_samples": 3,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 145543168,
+        "sampled_peak_tree_pss_bytes": 134836224,
+        "peak_tree_sum_vmhwm_bytes": 145543168,
+        "supervisor_peak_vmhwm_bytes": 4014080
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "e4d155a9b17c32c30cad5a070ae26803a392ab73bdb6d176c81f1474b1f0c594"
+      }
+    },
+    {
+      "id": "quality-r1:giga-asr",
+      "report_id": "quality-r1",
+      "step": "giga-asr",
+      "kind": "asr",
+      "model_ids": [
+        "gigaam-v3-e2e-rnnt"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 2.055739,
+      "conservative_observed_peak_bytes": 380387328,
+      "observed_peak_plus_reserve_bytes": 514605056,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.0978364268037312,
+      "native_peak_rss_bytes": 367329280,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 10,
+        "pss_complete_samples": 10,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 379441152,
+        "sampled_peak_tree_pss_bytes": 339307520,
+        "peak_tree_sum_vmhwm_bytes": 380387328,
+        "supervisor_peak_vmhwm_bytes": 3907584
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "029481378359d76bddb22334e3a62aa4b934a63b4cdf9eed7c7d2534fd2606f7"
+      },
+      "configuration": {
+        "threads": 2,
+        "feature_dim": 64
+      }
+    },
+    {
+      "id": "quality-r1:whisper-comparison",
+      "report_id": "quality-r1",
+      "step": "whisper-comparison",
+      "kind": "asr-comparison",
+      "model_ids": [
+        "whisper-large-v3-q5"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 38.610758,
+      "conservative_observed_peak_bytes": 1830199296,
+      "observed_peak_plus_reserve_bytes": 1964417024,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 1.8375574909575478,
+      "native_peak_rss_bytes": 1817133056,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 135,
+        "pss_complete_samples": 135,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 1829380096,
+        "sampled_peak_tree_pss_bytes": 1815732224,
+        "peak_tree_sum_vmhwm_bytes": 1830199296,
+        "supervisor_peak_vmhwm_bytes": 3993600
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "4ede29a1bb822e1d0f8425b53e63c58a948390330bc4f4cabdfa5e24fa6615c2"
+      },
+      "configuration": {
+        "threads": 4,
+        "processors": 1,
+        "beam_size": 2,
+        "best_of": 2,
+        "flash_attention": true
+      }
+    },
+    {
+      "id": "quality-r1:build-prompt",
+      "report_id": "quality-r1",
+      "step": "build-prompt",
+      "kind": "postprocess",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 0.993098,
+      "conservative_observed_peak_bytes": 152563712,
+      "observed_peak_plus_reserve_bytes": 286781440,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 143171584,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 6,
+        "pss_complete_samples": 6,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 152563712,
+        "sampled_peak_tree_pss_bytes": 75844608,
+        "peak_tree_sum_vmhwm_bytes": 152563712,
+        "supervisor_peak_vmhwm_bytes": 4050944
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "281104cd6c3f249d9f11cf14a20a5d6094bf7c7d429e6238c32a21e7b0e53bfd"
+      }
+    },
+    {
+      "id": "quality-r1:llm-metadata",
+      "report_id": "quality-r1",
+      "step": "llm-metadata",
+      "kind": "llm",
+      "model_ids": [
+        "qwen3-1.7b-q4-k-m"
+      ],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 40.320248,
+      "conservative_observed_peak_bytes": 1478885376,
+      "observed_peak_plus_reserve_bytes": 1613103104,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 1465856000,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 176,
+        "pss_complete_samples": 176,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 1478885376,
+        "sampled_peak_tree_pss_bytes": 1466597376,
+        "peak_tree_sum_vmhwm_bytes": 1478885376,
+        "supervisor_peak_vmhwm_bytes": 3919872
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "0c97d7368dd813dfb5797f7c143f9be6136052d0d5ee15cbcfe535020b45fb66"
+      },
+      "configuration": {
+        "threads": 2,
+        "llm_context_tokens": 1024
+      }
+    },
+    {
+      "id": "quality-r1:export-transcript",
+      "report_id": "quality-r1",
+      "step": "export-transcript",
+      "kind": "postprocess",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 0.973301,
+      "conservative_observed_peak_bytes": 157483008,
+      "observed_peak_plus_reserve_bytes": 291700736,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 148258816,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 5,
+        "pss_complete_samples": 5,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 157483008,
+        "sampled_peak_tree_pss_bytes": 79408128,
+        "peak_tree_sum_vmhwm_bytes": 157483008,
+        "supervisor_peak_vmhwm_bytes": 3936256
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "ea5e87e1abce1288b98ede731c4282f79a2550ede31dcf2227a24476e116ff29"
+      }
+    },
+    {
+      "id": "quality-r1:validate-metadata",
+      "report_id": "quality-r1",
+      "step": "validate-metadata",
+      "kind": "postprocess",
+      "model_ids": [],
+      "fixture_category": "text_or_postprocessing_fixture",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "native_wall_seconds": 0.954531,
+      "conservative_observed_peak_bytes": 157138944,
+      "observed_peak_plus_reserve_bytes": 291356672,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "native_peak_rss_bytes": 147927040,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 5,
+        "pss_complete_samples": 5,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 157138944,
+        "sampled_peak_tree_pss_bytes": 78926848,
+        "peak_tree_sum_vmhwm_bytes": 157138944,
+        "supervisor_peak_vmhwm_bytes": 4009984
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "f3723c4f674208b61a08652c829554cbaa47e6259d3b9e93f85d40cf03265cb8"
+      }
+    },
+    {
+      "id": "whisper-medium-guard:whisper-medium-raw",
+      "report_id": "whisper-medium-guard",
+      "step": "whisper-medium-raw",
+      "kind": "asr",
+      "model_ids": [
+        "whisper-medium-onnx-int8"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "memory_rejected",
+      "accepted": false,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 8.997699,
+      "conservative_observed_peak_bytes": 2124238848,
+      "observed_peak_plus_reserve_bytes": 2258456576,
+      "budget_check_passed": false,
+      "native_budget_check_passed": false,
+      "process_rtf": 0.42821716162193035,
+      "native_peak_rss_bytes": 2115031040,
+      "guard": {
+        "model_exit_code": 15,
+        "memory_rejected": 1,
+        "timed_out": 0,
+        "samples": 43,
+        "pss_complete_samples": 43,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 2124238848,
+        "sampled_peak_tree_pss_bytes": 2086884352,
+        "peak_tree_sum_vmhwm_bytes": 2124238848,
+        "supervisor_peak_vmhwm_bytes": 3887104
+      },
+      "raw_log_sha256": {
+        "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr": "8bdc4ce66d4a4cc2a6ca4e333a9287ef046b9cba878d312edf67c82ae61026b9"
+      },
+      "configuration": {
+        "threads": 2
+      }
+    },
+    {
+      "id": "whisper-turbo-guard:whisper-turbo-raw",
+      "report_id": "whisper-turbo-guard",
+      "step": "whisper-turbo-raw",
+      "kind": "asr",
+      "model_ids": [
+        "whisper-turbo-onnx-int8"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_process_guard",
+      "status": "accepted",
+      "accepted": true,
+      "budget_bytes": 2000000000,
+      "reserve_bytes": 134217728,
+      "audio_seconds": 21.012,
+      "native_wall_seconds": 14.648048,
+      "conservative_observed_peak_bytes": 1825275904,
+      "observed_peak_plus_reserve_bytes": 1959493632,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.6971277365315057,
+      "native_peak_rss_bytes": 1816113152,
+      "guard": {
+        "model_exit_code": 0,
+        "memory_rejected": 0,
+        "timed_out": 0,
+        "samples": 69,
+        "pss_complete_samples": 69,
+        "remaining_owned_processes": 0,
+        "sampled_peak_tree_rss_bytes": 1824522240,
+        "sampled_peak_tree_pss_bytes": 1787346944,
+        "peak_tree_sum_vmhwm_bytes": 1825275904,
+        "supervisor_peak_vmhwm_bytes": 3956736
+      },
+      "raw_log_sha256": {
+        "stdout": "9e6f36b11af8fc552b3e320e6c331b7653992cfabc436e3485f99c7487398505",
+        "stderr": "bf70ecf142b187daa03825a99bc533ba42eab9d714214f0bf6f83a3e241fc20d"
+      },
+      "configuration": {
+        "threads": 2
+      }
+    },
+    {
+      "id": "candidate-runs:diar-nemo_en_titanet_large-0.5",
+      "report_id": "candidate-runs",
+      "step": "diar-nemo_en_titanet_large-0.5",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "titanet-large"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_cli_unguarded",
+      "status": "completed",
+      "exit_code": 0,
+      "native_wall_seconds": 9.751412,
+      "native_peak_rss_bytes": 269344768,
+      "audio_seconds": 21.012,
+      "raw_log_sha256": {
+        "stdout": "130da3552ca016d59824118a71d9c08756f55e1ce27be99662cd823aab4c1cde",
+        "stderr": "386607418daec42ae5815d90b69dcb4eff2e4ce339dceedde54f3270b367bfd1"
+      }
+    },
+    {
+      "id": "candidate-runs:diar-nemo_en_titanet_large-0.7",
+      "report_id": "candidate-runs",
+      "step": "diar-nemo_en_titanet_large-0.7",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "titanet-large"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_cli_unguarded",
+      "status": "completed",
+      "exit_code": 0,
+      "native_wall_seconds": 7.812763,
+      "native_peak_rss_bytes": 268701696,
+      "audio_seconds": 21.012,
+      "raw_log_sha256": {
+        "stdout": "91ace8226c5187d45a60bf897804042545dbf695a797a73af254804cec91d8a6",
+        "stderr": "77910616b3226b6f48312cba2fd1ce627db8b5e6ac99d508cfb5b5e1e266ae57"
+      }
+    },
+    {
+      "id": "candidate-runs:diar-wespeaker_en_voxceleb_resnet293_LM-0.5",
+      "report_id": "candidate-runs",
+      "step": "diar-wespeaker_en_voxceleb_resnet293_LM-0.5",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "wespeaker-resnet293-lm"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_cli_unguarded",
+      "status": "completed",
+      "exit_code": 0,
+      "native_wall_seconds": 36.7153,
+      "native_peak_rss_bytes": 332361728,
+      "audio_seconds": 21.012,
+      "raw_log_sha256": {
+        "stdout": "257cd6ef9b8ac45cc761160a91347b62359397268a069b0ebd4ff2733d960dc2",
+        "stderr": "3a08c74504210fe404f0bb44e4be45f673e6d193a0c3d6730a23e0dc85618bf9"
+      }
+    },
+    {
+      "id": "candidate-runs:diar-wespeaker_en_voxceleb_resnet293_LM-0.7",
+      "report_id": "candidate-runs",
+      "step": "diar-wespeaker_en_voxceleb_resnet293_LM-0.7",
+      "model_ids": [
+        "baseline-pyannote-segmentation-int8",
+        "wespeaker-resnet293-lm"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_cli_unguarded",
+      "status": "completed",
+      "exit_code": 0,
+      "native_wall_seconds": 29.324131,
+      "native_peak_rss_bytes": 332607488,
+      "audio_seconds": 21.012,
+      "raw_log_sha256": {
+        "stdout": "cdd515daea3a780caa4f311404de8b04e12762ece11d61514056459533d643ee",
+        "stderr": "9311afd9737ae5e664a84dba164db439cb2a69affc66cb6d0387c571f0d7a176"
+      }
+    },
+    {
+      "id": "candidate-runs:gigaam-v3-rnnt",
+      "report_id": "candidate-runs",
+      "step": "gigaam-v3-rnnt",
+      "model_ids": [
+        "gigaam-v3-rnnt"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_cli_unguarded",
+      "status": "completed",
+      "exit_code": 0,
+      "native_wall_seconds": 1.736951,
+      "native_peak_rss_bytes": 364949504,
+      "audio_seconds": 21.012,
+      "raw_log_sha256": {
+        "stdout": "1cc9cf2a072679ee13237679819d08dd0f96e7c5c4466538cbd2ef359581288a",
+        "stderr": "a875ab32765964205c1def6189afecca9ab8f407edb325fb6293cfed14d8bced"
+      }
+    },
+    {
+      "id": "candidate-runs:gigaam-v3-e2e-rnnt",
+      "report_id": "candidate-runs",
+      "step": "gigaam-v3-e2e-rnnt",
+      "model_ids": [
+        "gigaam-v3-e2e-rnnt"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_cli_unguarded",
+      "status": "completed",
+      "exit_code": 0,
+      "native_wall_seconds": 1.690456,
+      "native_peak_rss_bytes": 367316992,
+      "audio_seconds": 21.012,
+      "raw_log_sha256": {
+        "stdout": "4ab2ebc1f141f9a71df58e48d333e6422a8f5acbffc69ab221287b3f410a910c",
+        "stderr": "a3398fac21137f1ae9ed45bb3aa065478c303f07b63eadf37594dcf54bc7b4e3"
+      }
+    },
+    {
+      "id": "candidate-runs:gigaam-v3-e2e-ctc",
+      "report_id": "candidate-runs",
+      "step": "gigaam-v3-e2e-ctc",
+      "model_ids": [
+        "gigaam-v3-e2e-ctc"
+      ],
+      "fixture_category": "private_short_clean",
+      "measurement_method": "native_cli_unguarded",
+      "status": "completed",
+      "exit_code": 0,
+      "native_wall_seconds": 1.688171,
+      "native_peak_rss_bytes": 359665664,
+      "audio_seconds": 21.012,
+      "raw_log_sha256": {
+        "stdout": "af9adc4ec87b1a795cc0390be77aacf3b0d422e10a3b5c3a0cf84fa1e03fad7b",
+        "stderr": "f155483eef31af8182866265ced1c4b93b82131f77a33499688e94a98db5466e"
+      }
+    }
+  ],
+  "limitations": [
+    "Native CLI and guarded postprocessing measurements, not a full APK benchmark.",
+    "RSS/PSS/high-water observations are not a mathematical instantaneous hard-cap guarantee.",
+    "Failure/termination times are censored runs, not completed-inference latency.",
+    "Private synthetic repetition stress is not independent 30-minute conversational coverage.",
+    "No WER or full DER is claimed without a human reference.",
+    "No audio paths, audio hashes, transcripts, prompts, LLM responses or raw logs are published."
+  ]
+}

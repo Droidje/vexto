@@ -1,0 +1,644 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-06",
+  "generated_utc": "2026-11-06T19:26:22.012852+00:00",
+  "models": [
+    {
+      "id": "gigaam-v3-rnnt",
+      "license": "MIT",
+      "artifacts": [
+        {
+          "filename": "decoder.onnx",
+          "size_bytes": 3331651,
+          "sha256": "5d1cfef155d8e07f213bd2f3229b5f6c5c29355c7fa5c1b9eb62cb1925725254",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16/resolve/0424d62637b37d8b7b1eb0f75a04d78dec55fdcc/decoder.onnx"
+        },
+        {
+          "filename": "encoder.int8.onnx",
+          "size_bytes": 224570814,
+          "sha256": "0ec54e5f130a91c0f228d21795ede10b31c992a1f73e45dcd827e843a71a9b50",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16/resolve/0424d62637b37d8b7b1eb0f75a04d78dec55fdcc/encoder.int8.onnx"
+        },
+        {
+          "filename": "joiner.onnx",
+          "size_bytes": 1440448,
+          "sha256": "fd1d02f45c2ad3d6b67cc149811ad794ab4b020ed49a0a9e2790a8619d1cddd8",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16/resolve/0424d62637b37d8b7b1eb0f75a04d78dec55fdcc/joiner.onnx"
+        },
+        {
+          "filename": "tokens.txt",
+          "size_bytes": 196,
+          "sha256": "17cc514451bcceac9c280068c71502f8448f99e9fb1456b8d0761651fd0392f2",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16/resolve/0424d62637b37d8b7b1eb0f75a04d78dec55fdcc/tokens.txt"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "candidate-runs:gigaam-v3-rnnt"
+        ],
+        "attempted_run_ids": [
+          "candidate-runs:gigaam-v3-rnnt"
+        ]
+      },
+      "repository": "csukuangfj/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16",
+      "revision": "0424d62637b37d8b7b1eb0f75a04d78dec55fdcc",
+      "complete": true
+    },
+    {
+      "id": "gigaam-v3-e2e-rnnt",
+      "license": "MIT",
+      "artifacts": [
+        {
+          "filename": "decoder.onnx",
+          "size_bytes": 4600132,
+          "sha256": "38fc7475443ea2a26f63211ca350f73ac50fff824ab7a3876ee2bd610c53bbc4",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/decoder.onnx"
+        },
+        {
+          "filename": "encoder.int8.onnx",
+          "size_bytes": 224570820,
+          "sha256": "369f35a71bf288d3b8e0391fabd8dba5f2314088d440bca474056b7b4b6e66bf",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/encoder.int8.onnx"
+        },
+        {
+          "filename": "joiner.onnx",
+          "size_bytes": 2712896,
+          "sha256": "602ff7017a93311aad34df1437c8d7f49911353c13d6eae7a6ee7b041339465c",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/joiner.onnx"
+        },
+        {
+          "filename": "tokens.txt",
+          "size_bytes": 13354,
+          "sha256": "39abae20e692998290c574e606f11a9edef2902a1995463fcff63d1490cf22b7",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/tokens.txt"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "asr-upgrade-guard:giga-v3-clean-denoised",
+          "asr-upgrade-guard:giga-v3-noise-raw",
+          "asr-upgrade-guard:giga-v3-noise-denoised",
+          "quality-final-clean:giga-asr",
+          "quality-final-recording1:giga-asr",
+          "quality-r1:giga-asr",
+          "candidate-runs:gigaam-v3-e2e-rnnt"
+        ],
+        "attempted_run_ids": [
+          "asr-upgrade-guard:giga-v3-clean-denoised",
+          "asr-upgrade-guard:giga-v3-noise-raw",
+          "asr-upgrade-guard:giga-v3-noise-denoised",
+          "quality-final-clean:giga-asr",
+          "quality-final-recording1:giga-asr",
+          "quality-r1:giga-asr",
+          "candidate-runs:gigaam-v3-e2e-rnnt"
+        ]
+      },
+      "repository": "csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16",
+      "revision": "a6039be7cee829a9044a69ac0ebaf1c191217c97",
+      "complete": true
+    },
+    {
+      "id": "gigaam-v3-ctc",
+      "license": "MIT",
+      "artifacts": [
+        {
+          "filename": "tokens.txt",
+          "size_bytes": 196,
+          "sha256": "17cc514451bcceac9c280068c71502f8448f99e9fb1456b8d0761651fd0392f2",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-ctc-giga-am-v3-russian-2025-12-16/resolve/32a4c7cc81809bd132e2d935ab99e9e6ab47fbec/tokens.txt"
+        }
+      ],
+      "android_execution": {
+        "observed": false,
+        "successful_run_ids": [],
+        "attempted_run_ids": []
+      },
+      "repository": "csukuangfj/sherpa-onnx-nemo-ctc-giga-am-v3-russian-2025-12-16",
+      "revision": "32a4c7cc81809bd132e2d935ab99e9e6ab47fbec",
+      "complete": false
+    },
+    {
+      "id": "gigaam-v3-e2e-ctc",
+      "license": "MIT",
+      "artifacts": [
+        {
+          "filename": "model.int8.onnx",
+          "size_bytes": 224893661,
+          "sha256": "d5fea8df94263c285e54b21e5774b707c707192d3bdbeffd7b1eb07fb6743b35",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-ctc-punct-giga-am-v3-russian-2025-12-16/resolve/4fb5407ff028a69fec516cdf4c10fac9ddea7c16/model.int8.onnx"
+        },
+        {
+          "filename": "tokens.txt",
+          "size_bytes": 2007,
+          "sha256": "142de7570b3de5b3035ce111a89c228e80e6085273731d944093ddf24fa539cd",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-ctc-punct-giga-am-v3-russian-2025-12-16/resolve/4fb5407ff028a69fec516cdf4c10fac9ddea7c16/tokens.txt"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "candidate-runs:gigaam-v3-e2e-ctc"
+        ],
+        "attempted_run_ids": [
+          "candidate-runs:gigaam-v3-e2e-ctc"
+        ]
+      },
+      "repository": "csukuangfj/sherpa-onnx-nemo-ctc-punct-giga-am-v3-russian-2025-12-16",
+      "revision": "4fb5407ff028a69fec516cdf4c10fac9ddea7c16",
+      "complete": true
+    },
+    {
+      "id": "titanet-large",
+      "license": "CC-BY-4.0",
+      "artifacts": [
+        {
+          "filename": "nemo_en_titanet_large.onnx",
+          "size_bytes": 101405493,
+          "sha256": "d51abcf31717ef28162f26acb9d44dd4127c3d44c9b8624f699f3425daca8e77",
+          "url": "https://huggingface.co/csukuangfj/speaker-embedding-models/resolve/0743f301363dec56491a490f6d6cbc9d67f9a3bf/nemo_en_titanet_large.onnx"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "diar-refinement:diar-large-fp32-fp32-repeat4",
+          "diar-refinement:diar-large-th09-int8-repeat4",
+          "diar-stress:diar-large-test2-noise10db",
+          "diar-stress:diar-large-test2-repeat4",
+          "candidate-runs:diar-nemo_en_titanet_large-0.5",
+          "candidate-runs:diar-nemo_en_titanet_large-0.7"
+        ],
+        "attempted_run_ids": [
+          "diar-refinement:diar-large-fp32-fp32-repeat4",
+          "diar-refinement:diar-large-th09-int8-repeat4",
+          "diar-stress:diar-large-test2-noise10db",
+          "diar-stress:diar-large-test2-repeat4",
+          "candidate-runs:diar-nemo_en_titanet_large-0.5",
+          "candidate-runs:diar-nemo_en_titanet_large-0.7"
+        ]
+      },
+      "revision": "0743f301363dec56491a490f6d6cbc9d67f9a3bf",
+      "source_model_card": "https://huggingface.co/nvidia/speakerverification_en_titanet_large"
+    },
+    {
+      "id": "wespeaker-resnet293-lm",
+      "license": "CC-BY-4.0",
+      "artifacts": [
+        {
+          "filename": "wespeaker_en_voxceleb_resnet293_LM.onnx",
+          "size_bytes": 114336527,
+          "sha256": "f65dbc820e534eef64ae12d1e289e20244d60e60f7f00d7b092092b1c458be2e",
+          "url": "https://huggingface.co/csukuangfj/speaker-embedding-models/resolve/0743f301363dec56491a490f6d6cbc9d67f9a3bf/wespeaker_en_voxceleb_resnet293_LM.onnx"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "diar-stress:diar-resnet293-threshold-0-2",
+          "diar-stress:diar-resnet293-threshold-0-3",
+          "candidate-runs:diar-wespeaker_en_voxceleb_resnet293_LM-0.5",
+          "candidate-runs:diar-wespeaker_en_voxceleb_resnet293_LM-0.7"
+        ],
+        "attempted_run_ids": [
+          "diar-stress:diar-resnet293-threshold-0-2",
+          "diar-stress:diar-resnet293-threshold-0-3",
+          "candidate-runs:diar-wespeaker_en_voxceleb_resnet293_LM-0.5",
+          "candidate-runs:diar-wespeaker_en_voxceleb_resnet293_LM-0.7"
+        ]
+      },
+      "revision": "0743f301363dec56491a490f6d6cbc9d67f9a3bf",
+      "source_model_card": "https://huggingface.co/Wespeaker/wespeaker-voxceleb-resnet293-LM"
+    },
+    {
+      "id": "qwen3-1.7b-q4-k-m",
+      "license": "apache-2.0",
+      "artifacts": [
+        {
+          "filename": "Qwen3-1.7B-Q4_K_M.gguf",
+          "size_bytes": 1282439264,
+          "sha256": "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5",
+          "url": "https://huggingface.co/ggml-org/Qwen3-1.7B-GGUF/resolve/daeb8e2d528a760970442092f6bf1e55c3b659eb/Qwen3-1.7B-Q4_K_M.gguf"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "llm-guard:qwen3-1-7b-q4-metadata",
+          "quality-final-clean:llm-metadata",
+          "quality-final-recording1:llm-metadata",
+          "quality-r1:llm-metadata"
+        ],
+        "attempted_run_ids": [
+          "llm-guard:qwen3-1-7b-q4-metadata",
+          "quality-final-clean:llm-metadata",
+          "quality-final-recording1:llm-metadata",
+          "quality-r1:llm-metadata"
+        ]
+      },
+      "repository": "ggml-org/Qwen3-1.7B-GGUF",
+      "revision": "daeb8e2d528a760970442092f6bf1e55c3b659eb"
+    },
+    {
+      "id": "gtcrn",
+      "license": "MIT",
+      "artifacts": [
+        {
+          "filename": "gtcrn_simple.onnx",
+          "size_bytes": 535638,
+          "sha256": "e77603ac0c23dac3227dd2d7135b3a585cbee2679048aecfa886657d3ae1b534",
+          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models/gtcrn_simple.onnx"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "denoise-guard:gtcrn-clean",
+          "denoise-guard:gtcrn-noise"
+        ],
+        "attempted_run_ids": [
+          "denoise-guard:gtcrn-clean",
+          "denoise-guard:gtcrn-noise"
+        ]
+      },
+      "license_source": "https://github.com/Xiaobin-Rong/gtcrn"
+    },
+    {
+      "id": "whisper-turbo-onnx-int8",
+      "license": "MIT",
+      "artifacts": [
+        {
+          "filename": "turbo-tokens.txt",
+          "size_bytes": 816730,
+          "sha256": "b34b360dbb493e781e479794586d661700670d65564001f23024971d1f2fa126",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-turbo/resolve/2ca6ff69fc878651b770880507669577ac41c2ff/turbo-tokens.txt"
+        },
+        {
+          "filename": "turbo-decoder.int8.onnx",
+          "size_bytes": 361080764,
+          "sha256": "20accd02388482eb3a46bd615631adfdc85e1eb2c7db9ea3f02a40ffe6b81547",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-turbo/resolve/2ca6ff69fc878651b770880507669577ac41c2ff/turbo-decoder.int8.onnx"
+        },
+        {
+          "filename": "turbo-encoder.int8.onnx",
+          "size_bytes": 674716297,
+          "sha256": "b02dcdf54f348741e93fe732b67d933c8dcb6735655f710640143081db38878b",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-turbo/resolve/2ca6ff69fc878651b770880507669577ac41c2ff/turbo-encoder.int8.onnx"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "whisper-turbo-guard:whisper-turbo-raw"
+        ],
+        "attempted_run_ids": [
+          "whisper-turbo-guard:whisper-turbo-raw"
+        ]
+      },
+      "license_source": "https://github.com/openai/whisper#license"
+    },
+    {
+      "id": "whisper-medium-onnx-int8",
+      "license": "MIT",
+      "artifacts": [
+        {
+          "filename": "medium-tokens.txt",
+          "size_bytes": 816730,
+          "sha256": "b34b360dbb493e781e479794586d661700670d65564001f23024971d1f2fa126",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-medium/resolve/8c31d28503847560985df21f90e14f0c736e075e/medium-tokens.txt"
+        },
+        {
+          "filename": "medium-encoder.int8.onnx",
+          "size_bytes": 374196283,
+          "sha256": "1c54582b4d829de0089f6cb63bbbdb3bf7555398bacaf855fbecf1a84dfd193e",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-medium/resolve/8c31d28503847560985df21f90e14f0c736e075e/medium-encoder.int8.onnx"
+        },
+        {
+          "filename": "medium-decoder.int8.onnx",
+          "size_bytes": 571059257,
+          "sha256": "595d00a338a365a7bfa0ca7f296cabc639583bef770ab6130df90f49a6412747",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-whisper-medium/resolve/8c31d28503847560985df21f90e14f0c736e075e/medium-decoder.int8.onnx"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [],
+        "attempted_run_ids": [
+          "whisper-medium-guard:whisper-medium-raw"
+        ]
+      },
+      "license_source": "https://github.com/openai/whisper#license"
+    },
+    {
+      "id": "whisper-large-v3-turbo-q5",
+      "license": "MIT",
+      "artifacts": [
+        {
+          "filename": "ggml-large-v3-turbo-q5_0.bin",
+          "size_bytes": 574041195,
+          "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo-q5_0.bin"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "cpp-quality-guard:cpp-turbo-nfa-q5-t4",
+          "cpp-whisper-guard:whisper-cpp-turbo-q5"
+        ],
+        "attempted_run_ids": [
+          "cpp-quality-guard:cpp-turbo-nfa-q5-t4",
+          "cpp-whisper-guard:whisper-cpp-turbo-q5"
+        ]
+      },
+      "revision": "5359861c739e955e79d9a303bcbc70fb988958b1"
+    },
+    {
+      "id": "whisper-large-v3-q5",
+      "license": "MIT",
+      "artifacts": [
+        {
+          "filename": "ggml-large-v3-q5_0.bin",
+          "size_bytes": 1081140203,
+          "sha256": "d75795ecff3f83b5faa89d1900604ad8c780abd5739fae406de19f23ecd98ad1",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-q5_0.bin"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "cpp-large-bounded-guard:cpp-large-q5-beam2",
+          "quality-final-clean:whisper-comparison",
+          "quality-final-recording1:whisper-comparison",
+          "quality-r1:whisper-comparison"
+        ],
+        "attempted_run_ids": [
+          "cpp-large-bounded-guard:cpp-large-q5-beam2",
+          "cpp-quality-guard:cpp-large-fa-q5-t4",
+          "quality-final-clean:whisper-comparison",
+          "quality-final-recording1:whisper-comparison",
+          "quality-r1:whisper-comparison"
+        ]
+      },
+      "revision": "5359861c739e955e79d9a303bcbc70fb988958b1"
+    },
+    {
+      "id": "nemotron3-q8",
+      "license": "openmdw-1.1",
+      "artifacts": [
+        {
+          "filename": "Nemotron-3-Diarization.q8_0.gguf",
+          "size_bytes": 107012128,
+          "sha256": "08456d9e22cd9a323c0364d98375f3746d6e68507ebb705cd46438c534c7a3a1",
+          "url": "https://huggingface.co/nvidia/Nemotron-3-Diarization/resolve/f667ed73aee57d40cc39428eb768b4fd87a0a29e/Nemotron-3-Diarization.q8_0.gguf"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "nemotron-guard:nemotron3-clean",
+          "nemotron-guard:nemotron3-noise",
+          "nemotron-guard:nemotron3-repeat4",
+          "nemotron-long-guard:nemotron3-repeat14",
+          "nemotron-long-guard:nemotron3-repeat86",
+          "nemotron-long-guard:nemotron3-recording1",
+          "quality-r1:diarization"
+        ],
+        "attempted_run_ids": [
+          "nemotron-guard:nemotron3-clean",
+          "nemotron-guard:nemotron3-noise",
+          "nemotron-guard:nemotron3-repeat4",
+          "nemotron-long-guard:nemotron3-repeat14",
+          "nemotron-long-guard:nemotron3-repeat86",
+          "nemotron-long-guard:nemotron3-recording1",
+          "quality-r1:diarization"
+        ]
+      },
+      "repository": "nvidia/Nemotron-3-Diarization",
+      "revision": "f667ed73aee57d40cc39428eb768b4fd87a0a29e",
+      "precision": "Q8_0"
+    },
+    {
+      "id": "nemotron3-f32-conversion",
+      "license": "openmdw-1.1",
+      "artifacts": [
+        {
+          "filename": "Nemotron-3-Diarization.f32.gguf",
+          "size_bytes": 395298848,
+          "sha256": "3339eca67ba8c7bc4a67b68797b60f8956e3ba1a34d5f84b14a0157ca96185b2"
+        }
+      ],
+      "android_execution": {
+        "observed": true,
+        "successful_run_ids": [
+          "nemotron-f32-guard:nemotron3-clean-f32",
+          "nemotron-f32-guard:nemotron3-noise-f32",
+          "nemotron-f32-guard:nemotron3-repeat4-f32",
+          "nemotron-f32-guard:nemotron3-recording1-f32",
+          "quality-final-clean:diarization",
+          "quality-final-recording1:diarization"
+        ],
+        "attempted_run_ids": [
+          "nemotron-f32-guard:nemotron3-clean-f32",
+          "nemotron-f32-guard:nemotron3-noise-f32",
+          "nemotron-f32-guard:nemotron3-repeat4-f32",
+          "nemotron-f32-guard:nemotron3-recording1-f32",
+          "quality-final-clean:diarization",
+          "quality-final-recording1:diarization"
+        ]
+      },
+      "distribution": "locally_converted",
+      "source_artifact": {
+        "filename": "Nemotron-3-Diarization.nemo",
+        "size_bytes": 198676480,
+        "sha256": "867c53f552998f772e5b5e5c082962ae85ee7ca5669c2bc17d7f615133d4e96d",
+        "url": "https://huggingface.co/nvidia/Nemotron-3-Diarization/resolve/f667ed73aee57d40cc39428eb768b4fd87a0a29e/Nemotron-3-Diarization.nemo"
+      },
+      "converter_revision": "536b17a41bef62d2a67a40ed3df61df26a4389fe",
+      "tensor_count": 360,
+      "dtype_tally": {
+        "F32": 359,
+        "F16": 1
+      },
+      "precision_caveat": "Official converter --outtype f32 retains Conv1D kernels F16 due to CPU im2col requirements."
+    }
+  ],
+  "runtimes": [
+    {
+      "id": "whisper.cpp-android-x86_64-generic",
+      "license": "MIT",
+      "source": {
+        "repository": "https://github.com/ggml-org/whisper.cpp",
+        "release": "v1.9.5",
+        "commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037"
+      },
+      "abi": "x86_64",
+      "android_min_api": 26,
+      "cpu_features_required": [],
+      "system_libraries": [
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "android_execution_observed": false,
+      "run_ids": [],
+      "artifacts": [
+        {
+          "filename": "whisper-cli",
+          "size_bytes": 2514520,
+          "sha256": "871e0a266d1f6b30149f0756d5db6c9770e0a3e348cc6139f8b305ecb13090b3"
+        },
+        {
+          "filename": "libggml-base.a",
+          "size_bytes": 9602478,
+          "sha256": "fd86b152a74604bd9ac9a52a8d26e0356d013077713aa09c3e66352c10c1c7e9"
+        },
+        {
+          "filename": "libggml-cpu.a",
+          "size_bytes": 7903640,
+          "sha256": "dfff111b226c3cc87fe3dc3c16c37d8c7e446e509b76333518da984f764463e3"
+        },
+        {
+          "filename": "libggml.a",
+          "size_bytes": 844694,
+          "sha256": "d7d52394160154dda40eae07aa3acda89c0ebe408441e2e469715e8aa79e3615"
+        },
+        {
+          "filename": "libwhisper.a",
+          "size_bytes": 11216774,
+          "sha256": "cd2036128c082ed426c7b602c80e51a1ea5088f0e20b2bf46fc78937ad5fcf79"
+        }
+      ]
+    },
+    {
+      "id": "whisper.cpp-android-x86_64-avx2",
+      "license": "MIT",
+      "source": {
+        "repository": "https://github.com/ggml-org/whisper.cpp",
+        "release": "v1.9.5",
+        "commit": "d1be6fde11ac6e0407606b4e42fe72d34add8037"
+      },
+      "abi": "x86_64",
+      "android_min_api": 26,
+      "cpu_features_required": [
+        "SSE4.2",
+        "AVX",
+        "AVX2",
+        "FMA",
+        "F16C"
+      ],
+      "system_libraries": [
+        "libm.so",
+        "libdl.so",
+        "libc.so"
+      ],
+      "android_execution_observed": true,
+      "run_ids": [
+        "cpp-large-bounded-guard:cpp-large-q5-beam2",
+        "cpp-quality-guard:cpp-large-fa-q5-t4",
+        "cpp-quality-guard:cpp-turbo-nfa-q5-t4",
+        "cpp-whisper-guard:whisper-cpp-turbo-q5",
+        "quality-final-clean:whisper-comparison",
+        "quality-final-recording1:whisper-comparison",
+        "quality-r1:whisper-comparison"
+      ],
+      "artifacts": [
+        {
+          "filename": "whisper-cli",
+          "size_bytes": 2791888,
+          "sha256": "6e9673f70ca474b1337f2769d04ad819b60c47f041f3bc78ee865133c1697fe1"
+        },
+        {
+          "filename": "libggml-base.a",
+          "size_bytes": 9602526,
+          "sha256": "4a8ff33d84136218aac903d22bf8f8a05860b2d485fc5e3031cc15fece438755"
+        },
+        {
+          "filename": "libggml-cpu.a",
+          "size_bytes": 10386104,
+          "sha256": "ae329de7783846b796db5418413c2dee9dd01f195a65f05bb61a05393b921520"
+        },
+        {
+          "filename": "libggml.a",
+          "size_bytes": 844694,
+          "sha256": "f5e443314b54c2cf9f89a54d410dc77bd72f0fd8dfe21239938ab2ac97f4d8f0"
+        },
+        {
+          "filename": "libwhisper.a",
+          "size_bytes": 11216790,
+          "sha256": "1653c4dc972fa5683eaad932336e8edc1623771344b2aace63245b0c8e423706"
+        }
+      ]
+    },
+    {
+      "id": "nemo-speech.cpp-android-x86_64-avx2",
+      "license": "Apache-2.0",
+      "source_repository": "https://github.com/NVIDIA/NeMo-Speech.cpp",
+      "source_revision": "536b17a41bef62d2a67a40ed3df61df26a4389fe",
+      "source_archive_url": "https://codeload.github.com/NVIDIA/NeMo-Speech.cpp/zip/536b17a41bef62d2a67a40ed3df61df26a4389fe",
+      "abi": "x86_64",
+      "android_min_api": 26,
+      "system_libraries": [
+        "libc.so",
+        "libdl.so",
+        "liblog.so",
+        "libm.so"
+      ],
+      "android_execution_observed": true,
+      "run_ids": [
+        "nemotron-f32-guard:nemotron3-clean-f32",
+        "nemotron-f32-guard:nemotron3-noise-f32",
+        "nemotron-f32-guard:nemotron3-repeat4-f32",
+        "nemotron-f32-guard:nemotron3-recording1-f32",
+        "nemotron-guard:nemotron3-clean",
+        "nemotron-guard:nemotron3-noise",
+        "nemotron-guard:nemotron3-repeat4",
+        "nemotron-long-guard:nemotron3-repeat14",
+        "nemotron-long-guard:nemotron3-repeat86",
+        "nemotron-long-guard:nemotron3-recording1",
+        "quality-final-clean:diarization",
+        "quality-final-recording1:diarization",
+        "quality-r1:diarization"
+      ],
+      "source_patches": [
+        {
+          "path": "patches/android-sentencepiece-log.patch",
+          "sha256": "94a1169c954badeace62c04e644b9407a388e64db766022c193f960b5fa8f0db",
+          "original_sha256": "465c2a4d366659b15bfc3579f1b92dbce4a19be998905700361badde1d32ee19",
+          "modified_sha256": "faf9803756a56e076004998aa9dfb2042f22a542e017ac54bb30b2cf63c8b26f",
+          "reason": "Android bundled protobuf-lite references __android_log_write; link system liblog for SentencePiece consumers."
+        }
+      ],
+      "artifacts": [
+        {
+          "filename": "diarize_file",
+          "size_bytes": 232848,
+          "sha256": "3860eac51d1681ab237505db60c8dceb44a2f9e79a5c17df02bb88ddb188b92b"
+        },
+        {
+          "filename": "libnemo_speech_asr.so",
+          "size_bytes": 4678680,
+          "sha256": "2113365b26570632f7af9824c5119c8197df464d3338ee3e9b561eef1c0cac6e"
+        },
+        {
+          "filename": "libnemo_speech_asr_c.so",
+          "size_bytes": 77152,
+          "sha256": "8da7fbcae8d40a9b8a6285f4e38a1e6df440c838bf1ef5d6d32ad6c07d943599"
+        }
+      ]
+    }
+  ],
+  "baseline_model_ids_not_reenumerated": [
+    "baseline-pyannote-segmentation-fp32",
+    "baseline-pyannote-segmentation-int8",
+    "baseline-silero-vad",
+    "baseline-titanet-small"
+  ],
+  "notes": [
+    "Model and runtime licenses are separate.",
+    "Observed execution flags are derived from actual run evidence, replacing provisioning-time false flags.",
+    "Release-asset URLs are pinned by their recorded SHA256; Hugging Face downloads pin repository revisions.",
+    "Baseline component provenance is documented by the earlier Android 4 GiB research artifacts."
+  ]
+}

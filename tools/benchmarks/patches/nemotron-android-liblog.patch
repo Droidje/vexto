@@ -1,0 +1,14 @@
+--- a/cmake/sentencepiece.cmake
++++ b/cmake/sentencepiece.cmake
+@@ -2,6 +2,11 @@
+ # SPDX-License-Identifier: Apache-2.0
+ include_guard(GLOBAL)
+ function(nemo_speech_link_sentencepiece target)
++    # Bundled SentencePiece protobuf-lite uses __android_log_write on Android.
++    # liblog is part of the Android NDK/system and must be linked explicitly.
++    if(ANDROID)
++        target_link_libraries(${target} PRIVATE log)
++    endif()
+     # SentencePiece is a core ASR dependency: the RNNT head tokenizes word-boosting
+     # phrases with the model's embedded tokenizer (context biasing in
+     # rnnt_greedy_decoder.cpp / RnntModel::encode_phrase); the flashlight decoder
