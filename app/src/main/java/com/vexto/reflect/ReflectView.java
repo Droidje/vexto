@@ -50,7 +50,7 @@ final class ReflectView extends ViewGroup {
     private final Actions actions;
     private final ReflectArtwork artwork;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
-    private final List<RectF> hitAreas = new ArrayList<>();
+    private final List<RectF> childAreas = new ArrayList<>();
     private final Path stage = new Path();
     private final Path glass = new Path();
     private final Path playGlyph = new Path();
@@ -126,8 +126,9 @@ final class ReflectView extends ViewGroup {
         offsetX = (width - scale * WIDTH) / 2;
         offsetY = (height - scale * HEIGHT) / 2;
         for (int i = 0; i < getChildCount(); i++) {
-            RectF bounds = hitAreas.get(i);
-            getChildAt(i).measure(
+            RectF bounds = childAreas.get(i);
+            View child = getChildAt(i);
+            child.measure(
                     MeasureSpec.makeMeasureSpec(Math.round(bounds.width() * scale), MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(Math.round(bounds.height() * scale), MeasureSpec.EXACTLY));
         }
@@ -136,7 +137,7 @@ final class ReflectView extends ViewGroup {
     @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         for (int i = 0; i < getChildCount(); i++) {
             View control = getChildAt(i);
-            RectF area = hitAreas.get(i);
+            RectF area = childAreas.get(i);
             int x = Math.round(offsetX + area.left * scale), y = Math.round(offsetY + area.top * scale);
             control.layout(x, y, x + control.getMeasuredWidth(), y + control.getMeasuredHeight());
         }
@@ -144,7 +145,7 @@ final class ReflectView extends ViewGroup {
 
     private void rebuildControls() {
         removeAllViews();
-        hitAreas.clear();
+        childAreas.clear();
         setAccessibilityPaneTitle(switch (screen) {
             case HOME -> "Начните работу с Reflect";
             case MENU -> "Добавить аудио";
@@ -188,8 +189,12 @@ final class ReflectView extends ViewGroup {
         mask.setColor(WHITE);
         mask.setCornerRadius(80);
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x35aaaaaa), null, mask));
-        hitAreas.add(new RectF(x, y, x + width, y + height));
-        addView(button);
+        place(button, x, y, width, height);
+    }
+
+    private void place(View child, float x, float y, float width, float height) {
+        childAreas.add(new RectF(x, y, x + width, y + height));
+        addView(child);
     }
 
     @Override protected void onDraw(Canvas canvas) {
@@ -221,19 +226,27 @@ final class ReflectView extends ViewGroup {
     }
 
     private void drawScreen(Canvas canvas, Screen page, float menu) {
-        if (home(page)) drawHome(canvas, menu);
+        if (home(page)) {
+            drawHome(canvas);
+            drawNavigation(canvas, menu, 0);
+        }
         else drawRecorder(canvas, page);
     }
 
-    private void drawHome(Canvas c, float menu) {
+    private void drawHome(Canvas c) {
         artwork.image(c, "butterfly", 71, 280, 250, 194);
         text(c, "Начните работу с Reflect", 196, 501, 22, 0xfff5f5f5, artwork.display, true);
         text(c, "Прикрепите файлы или запишите", 186.5f, 533.3f, 16, 0xff999999, artwork.medium, true);
         text(c, "аудио прямо сейчас", 186.5f, 554, 16, 0xff999999, artwork.medium, true);
         artwork.icon(c, "guide_arrow", 177.24f, 579.25f);
+    }
+
+    private void drawNavigation(Canvas c, float menu, int selectedTab) {
         rounded(c, 0, 736, 393, 852, 0, (Math.round(3 * (1 - menu)) << 24) | 0xffffff);
         pill(c, 16, 765, 302, 824, 29.5f, 0x1cffffff);
-        rounded(c, 22, 771, 90, 818, 24, 0x1affffff);
+        float center = TAB_CENTERS[selectedTab];
+        float halfWidth = selectedTab == 0 ? 34 : 35.5f;
+        rounded(c, center - halfWidth, 771, center + halfWidth, 818, 24, 0x1affffff);
         for (int i = 0; i < TAB_NAMES.length; i++) {
             artwork.centeredIcon(c, TAB_ICONS[i], TAB_CENTERS[i], 787);
             text(c, TAB_NAMES[i], TAB_CENTERS[i], 811.3f, 10, WHITE, artwork.regular, true);
