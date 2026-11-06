@@ -1,0 +1,33 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
+android {
+    namespace 'com.vexto.engine'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 28
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    // AAR sherpa-onnx не публикуется в Maven, его скачивает scripts/fetch_models.sh
+    api files('libs/sherpa-onnx-2.0.1.aar')
+    api 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1'
+
+    testImplementation 'junit:junit:4.13.2'
+}

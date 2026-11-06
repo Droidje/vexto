@@ -7,3 +7,6 @@ local.properties
 *.apk
 .env
 .DS_Store
+# Тяжёлые бинарники движка скачивает scripts/fetch_models.sh
+engine/libs/*.aar
+engine/src/main/assets/models/
