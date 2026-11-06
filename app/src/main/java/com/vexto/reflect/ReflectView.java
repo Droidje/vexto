@@ -34,6 +34,7 @@ final class ReflectView extends ViewGroup {
         void openRecorder();
         void startRecording();
         void pauseRecording();
+        void finishRecording();
         void closeRecorder();
         void play();
         void save();
@@ -43,6 +44,7 @@ final class ReflectView extends ViewGroup {
     }
 
     private static final float WIDTH = 393, HEIGHT = 852;
+    private static final float FINISH_LEFT = 172, FINISH_CENTER_X = 201.5f;
     private static final int BACKGROUND = 0xff040402, WHITE = Color.WHITE;
     private static final int[] REVIEW_WAVE = {4,6,10,7,14,9,18,12,8,16,22,13,9,19,11,6,15,20,10,7,12,17,9,5,11,14,8,6,10,7,5,4};
     private static final String[] TAB_ICONS = {"tab_home", "tab_records", "tab_speakers", "tab_settings"};
@@ -283,6 +285,9 @@ final class ReflectView extends ViewGroup {
                 control("Записать сейчас", 175, 705, 202, 44, actions::openRecorder);
             }
         } else {
+            if (screen == Screen.RECORDING || screen == Screen.PAUSED) {
+                control("Завершить запись", FINISH_LEFT, 765, 59, 59, actions::finishRecording);
+            }
             control("Закрыть", 318, 765, 59, 59, actions::closeRecorder);
             switch (screen) {
                 case READY: control("Начать запись", 245, 765, 59, 59, actions::startRecording); break;
@@ -428,6 +433,8 @@ final class ReflectView extends ViewGroup {
         }
         if (page == Screen.RECORDING || page == Screen.PAUSED) {
             text(c, elapsed, 32, 803, 26, WHITE, artwork.display, false);
+            pill(c, FINISH_LEFT, 765, FINISH_LEFT + 59, 824, PLUS_EDGE);
+            rounded(c, FINISH_CENTER_X - 8, 786.5f, FINISH_CENTER_X + 8, 802.5f, 2.5f, WHITE);
         }
         closeButton(c, "plus_recorder", -45);
     }

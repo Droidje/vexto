@@ -174,7 +174,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         return view.screen() == RECORDING || view.screen() == PAUSED;
     }
 
-    private void finishRecording() {
+    @Override public void finishRecording() {
         if (!hasRecordingDraft()) return;
         if (recordingExit != null) recordingExit.dismiss();
         handler.removeCallbacks(heartbeat);
