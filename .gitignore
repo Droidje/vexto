@@ -20,3 +20,7 @@ local.properties
 *.iml
 *.apk
 .DS_Store
+
+# Локальные артефакты офлайн-движка
+/engine/libs/
+/engine/src/main/assets/models/

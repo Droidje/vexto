@@ -4,9 +4,10 @@ vexto — Android-приложение для записи разговоров,
 
 ## Запуск Android приложения
 
-Требуются JDK 17, Android SDK Platform 35 и Build Tools 35.0.0. Приложение работает на Android 9 (API 28) и новее.
+Требуются JDK 17, Android SDK Platform 35 и Build Tools 35.0.0. Приложение работает на Android 9 (API 28) и новее. Перед сборкой скачайте проверяемые по SHA-256 веса и AAR для [офлайн-движка](engine/README.md).
 
 ```sh
+bash scripts/fetch_models.sh
 ./gradlew :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n com.vexto.reflect/.MainActivity

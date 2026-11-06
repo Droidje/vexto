@@ -1,0 +1,47 @@
+package com.vexto.engine.model
+
+/** Слово с таймкодами в миллисекундах от начала записи. */
+data class Word(
+    val text: String,
+    val startMs: Long,
+    val endMs: Long,
+)
+
+/** Интервал речи одного говорящего по данным диаризации. */
+data class SpeakerTurn(
+    val speaker: Int,
+    val startMs: Long,
+    val endMs: Long,
+)
+
+/** Реплика: непрерывная речь одного говорящего. */
+data class Utterance(
+    val speakerId: String,
+    val startMs: Long,
+    val endMs: Long,
+    val text: String,
+    val words: List<Word> = emptyList(),
+)
+
+/** Участник разговора. [id] стабилен и уходит в экспорт, [name] задаёт пользователь. */
+data class Speaker(
+    val id: String,
+    val name: String? = null,
+) {
+    fun displayName(): String = name ?: "Спикер ${id.substringAfterLast('_')}"
+}
+
+data class Transcript(
+    val utterances: List<Utterance>,
+    val speakers: List<Speaker>,
+) {
+    fun speaker(id: String): Speaker = speakers.firstOrNull { it.id == id } ?: Speaker(id)
+
+    /** Суммарное время речи каждого участника. */
+    fun talkTimeMs(): Map<String, Long> =
+        utterances.groupBy { it.speakerId }.mapValues { (_, list) -> list.sumOf { it.endMs - it.startMs } }
+
+    companion object {
+        val Empty = Transcript(emptyList(), emptyList())
+    }
+}
