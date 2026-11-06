@@ -39,10 +39,10 @@ Pixel7 AVD, AndroidAPI36, x86_64, четыре виртуальных CPU, CPU-�
 | Nemotron3 Q8_0 | 21.54 /4 | 1.501 | — | — | — |
 | Nemotron3 F32-linear | 21.47 /4 | 1.301 | 14.98 /4 | 1.254 | 408.7 |
 | Streaming Sortformer4spk-v2 Q8_0 | 16.35 /4 | 2.552 | 15.83 /3 | 2.551 | 204.5 |
-| pyannoteINT8 + TitaNet Small | 10.37 /4 | 2.753 | 21.72 /2 | 2.775 | 321.9 |
-| pyannoteINT8 + TitaNet Large | 10.37 /4 | 8.785 | 20.64 /3 | 8.267 | 377.4 |
-| pyannoteINT8 + CAM++ English | 45.52 /7 | 3.354 | — | — | — |
-| pyannoteINT8 + ERes2NetV2 | 12.90 /3 | 29.443 | 21.72 /2 | 19.522 | 570.1 |
+| pyannote segmentation-3.0 INT8 + TitaNet Small | 10.37 /4 | 2.753 | 21.72 /2 | 2.775 | 321.9 |
+| pyannote segmentation-3.0 INT8 + TitaNet Large | 10.37 /4 | 8.785 | 20.64 /3 | 8.267 | 377.4 |
+| pyannote segmentation-3.0 INT8 + CAM++ English | 45.52 /7 | 3.354 | — | — | — |
+| pyannote segmentation-3.0 INT8 + ERes2NetV2 | 12.90 /3 | 29.443 | 21.72 /2 | 19.522 | 570.1 |
 
 У embedding-связок одинаковая segmentationINT8, автоматическая кластеризация
 с threshold0.7, без принудительного числа голосов, runtime Sherpa-ONNX2.0.1.
@@ -51,6 +51,41 @@ Nemotron использует NeMo-Speech.cpp `v3-offline`, Sortformer — `offl
 На test-фрагменте NemotronF32 дал наименьший DER из проверенных вариантов;
 на train-фрагменте лидировали TitaNet. Число ID само по себе не измеряет ошибки
 границ или идентичности. Увеличение TitaNet не гарантировало улучшения.
+
+## Что именно проверено у pyannote
+
+Название `pyannote` обозначает библиотеку и семейство моделей, а не один checkpoint.
+В строках таблицы выше проверялась **segmentation-3.0, ONNX INT8**, в связке с
+TitaNet Small/Large, CAM++ или ERes2NetV2 и кластеризацией Sherpa. В предыдущей
+серии также проверялся FP32-вариант той же segmentation. Это **не запуск полного
+`pyannote/speaker-diarization-3.1` и не Community-1**. Семь строк таблицы — семь
+конфигураций, включая разные точности Nemotron и разные embeddings; их нельзя
+считать семью независимыми архитектурами диаризации.
+
+[segmentation-3.0](https://huggingface.co/pyannote/segmentation-3.0) определяет
+локальную активность говорящих в 10-секундных окнах. Сопоставление одного голоса
+между окнами требует других частей конвейера. Подмена embeddings и кластеризации
+меняет весь результат, поэтому наши DER нельзя приписывать официальному pipeline.
+
+Следующие кандидаты, **пока без наших измерений качества, Android RAM и времени**:
+
+| Приоритет | Полный конвейер | Почему проверять | Что ещё не установлено |
+| --- | --- | --- | --- |
+| 1 | [pyannote Community-1](https://huggingface.co/pyannote/speaker-diarization-community-1) | Авторы сообщают об улучшении определения числа говорящих и принадлежности реплик относительно 3.1; есть отдельный exclusive-выход для привязки текста | Локальный Python-запуск, затем воспроизведение всех частей на Android и замер бюджета 2 ГБ |
+| 2 | [pyannote speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1) | Официальный полный baseline, с которым можно сравнить нашу гибридную сборку | Его полный PyTorch pipeline на ноутбуке и Android не запускался |
+| 3 | [NeMo clustering + MSDD](https://docs.nvidia.com/nemo-framework/user-guide/latest/nemotoolkit/asr/speaker_diarization/models.html) | Другой полный каскад: VAD, TitaNet, кластеризация и многомасштабный нейронный декодер; проверяет больше, чем замену одного embedding | Выбор точного checkpoint, экспорт и выполнение всех этапов на Android, суммарная память |
+
+Это порядок следующих диагностических проб, а не обещание превосходства.
+Для Community-1 и 3.1 официальные карточки требуют принять условия Hugging Face
+и использовать токен при загрузке. После загрузки Community-1 поддерживает
+офлайн-работу. Официальный Python/PyTorch API сам по себе не доказывает наличие
+готового Android runtime или соблюдение нашего лимита памяти.
+
+Источники проверены 6 ноября 2026:
+[pyannote.audio](https://github.com/pyannote/pyannote-audio),
+[описание изменений Community-1](https://www.pyannote.ai/blog/community-1).
+В будущей оценке с overlap следует использовать обычную diarization-разметку;
+exclusive-выход оставлять дополнительным представлением для привязки ASR.
 
 ## Выразительная русская речь без RTTM
 
