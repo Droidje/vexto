@@ -83,7 +83,10 @@ final class ReflectLocalTranscription {
                         try {
                             ReflectTranscript core = convert(transcript);
                             store.saveEngineArtifacts(recording, artifacts);
-                            if (!core.lines.isEmpty() && store.saveIfAbsent(recording, core)) started.provisional = core;
+                            if (!core.lines.isEmpty() && store.saveIfAbsent(recording, core)) {
+                                started.provisional = core;
+                                registerSpeakers(recording, core, transcript);
+                            }
                         } catch (IOException | RuntimeException ignored) {
                             // Engine still retains its durable originals, even when the UI sidecar cannot be written.
                         }
@@ -145,10 +148,14 @@ final class ReflectLocalTranscription {
                 return;
             }
             String profileWarning = null;
-            try { profiles.saveEmbeddings(recording, transcript, output.getSpeakers()); }
-            catch (IOException | RuntimeException unavailable) {
-                profileWarning = "Расшифровка сохранена. Не удалось сохранить голосовые профили.";
+            if (started.provisional != null) {
+                try { profiles.retainAcrossRefinement(recording, started.provisional, transcript); }
+                catch (IOException | RuntimeException unavailable) {
+                    profileWarning = "Расшифровка сохранена. Не удалось перенести привязки спикеров.";
+                }
             }
+            String registrationWarning = registerSpeakers(recording, transcript, output);
+            if (registrationWarning != null) profileWarning = registrationWarning;
             String statsWarning = !stats.getComplete() ? "Часть аудио не распознана. Доступный текст и оригинальные результаты сохранены."
                     : !stats.getSelectionResolved() ? "Текст сохранён. Для части фрагментов выбор модели не подтверждён."
                     : !stats.getFullProfileCompleted() ? "Текст сохранён. Некоторые дополнительные этапы не завершились."
@@ -159,6 +166,19 @@ final class ReflectLocalTranscription {
         } catch (IOException | RuntimeException failure) {
             main.post(() -> complete(started, null, SAVE_FAILED));
         }
+    }
+
+    private String registerSpeakers(File recording, ReflectTranscript transcript, Transcript output) {
+        String warning = null;
+        try { profiles.saveEmbeddings(recording, transcript, output.getSpeakers()); }
+        catch (IOException | RuntimeException unavailable) {
+            warning = "Расшифровка сохранена. Не удалось сохранить голосовые профили.";
+        }
+        try { profiles.assign(recording, transcript); }
+        catch (IOException | RuntimeException unavailable) {
+            return "Расшифровка сохранена. Не удалось обновить список спикеров.";
+        }
+        return warning;
     }
 
     private static ReflectTranscript convert(Transcript output) {
