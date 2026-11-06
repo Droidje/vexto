@@ -10,7 +10,7 @@ package com.vexto.engine.model
  */
 class TranscriptAssembler(
     private val maxSnapMs: Long = 1_000,
-    private val maxPauseMs: Long = 5_000,
+    private val maxPauseMs: Long = 1_000,
 ) {
 
     fun assemble(words: List<Word>, turns: List<SpeakerTurn>): Transcript {

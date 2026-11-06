@@ -7,7 +7,7 @@ package com.vexto.engine.model
  */
 object TokenWords {
 
-    private const val TailMs = 400L
+    private const val TailMs = 100L
     private const val MinWordMs = 80L
 
     fun group(tokens: Array<String>, timesSec: FloatArray, segmentStartMs: Long, segmentEndMs: Long): List<Word> {

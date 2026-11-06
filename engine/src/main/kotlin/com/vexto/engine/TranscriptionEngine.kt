@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
 import com.vexto.engine.audio.AudioDecoder
+import com.vexto.engine.diarization.Diarizer
 import com.vexto.engine.model.ProcessingStats
 import com.vexto.engine.model.SimplePunctuation
 import com.vexto.engine.model.Stage
@@ -13,7 +14,6 @@ import com.vexto.engine.model.TranscriptionEvent
 import com.vexto.engine.model.TranscriptionOptions
 import com.vexto.engine.model.Word
 import com.vexto.engine.models.ModelStore
-import com.vexto.engine.pipeline.Diarizer
 import com.vexto.engine.pipeline.SpeechRecognizer
 import com.vexto.engine.pipeline.VoiceDetector
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +28,7 @@ import java.io.File
 
 /**
  * Офлайн-расшифровка: декодирование, диаризация всей записи, VAD, ASR по кускам,
- * сопоставление слов и спикеров. Модели грузятся по одной и освобождаются после своего
+ * сопоставление слов и спикеров. Перед VAD, эмбеддингами и ASR работает медленная АРУ. Модели грузятся по одной и освобождаются после своего
  * этапа, чтобы уложиться в 4 ГБ RAM. Одновременно идёт не больше одной расшифровки.
  */
 class TranscriptionEngine(context: Context) {
@@ -65,11 +65,12 @@ class TranscriptionEngine(context: Context) {
         val cacheDir = File(context.cacheDir, "engine").apply { mkdirs() }
         stage(Stage.Decoding) { AudioDecoder.decode(context, uri, cacheDir, it) }.use { audio ->
             val turns = stage(Stage.Diarization) { progress ->
-                Diarizer.run(models, audio.readAll(), options.speakerCount, threads, progress)
+                val speech = VoiceDetector.segments(models, audio, VoiceDetector.Diarization) { progress(it * VadShare) }
+                Diarizer.run(models, audio, speech, options.speakerCount, threads) { progress(VadShare + (1 - VadShare) * it) }
             }
             val assembler = TranscriptAssembler()
             val words = stage(Stage.Recognition) { progress ->
-                val segments = VoiceDetector.segments(models, audio) { progress(it * VadShare) }
+                val segments = VoiceDetector.segments(models, audio, VoiceDetector.Recognition) { progress(it * VadShare) }
                 val words = mutableListOf<Word>()
                 SpeechRecognizer(models, threads).use { recognizer ->
                     var lastPartial = SystemClock.elapsedRealtime()

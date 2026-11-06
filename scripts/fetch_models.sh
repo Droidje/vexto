@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Скачивает AAR sherpa-onnx и модели движка, проверяет sha256 и пишет манифест.
+# Скачивает AAR sherpa-onnx и модели движка (выбор по замерам bench, см. engine/README.md), проверяет sha256 и пишет манифест.
 #
 #   scripts/fetch_models.sh [--asr ID] [--emb ID] [--threshold X] [--aar-only]
 #
-# ASR: gigaam-v3-rnnt-punct (по умолчанию), gigaam-v3-rnnt, gigaam-v2-rnnt.
-# Эмбеддинги спикера: campplus (по умолчанию), titanet-small.
+# ASR: gigaam-v3-rnnt (по умолчанию), gigaam-v3-rnnt-punct (своя пунктуация, WER хуже на 0,5–4 п.п.),
+# gigaam-v2-rnnt. Эмбеддинги спикера: eres2net (по умолчанию), titanet-small, campplus.
+# Порог кластеризации по умолчанию 0,35, рабочий диапазон для eres2net 0,35–0,40.
 # Скачанное кэшируется в $VEXTO_MODEL_CACHE (по умолчанию ~/.cache/vexto-models).
 set -euo pipefail
 
@@ -14,9 +15,9 @@ ASSETS="$ROOT/engine/src/main/assets/models"
 HF=https://huggingface.co
 GH=https://github.com/k2-fsa/sherpa-onnx/releases/download
 
-ASR=gigaam-v3-rnnt-punct
-EMB=campplus
-THRESHOLD=0.5
+ASR=gigaam-v3-rnnt
+EMB=eres2net
+THRESHOLD=0.35
 AAR_ONLY=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -75,6 +76,9 @@ case "$ASR" in
 esac
 
 case "$EMB" in
+  eres2net)
+    EMB_FILE=3dspeaker_speech_eres2net_base_200k_sv_zh-cn_16k-common.onnx
+    EMB_SHA=e2d2048292e055f7b61cdec3db010503f35369b245bf0b3bbad021c9a91e4053 ;;
   campplus)
     EMB_FILE=3dspeaker_speech_campplus_sv_zh_en_16k-common_advanced.onnx
     EMB_SHA=aa3cfc16963a10586a9393f5035d6d6b57e98d358b347f80c2a30bf4f00ceba2 ;;
@@ -92,8 +96,6 @@ fetch "$HF/$REPO/resolve/main/joiner.onnx" "$JOIN" "$ASSETS/$A/joiner.onnx"
 fetch "$HF/$REPO/resolve/main/tokens.txt" "$TOK" "$ASSETS/$A/tokens.txt"
 fetch "$GH/asr-models/silero_vad.onnx" \
   9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6 "$ASSETS/vad/silero_vad.onnx"
-fetch "$HF/csukuangfj/sherpa-onnx-pyannote-segmentation-3-0/resolve/main/model.int8.onnx" \
-  d582f4b4c6b48205de7e0643c57df0df5615a3c176189be3fc461e9d18827b5d "$ASSETS/diarization/segmentation-3.0.int8.onnx"
 fetch "$GH/speaker-recongition-models/$EMB_FILE" "$EMB_SHA" "$ASSETS/diarization/$EMB_FILE"
 
 VERSION=$(printf '%s' "$ENC$DEC$JOIN$TOK$EMB_SHA$THRESHOLD" | shasum -a 256 | cut -c1-12)
@@ -111,7 +113,6 @@ cat > "$ASSETS/manifest.json" <<JSON
     "punctuation": $PUNCT
   },
   "vad": "vad/silero_vad.onnx",
-  "segmentation": "diarization/segmentation-3.0.int8.onnx",
   "embedding": "diarization/$EMB_FILE",
   "clusterThreshold": $THRESHOLD
 }

@@ -14,7 +14,7 @@ class TokenWordsTest {
 
         assertEquals(listOf("Добрый", "день!", "Как", "дела?"), words.map { it.text })
         assertEquals(listOf(1000L, 1500L, 2500L, 2800L), words.map { it.startMs })
-        assertEquals(listOf(1500L, 2300L, 2800L, 3500L), words.map { it.endMs })
+        assertEquals(listOf(1300L, 2000L, 2600L, 3200L), words.map { it.endMs })
     }
 
     @Test

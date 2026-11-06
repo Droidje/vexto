@@ -37,7 +37,7 @@ class EvalActivity : Activity() {
         super.onCreate(savedInstanceState)
         status = TextView(this).apply { setPadding(32, 96, 32, 32) }
         setContentView(status)
-        val dir = intent.getStringExtra("dir")?.let(::File) ?: File(getExternalFilesDir(null), "eval")
+        val dir = intent.getStringExtra("dir")?.let(::File) ?: getExternalFilesDir("eval")!!
         val speakers = intent.getIntExtra("speakers", 0).takeIf { it > 0 }
         scope.launch { runAll(dir, speakers) }
     }
