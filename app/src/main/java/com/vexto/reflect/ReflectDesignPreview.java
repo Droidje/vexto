@@ -1,6 +1,7 @@
 package com.vexto.reflect;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /** Example content from Figma, used only by the opt-in debug preview. */
@@ -32,5 +33,26 @@ final class ReflectDesignPreview {
         var room = new ReflectCatalog.Conversation("Переговорная 2", "1:34 PM",
                 "Настя: Все они показывают разные аспекты моих навыков.", true, null);
         return Arrays.asList(sprint, room, room, sprint);
+    }
+
+    static String transcriptTitle(String key) {
+        return "Спринт тайп".equals(key) ? "Спринт по портфолио" : key;
+    }
+
+    static ReflectTranscript transcript(String key) {
+        if ("Запись №7".equals(key)) return null;
+        if ("Переговорная 2".equals(key)) {
+            return new ReflectTranscript(Collections.singletonList(new ReflectTranscript.Line(
+                    "Настя", 0, 4500, "Все они показывают разные аспекты моих навыков.")));
+        }
+        return new ReflectTranscript(Arrays.asList(
+                new ReflectTranscript.Line("jennifer", 0, 4200,
+                        "Звучит интересно! Какие проекты ты выбрала для своего спринта?"),
+                new ReflectTranscript.Line("michel", 4500, 16700,
+                        "Ну, у меня есть несколько ключевых: разработка мобильного приложения, участие в большом маркетинговом проекте и запуск веб-сайта. Все они показывают разные аспекты моих навыков."),
+                new ReflectTranscript.Line("alex", 17000, 28100,
+                        "Планирую создать небольшую презентацию с описанием каждого проекта, добавить графики и отзывы клиентов. Думаю, это поможет лучше донести информацию."),
+                new ReflectTranscript.Line("jennifer", 28500, 33100,
+                        "Звучит интересно! Какие проекты ты выбрала для своего спринта?")));
     }
 }

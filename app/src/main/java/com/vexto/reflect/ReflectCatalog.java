@@ -66,7 +66,7 @@ final class ReflectCatalog {
 
     private ReflectCatalog() {}
 
-    static List<Recording> localRecordings(File directory) {
+    static List<Recording> localRecordings(File directory, ReflectTranscriptStore transcripts) {
         File[] files = directory.listFiles(File::isFile);
         if (files == null) return Collections.emptyList();
         Arrays.sort(files, Comparator.comparingLong(File::lastModified).reversed()
@@ -87,7 +87,8 @@ final class ReflectCatalog {
             String date = day.equals(today) ? "Сегодня" : DATE.format(day);
             int seconds = duration / 1000;
             String length = String.format(Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60);
-            recordings.add(new Recording(file, "Запись №" + (files.length - i), date,
+            String title = transcripts.title(file, "Запись №" + (files.length - i));
+            recordings.add(new Recording(file, title, date,
                     TIME.format(modified), length, "Сохранено", false, false,
                     Collections.emptyList(), ""));
         }

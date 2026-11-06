@@ -2,7 +2,6 @@ package com.vexto.reflect;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -38,6 +37,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private final RecordingSession session = new RecordingSession();
     private ReflectView view;
     private ReflectPreferences preferences;
+    private ReflectTranscriptStore transcriptStore;
+    private ReflectTranscriptController transcripts;
     private File audio;
     private int duration;
     private MediaPlayer player;
@@ -62,6 +63,9 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         previewSpeakersEmpty = state != null && state.getBoolean("previewSpeakersEmpty");
         preferences = new ReflectPreferences(this);
         view = new ReflectView(this, this, designPreview, preferences);
+        transcriptStore = new ReflectTranscriptStore(getFilesDir());
+        transcripts = new ReflectTranscriptController(this, view, preferences, transcriptStore, imports,
+                this::notice, this::playFrom, this::refreshRecordings);
         setContentView(view);
         fullscreen();
         refreshRecordings();
@@ -69,9 +73,16 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         if (state != null) {
             ReflectView.Screen tab = ReflectView.Screen.valueOf(state.getString("tab", HOME.name()));
             if (ReflectView.isTab(tab)) view.show(tab);
-            String file = state.getString("audio");
-            if (file != null && new File(file).isFile()) {
-                try { review(new File(file)); }
+            String file = state.getString("transcriptAudio", state.getString("audio"));
+            String preview = state.getString("transcriptPreview");
+            if (designPreview && preview != null) {
+                transcripts.openPreview(preview);
+            } else if (file != null && new File(file).isFile()) {
+                try {
+                    if (state.getBoolean("transcript")) {
+                        openLocalTranscript(new File(file), state.getString("transcriptTitle", "Запись"));
+                    } else review(new File(file));
+                }
                 catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
             } else if (state.getBoolean("ready")) view.show(READY);
         }
@@ -83,6 +94,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         state.putBoolean("ready", view.screen() == READY);
         state.putString("tab", view.tab().name());
         state.putBoolean("previewSpeakersEmpty", previewSpeakersEmpty);
+        transcripts.saveState(state);
     }
 
     @Override public void onWindowFocusChanged(boolean focused) {
@@ -153,6 +165,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         session.cancel();
         stopPlayer();
         discardDraft();
+        if (view.screen() == TRANSCRIPT) transcripts.close();
         view.show(view.tab());
     }
 
@@ -165,6 +178,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
+        if (transcripts.onActivityResult(request, result, data)) return;
         if (request != PICK_AUDIO || result != RESULT_OK || data == null || data.getData() == null) return;
         Uri uri = data.getData();
         String mime = getContentResolver().getType(uri);
@@ -207,17 +221,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override public void play() {
         if (audio == null) return;
         try {
-            if (player == null) {
-                player = new MediaPlayer();
-                player.setDataSource(audio.getAbsolutePath());
-                player.setOnCompletionListener(completed -> stopPlayer());
-                player.setOnErrorListener((failed, what, extra) -> {
-                    stopPlayer();
-                    notice("Не удалось воспроизвести запись");
-                    return true;
-                });
-                player.prepare();
-            }
+            preparePlayer();
             handler.removeCallbacks(heartbeat);
             if (player.isPlaying()) {
                 player.pause();
@@ -226,6 +230,33 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
                 player.start();
                 handler.post(heartbeat);
             }
+        } catch (IOException | RuntimeException error) {
+            stopPlayer();
+            notice("Не удалось воспроизвести запись");
+        }
+    }
+
+    private void preparePlayer() throws IOException {
+        if (player != null) return;
+        player = new MediaPlayer();
+        player.setDataSource(audio.getAbsolutePath());
+        player.setOnCompletionListener(completed -> stopPlayer());
+        player.setOnErrorListener((failed, what, extra) -> {
+            stopPlayer();
+            notice("Не удалось воспроизвести запись");
+            return true;
+        });
+        player.prepare();
+    }
+
+    private void playFrom(int millis) {
+        if (audio == null) return;
+        try {
+            preparePlayer();
+            player.seekTo(Math.min(millis, Math.max(0, duration - 1)), MediaPlayer.SEEK_CLOSEST);
+            player.start();
+            handler.removeCallbacks(heartbeat);
+            handler.post(heartbeat);
         } catch (IOException | RuntimeException error) {
             stopPlayer();
             notice("Не удалось воспроизвести запись");
@@ -275,13 +306,20 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override public void openRecording(ReflectCatalog.Recording recording) {
         if (recording.file == null) {
-            new AlertDialog.Builder(this).setTitle(recording.title)
-                    .setMessage(recording.time + " · " + recording.length + "\n" + recording.status)
-                    .setPositiveButton(android.R.string.ok, null).show();
+            if (designPreview) transcripts.openPreview(recording.title);
             return;
         }
-        try { review(recording.file); }
+        try { openLocalTranscript(recording.file, recording.title); }
         catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
+    }
+
+    private void openLocalTranscript(File file, String title) throws IOException {
+        int length = RecordingSession.duration(file);
+        stopPlayer();
+        discardDraft();
+        audio = file;
+        duration = length;
+        transcripts.open(file, title, time(length));
     }
 
     private void refreshRecordings() {
@@ -292,7 +330,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         }
         File directory = new File(getFilesDir(), "recordings");
         imports.execute(() -> {
-            var recordings = ReflectCatalog.localRecordings(directory);
+            var recordings = ReflectCatalog.localRecordings(directory, transcriptStore);
             runOnUiThread(() -> {
                 if (!isDestroyed()) {
                     view.setRecordings(recordings);
@@ -305,11 +343,16 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override public void openConversation(ReflectCatalog.Conversation conversation) {
         if (conversation.recording != null) {
             openRecording(conversation.recording);
-        } else {
-            new AlertDialog.Builder(this).setTitle(conversation.title).setMessage(conversation.preview)
-                    .setPositiveButton(android.R.string.ok, null).show();
-        }
+        } else if (designPreview) transcripts.openPreview(conversation.title);
     }
+
+    @Override public void closeTranscript() { closeRecorder(); }
+    @Override public void exportTranscript() { transcripts.export(); }
+    @Override public void importTranscript() { transcripts.pick(); }
+    @Override public void openTranscriptOptions() { transcripts.options(); }
+    @Override public void openTranscriptStyle() { transcripts.styleOptions(); }
+    @Override public void playTranscriptAudio() { play(); }
+    @Override public void openTranscriptLine(ReflectTranscript.Line line) { transcripts.lineOptions(line); }
 
     @Override public void toggleSpeakerPreview() {
         if (!designPreview) return;

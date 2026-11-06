@@ -3,6 +3,7 @@ package com.vexto.reflect;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.view.Gravity;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
@@ -26,6 +27,11 @@ final class ReflectSettingsView extends ScrollView {
         setOverScrollMode(OVER_SCROLL_NEVER);
     }
 
+    void refresh() {
+        layoutWidth = 0;
+        requestLayout();
+    }
+
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec);
         if (width > 0 && width != layoutWidth) {
@@ -41,6 +47,14 @@ final class ReflectSettingsView extends ScrollView {
         LinearLayout root = style.column();
         root.setPadding(style.px(16), style.px(8), style.px(16), style.px(28));
         style.append(root, style.title("Настройки"), 0, 20);
+
+        section(root, style, "Транскрипт");
+        LinearLayout transcript = card(style);
+        style.append(transcript, style.text("Размер текста", 17, Color.WHITE, artwork.semibold), 2, 12);
+        style.append(transcript, textSizes(style), 0, 10);
+        style.append(transcript, toggle(style, "Метки времени", preferences.timestamps(),
+                preferences::setTimestamps), 0, 0);
+        style.append(root, transcript, 0, 22);
 
         section(root, style, "Интерфейс");
         LinearLayout display = card(style);
@@ -82,7 +96,39 @@ final class ReflectSettingsView extends ScrollView {
         toggle.setChecked(checked);
         toggle.setTrackTintList(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},
                 new int[]{ReflectPageStyle.ACCENT, 0xff626262}));
+        toggle.setThumbTintList(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},
+                new int[]{Color.WHITE, 0xffbcbcbc}));
         toggle.setOnCheckedChangeListener((button, value) -> change.accept(value));
         return toggle;
+    }
+
+    private LinearLayout textSizes(ReflectPageStyle style) {
+        LinearLayout options = new LinearLayout(getContext());
+        options.setBackground(style.rounded(0xff343434, 20));
+        options.setPadding(style.px(3), style.px(3), style.px(3), style.px(3));
+        String[] labels = {"Мелкий", "Обычный", "Крупный"};
+        int[] sizes = {14, 16, 20};
+        for (int i = 0; i < sizes.length; i++) {
+            int size = sizes[i];
+            TextView item = style.text(labels[i], 14, Color.WHITE, artwork.medium);
+            item.setGravity(Gravity.CENTER);
+            item.setTag(size);
+            item.setOnClickListener(view -> {
+                preferences.setTextSize(size);
+                selectSize(options, style);
+            });
+            options.addView(item, new LinearLayout.LayoutParams(0, style.px(36), 1));
+        }
+        selectSize(options, style);
+        return options;
+    }
+
+    private void selectSize(LinearLayout options, ReflectPageStyle style) {
+        for (int i = 0; i < options.getChildCount(); i++) {
+            android.view.View item = options.getChildAt(i);
+            boolean selected = (int) item.getTag() == preferences.textSize();
+            item.setSelected(selected);
+            item.setBackground(style.pressable(selected ? 0xff575757 : Color.TRANSPARENT, 17));
+        }
     }
 }

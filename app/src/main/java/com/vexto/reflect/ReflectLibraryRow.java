@@ -6,17 +6,19 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Typeface;
+import android.text.TextPaint;
+import android.text.TextUtils;
 import android.view.View;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 /** A measured, accessible list item rendered in the library's design coordinates. */
 final class ReflectLibraryRow extends View {
     private static final int MUTED = 0xff999999;
-    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
+    private final TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final float height;
     private final Drawing drawing;
 
-    interface Drawing { void draw(Canvas canvas, Paint paint); }
+    interface Drawing { void draw(Canvas canvas, TextPaint paint); }
 
     private ReflectLibraryRow(Context context, float height, String label, Drawing drawing) {
         super(context);
@@ -43,12 +45,13 @@ final class ReflectLibraryRow extends View {
         ReflectLibraryRow row = new ReflectLibraryRow(context, hasSpeakers ? 109 : 88,
                 item.title + ", " + item.time + ", " + item.length + ", " + item.status, (canvas, paint) -> {
             recordingCover(canvas, art, item.waveCover, 21);
-            text(canvas, paint, item.title, 74, 29, 18, Color.WHITE, art.semibold, -.43f);
-            text(canvas, paint, item.time + " · " + item.length, 74, 51, 16, MUTED, art.regular, -.23f);
             boolean arrow = !item.complete;
             String status = item.status;
             textRight(canvas, paint, status, arrow ? 361 : 377, 29, 17,
                     item.complete ? 0xff34c759 : MUTED, art.regular, -.43f);
+            float available = (arrow ? 361 : 377) - 74 - 10 - paint.measureText(status);
+            rowTitle(canvas, paint, art, item.title, available);
+            text(canvas, paint, item.time + " · " + item.length, 74, 51, 16, MUTED, art.regular, -.23f);
             if (arrow) chevron(canvas, paint, 373, 23);
             if (hasSpeakers) {
                 text(canvas, paint, "Участники:", 74, 83, 16, MUTED, art.regular, -.23f);
@@ -86,7 +89,7 @@ final class ReflectLibraryRow extends View {
             else conversationCover(canvas, art, item.roomCover);
             textRight(canvas, paint, item.time, 361, 29, 17, MUTED, art.duration, -.43f);
             float available = 279 - paint.measureText(item.time);
-            text(canvas, paint, item.title, 74, 29, 18, Color.WHITE, art.semibold, -.43f);
+            rowTitle(canvas, paint, art, item.title, available);
             preview(canvas, paint, art, item.preview, available);
             chevron(canvas, paint, 373, 23);
             separator(canvas, paint, 88);
@@ -112,6 +115,13 @@ final class ReflectLibraryRow extends View {
             rest = rest.substring(0, chars).trim() + "…";
         }
         text(canvas, paint, rest, 74, 71, 16, MUTED, art.regular, -.23f);
+    }
+
+    private static void rowTitle(Canvas canvas, TextPaint paint, ReflectArtwork art, String title, float width) {
+        style(paint, 18, Color.WHITE, art.semibold, -.43f);
+        paint.setTextAlign(Paint.Align.LEFT);
+        CharSequence fitted = TextUtils.ellipsize(title, paint, Math.max(0, width), TextUtils.TruncateAt.END);
+        canvas.drawText(fitted, 0, fitted.length(), 74, 29, paint);
     }
 
     private static void conversationCover(Canvas canvas, ReflectArtwork art, boolean room) {
