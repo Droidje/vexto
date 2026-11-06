@@ -81,7 +81,7 @@ internal object Validation {
 
     private val speakerPrefix = Regex("""^\s*speaker_\d+:\s*""", RegexOption.IGNORE_CASE)
 
-    /** [timestamps] — метка `mm:ss` → начало первой реплики с этой меткой. */
+    /** [timestamps]: метка `mm:ss` → начало первой реплики с этой меткой. */
     fun summary(raw: String, timestamps: Map<String, Long>): Summary? {
         val json = runCatching { JSONObject(raw) }.getOrNull() ?: return null
         val text = json.optString("summary").trim()

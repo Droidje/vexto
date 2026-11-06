@@ -15,8 +15,9 @@ import org.junit.runner.RunWith
 import java.io.File
 
 /**
- * Прогон трёх задач на реальной модели через процесс `:llm`. Команды запуска — в llm/README.md.
- * Аргументы инструментации: `modelPath` (по умолчанию filesDir/model.gguf), `threads`, `cpuVariant`, `repack`.
+ * Прогон трёх задач на реальной модели через процесс `:llm`. Команды запуска в llm/README.md.
+ * Аргументы инструментации: `modelPath` (по умолчанию filesDir/model.gguf, `asset` для модели из APK),
+ * `threads`, `cpuVariant`, `repack`.
  */
 @RunWith(AndroidJUnit4::class)
 class LlmTasksTest {
@@ -24,8 +25,12 @@ class LlmTasksTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val args = InstrumentationRegistry.getArguments()
     private val context = instrumentation.targetContext
-    private val modelPath = args.getString("modelPath")
-        ?: File(context.filesDir, "model.gguf").path
+    // `-e modelPath asset` проверяет модель из assets, как в сборке приложения.
+    private val modelPath = when (val arg = args.getString("modelPath")) {
+        null -> File(context.filesDir, "model.gguf").path
+        "asset" -> null
+        else -> arg
+    }
     private val stats = mutableListOf<GenerationStats>()
     private val config = LlmConfig(
         modelPath = modelPath,
