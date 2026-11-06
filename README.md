@@ -44,10 +44,11 @@ adb shell am start -n com.vexto.reflect/.MainActivity
 
 ## CI/CD
 
-Два пайплайна GitHub Actions (`.github/workflows/`):
+Три пайплайна GitHub Actions (`.github/workflows/`):
 
 1. **[CI](.github/workflows/ci.yml)** — на PR в `dev` и push в `dev`. `smoke` (целостность репо) + `test` (unit-тесты утилит и Android, синтаксис shell guard и сборка APK). Если коммиты PR уже прошли CI, после слияния в `dev` прогон не повторяется (дедуп-гейт). Python-тесты работают без моделей; Android JVM-тесты и сборка проверяют локальное хранение и отсутствие сетевых разрешений. Для них скачивается AAR sherpa-onnx, без весов ML.
 2. **[Release Checks](.github/workflows/release-checks.yml)** — на MR в `main` (обычно из `dev`). Не повторяет тесты: гейт проверяет зелёный CI на head-коммите, затем выполняются только релизные проверки (слот).
+3. **[Publish](.github/workflows/publish.yml)** — только после слияния в `main`: сборка Docker-образа и публикация в GitHub Packages (`ghcr.io/<owner>/vexto`, теги `latest` и SHA). `Dockerfile` — контейнер-заглушка: артефакт Android (APK/AAB) собирается в CI, образ — для будущих серверных компонентов.
 
 Все пайплайны можно запускать вручную (`workflow_dispatch`).
 
