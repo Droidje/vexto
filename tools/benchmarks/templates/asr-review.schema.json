@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "punctuated_text": {"type": "string"},
+    "replacements": {"type": "array", "maxItems": 3, "items": {
+      "type": "object", "properties": {
+        "original": {"type": "string"}, "replacement": {"type": "string"}, "reason": {"type": "string"}
+      }, "required": ["original", "replacement", "reason"], "additionalProperties": false
+    }}
+  },
+  "required": ["punctuated_text", "replacements"],
+  "additionalProperties": false
+}

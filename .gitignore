@@ -1,9 +1,22 @@
-.gradle/
+# Настройки конкретного компьютера и временные файлы агентов
+/.agents/local/
+/.agents/work/
+
+# Локальные конфиги IDE и окружения
 .idea/
+.env
+.env.*
+!.env.example
+*.log
+
+# Кэши Python
+__pycache__/
+*.py[cod]
+
+# Android и Gradle
+.gradle/
 **/build/
 local.properties
 *.iml
-*.log
 *.apk
-.env
 .DS_Store

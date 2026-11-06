@@ -1,0 +1,690 @@
+{
+  "created_utc": "2026-11-06T17:07:21.789323+00:00",
+  "environment": {
+    "android_api": "36",
+    "abi_list": "x86_64,arm64-v8a",
+    "online_cpus": "4",
+    "cpu_model": "Intel(R) Core(TM) Ultra 7 258V",
+    "meminfo_before": "MemTotal:        4008620 kB\nMemFree:          529380 kB\nMemAvailable:    2453248 kB",
+    "heap_growth_limit": "192m",
+    "java_max_heap": "576m"
+  },
+  "runs": [
+    {
+      "model": "silero-vad",
+      "repeat": 1,
+      "exit_code": 0,
+      "process_wall_seconds": 0.136366,
+      "peak_rss_kib": 75004,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-vad --silero-vad-model=silero_vad.onnx two-speakers-en.wav vad-output.wav",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "c58ddcc1724d2c36f9127af065a524b4a08353cd48e86a6099de40dc45640c2e",
+      "audio_seconds": 16.0,
+      "process_rtf": 0.008522875,
+      "speech_regions": [
+        [
+          "1.638",
+          "3.372"
+        ],
+        [
+          "4.422",
+          "6.540"
+        ],
+        [
+          "9.382",
+          "11.500"
+        ],
+        [
+          "12.198",
+          "14.700"
+        ]
+      ]
+    },
+    {
+      "model": "silero-vad",
+      "repeat": 2,
+      "exit_code": 0,
+      "process_wall_seconds": 0.140542,
+      "peak_rss_kib": 75220,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-vad --silero-vad-model=silero_vad.onnx two-speakers-en.wav vad-output.wav",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "d4049d697e5362033a0258225d8b5119b51c1707a0833306cc1fa60bf6fc51b8",
+      "audio_seconds": 16.0,
+      "process_rtf": 0.008783875,
+      "speech_regions": [
+        [
+          "1.638",
+          "3.372"
+        ],
+        [
+          "4.422",
+          "6.540"
+        ],
+        [
+          "9.382",
+          "11.500"
+        ],
+        [
+          "12.198",
+          "14.700"
+        ]
+      ]
+    },
+    {
+      "model": "silero-vad",
+      "repeat": 3,
+      "exit_code": 0,
+      "process_wall_seconds": 0.135613,
+      "peak_rss_kib": 74584,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-vad --silero-vad-model=silero_vad.onnx two-speakers-en.wav vad-output.wav",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "aac5eeedd689af71ea567ffc3c5d667c59838eb7045b15389a5ddd23544d9d33",
+      "audio_seconds": 16.0,
+      "process_rtf": 0.0084758125,
+      "speech_regions": [
+        [
+          "1.638",
+          "3.372"
+        ],
+        [
+          "4.422",
+          "6.540"
+        ],
+        [
+          "9.382",
+          "11.500"
+        ],
+        [
+          "12.198",
+          "14.700"
+        ]
+      ]
+    },
+    {
+      "model": "pyannote-int8-campplus-auto",
+      "repeat": 1,
+      "exit_code": 0,
+      "process_wall_seconds": 1.061326,
+      "peak_rss_kib": 157444,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-offline-speaker-diarization --segmentation.pyannote-model=segmentation.int8.onnx --embedding.model=campplus.onnx --clustering.cluster-threshold=0.5 two-speakers-en.wav",
+      "stdout_sha256": "a5037afc37187336fbe9c72fac3b836dcf676ad52c7092aaf29a884550225943",
+      "stderr_sha256": "38f0630f5bace2d145ab60545eb1bb79d86e7e80d7de5d229ccb6969e9075250",
+      "audio_seconds": 16.0,
+      "process_rtf": 0.066332875,
+      "inference_seconds_reported_by_runtime": 0.656,
+      "segments": [
+        {
+          "start_s": 1.617,
+          "end_s": 3.271,
+          "speaker": "speaker_00"
+        },
+        {
+          "start_s": 4.435,
+          "end_s": 6.427,
+          "speaker": "speaker_00"
+        },
+        {
+          "start_s": 9.346,
+          "end_s": 11.455,
+          "speaker": "speaker_03"
+        },
+        {
+          "start_s": 12.181,
+          "end_s": 14.645,
+          "speaker": "speaker_03"
+        }
+      ]
+    },
+    {
+      "model": "pyannote-int8-campplus-auto",
+      "repeat": 2,
+      "exit_code": 0,
+      "process_wall_seconds": 1.067837,
+      "peak_rss_kib": 157648,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-offline-speaker-diarization --segmentation.pyannote-model=segmentation.int8.onnx --embedding.model=campplus.onnx --clustering.cluster-threshold=0.5 two-speakers-en.wav",
+      "stdout_sha256": "a5037afc37187336fbe9c72fac3b836dcf676ad52c7092aaf29a884550225943",
+      "stderr_sha256": "ec751f4ea7f3627c74a45e2369caf2b0b39725d6eb5956efd7c09fda877adc36",
+      "audio_seconds": 16.0,
+      "process_rtf": 0.0667398125,
+      "inference_seconds_reported_by_runtime": 0.673,
+      "segments": [
+        {
+          "start_s": 1.617,
+          "end_s": 3.271,
+          "speaker": "speaker_00"
+        },
+        {
+          "start_s": 4.435,
+          "end_s": 6.427,
+          "speaker": "speaker_00"
+        },
+        {
+          "start_s": 9.346,
+          "end_s": 11.455,
+          "speaker": "speaker_03"
+        },
+        {
+          "start_s": 12.181,
+          "end_s": 14.645,
+          "speaker": "speaker_03"
+        }
+      ]
+    },
+    {
+      "model": "pyannote-int8-campplus-auto",
+      "repeat": 3,
+      "exit_code": 0,
+      "process_wall_seconds": 1.067436,
+      "peak_rss_kib": 157644,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-offline-speaker-diarization --segmentation.pyannote-model=segmentation.int8.onnx --embedding.model=campplus.onnx --clustering.cluster-threshold=0.5 two-speakers-en.wav",
+      "stdout_sha256": "a5037afc37187336fbe9c72fac3b836dcf676ad52c7092aaf29a884550225943",
+      "stderr_sha256": "57b01665b6846d5fdb376f598915388de995859fe30cd99a797cb088011d2a47",
+      "audio_seconds": 16.0,
+      "process_rtf": 0.06671475,
+      "inference_seconds_reported_by_runtime": 0.667,
+      "segments": [
+        {
+          "start_s": 1.617,
+          "end_s": 3.271,
+          "speaker": "speaker_00"
+        },
+        {
+          "start_s": 4.435,
+          "end_s": 6.427,
+          "speaker": "speaker_00"
+        },
+        {
+          "start_s": 9.346,
+          "end_s": 11.455,
+          "speaker": "speaker_03"
+        },
+        {
+          "start_s": 12.181,
+          "end_s": 14.645,
+          "speaker": "speaker_03"
+        }
+      ]
+    },
+    {
+      "model": "gigaam-v2-int8",
+      "repeat": 1,
+      "exit_code": 0,
+      "process_wall_seconds": 1.602806,
+      "peak_rss_kib": 443280,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-offline --encoder=gigaam/encoder.int8.onnx --decoder=gigaam/decoder.onnx --joiner=gigaam/joiner.onnx --tokens=gigaam/tokens.txt --model-type=nemo_transducer --num-threads=2 gigaam/test_wavs/example.wav",
+      "stdout_sha256": "63f9c6506b1c38c14fd219b4459cc412f89397e561876ed82419099cc939b3f9",
+      "stderr_sha256": "07f390bfdc68c405a80bf9d1a542892c0ed413b277e2f7d6737c6d567ea48e55",
+      "audio_seconds": 11.29,
+      "process_rtf": 0.14196687333923827,
+      "inference_seconds_reported_by_runtime": 0.651,
+      "text": "ничьих не требуя похвал счастлив уж я надеждой сладкой что дева с трепетом любви посмотрит может быть украдкой на песни грешные мои у лукоморья дуб зеленый",
+      "timestamp_count": 155
+    },
+    {
+      "model": "gigaam-v2-int8",
+      "repeat": 2,
+      "exit_code": 0,
+      "process_wall_seconds": 1.52452,
+      "peak_rss_kib": 443148,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-offline --encoder=gigaam/encoder.int8.onnx --decoder=gigaam/decoder.onnx --joiner=gigaam/joiner.onnx --tokens=gigaam/tokens.txt --model-type=nemo_transducer --num-threads=2 gigaam/test_wavs/example.wav",
+      "stdout_sha256": "63f9c6506b1c38c14fd219b4459cc412f89397e561876ed82419099cc939b3f9",
+      "stderr_sha256": "bb67c40c61d23b669055ea5b8d40684ef9086eb64cfd05c7c9c8d90a7aef4f62",
+      "audio_seconds": 11.29,
+      "process_rtf": 0.13503277236492472,
+      "inference_seconds_reported_by_runtime": 0.652,
+      "text": "ничьих не требуя похвал счастлив уж я надеждой сладкой что дева с трепетом любви посмотрит может быть украдкой на песни грешные мои у лукоморья дуб зеленый",
+      "timestamp_count": 155
+    },
+    {
+      "model": "gigaam-v2-int8",
+      "repeat": 3,
+      "exit_code": 0,
+      "process_wall_seconds": 1.468909,
+      "peak_rss_kib": 443548,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-offline --encoder=gigaam/encoder.int8.onnx --decoder=gigaam/decoder.onnx --joiner=gigaam/joiner.onnx --tokens=gigaam/tokens.txt --model-type=nemo_transducer --num-threads=2 gigaam/test_wavs/example.wav",
+      "stdout_sha256": "63f9c6506b1c38c14fd219b4459cc412f89397e561876ed82419099cc939b3f9",
+      "stderr_sha256": "d085aaf257c3e8de9a88880876ab561230bc59484de41195fbb910d5b58fa926",
+      "audio_seconds": 11.29,
+      "process_rtf": 0.1301070859167405,
+      "inference_seconds_reported_by_runtime": 0.636,
+      "text": "ничьих не требуя похвал счастлив уж я надеждой сладкой что дева с трепетом любви посмотрит может быть украдкой на песни грешные мои у лукоморья дуб зеленый",
+      "timestamp_count": 155
+    },
+    {
+      "model": "small-zipformer-ru-int8",
+      "repeat": 1,
+      "exit_code": 0,
+      "process_wall_seconds": 2.091591,
+      "peak_rss_kib": 209400,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-offline --encoder=zipformer/encoder.int8.onnx --decoder=zipformer/decoder.onnx --joiner=zipformer/joiner.int8.onnx --tokens=zipformer/tokens.txt --num-threads=2 gigaam/test_wavs/example.wav",
+      "stdout_sha256": "b95a274e0a198fc204f736861990aa15fbbee825c6a007ad44634d64992b1278",
+      "stderr_sha256": "f31d87adb4bc6ce0ea4889243aca695815fb52f0fb52c1b6932e206b444a3c17",
+      "audio_seconds": 11.29,
+      "process_rtf": 0.18526049601417185,
+      "inference_seconds_reported_by_runtime": 0.116,
+      "text": "ничьих не требуя похвал счастлив уж я надежды сладкой что дева с трепетом любви посмотрит может быть украдкой на песни грешные мои у лукоморье туб зелёный",
+      "timestamp_count": 77
+    },
+    {
+      "model": "small-zipformer-ru-int8",
+      "repeat": 2,
+      "exit_code": 0,
+      "process_wall_seconds": 2.1395,
+      "peak_rss_kib": 208596,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-offline --encoder=zipformer/encoder.int8.onnx --decoder=zipformer/decoder.onnx --joiner=zipformer/joiner.int8.onnx --tokens=zipformer/tokens.txt --num-threads=2 gigaam/test_wavs/example.wav",
+      "stdout_sha256": "b95a274e0a198fc204f736861990aa15fbbee825c6a007ad44634d64992b1278",
+      "stderr_sha256": "4bde7bfb745e43f8e3f0e46bcbd886c8b3b035ac7cb91bdd29f513fa7e609229",
+      "audio_seconds": 11.29,
+      "process_rtf": 0.18950398582816652,
+      "inference_seconds_reported_by_runtime": 0.112,
+      "text": "ничьих не требуя похвал счастлив уж я надежды сладкой что дева с трепетом любви посмотрит может быть украдкой на песни грешные мои у лукоморье туб зелёный",
+      "timestamp_count": 77
+    },
+    {
+      "model": "small-zipformer-ru-int8",
+      "repeat": 3,
+      "exit_code": 0,
+      "process_wall_seconds": 2.354678,
+      "peak_rss_kib": 208744,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v bin/sherpa-onnx-offline --encoder=zipformer/encoder.int8.onnx --decoder=zipformer/decoder.onnx --joiner=zipformer/joiner.int8.onnx --tokens=zipformer/tokens.txt --num-threads=2 gigaam/test_wavs/example.wav",
+      "stdout_sha256": "b95a274e0a198fc204f736861990aa15fbbee825c6a007ad44634d64992b1278",
+      "stderr_sha256": "dee0bc1b4aee2102ade558bcfc4c5b4dfdc757d9bc564800b1843d7504a03ade",
+      "audio_seconds": 11.29,
+      "process_rtf": 0.20856315323294952,
+      "inference_seconds_reported_by_runtime": 0.239,
+      "text": "ничьих не требуя похвал счастлив уж я надежды сладкой что дева с трепетом любви посмотрит может быть украдкой на песни грешные мои у лукоморье туб зелёный",
+      "timestamp_count": 77
+    },
+    {
+      "model": "qwen3-0.6b-q8-bench",
+      "repeat": 1,
+      "exit_code": 0,
+      "process_wall_seconds": 4.50035,
+      "peak_rss_kib": 711748,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v llama/bin/llama-bench -m Qwen3-0.6B-Q8_0.gguf -p 128 -n 32 -r 1 -t 2 -ngl 0 -o json",
+      "stdout_sha256": "2726dac67d650749e64a9bbab8d03c8200e73890b8538d194c95b56ebc8585ad",
+      "stderr_sha256": "5f6786091441954fa684f4a64201d2685816901d5f3eaac8ee0b2b5fa236298a",
+      "llama_bench": [
+        {
+          "build_commit": "unknown",
+          "build_number": 0,
+          "cpu_info": "Intel(R) Core(TM) Ultra 7 258V",
+          "gpu_info": "",
+          "backends": "CPU",
+          "model_filename": "Qwen3-0.6B-Q8_0.gguf",
+          "model_type": "qwen3 0.6B Q8_0",
+          "model_size": 633495552,
+          "model_n_params": 596049920,
+          "n_batch": 2048,
+          "n_ubatch": 512,
+          "n_threads": 2,
+          "cpu_mask": "0x0",
+          "cpu_strict": false,
+          "poll": 50,
+          "type_k": "f16",
+          "type_v": "f16",
+          "n_gpu_layers": 0,
+          "n_cpu_moe": 0,
+          "split_mode": "layer",
+          "main_gpu": 0,
+          "no_kv_offload": false,
+          "flash_attn": -1,
+          "devices": "auto",
+          "tensor_split": "0.00",
+          "tensor_buft_overrides": "none",
+          "load_mode": "auto",
+          "lazy_mode": "auto",
+          "embeddings": false,
+          "no_op_offload": 0,
+          "no_host": false,
+          "repack": true,
+          "fit_target": 0,
+          "fit_min_ctx": 0,
+          "n_prompt": 128,
+          "n_gen": 0,
+          "n_depth": 0,
+          "test_time": "2026-11-06T17:07:08Z",
+          "avg_ns": 1526730132,
+          "stddev_ns": 0,
+          "avg_ts": 83.839309,
+          "stddev_ts": 0.0,
+          "samples_ns": [
+            1526730132
+          ],
+          "samples_ts": [
+            83.8393
+          ]
+        },
+        {
+          "build_commit": "unknown",
+          "build_number": 0,
+          "cpu_info": "Intel(R) Core(TM) Ultra 7 258V",
+          "gpu_info": "",
+          "backends": "CPU",
+          "model_filename": "Qwen3-0.6B-Q8_0.gguf",
+          "model_type": "qwen3 0.6B Q8_0",
+          "model_size": 633495552,
+          "model_n_params": 596049920,
+          "n_batch": 2048,
+          "n_ubatch": 512,
+          "n_threads": 2,
+          "cpu_mask": "0x0",
+          "cpu_strict": false,
+          "poll": 50,
+          "type_k": "f16",
+          "type_v": "f16",
+          "n_gpu_layers": 0,
+          "n_cpu_moe": 0,
+          "split_mode": "layer",
+          "main_gpu": 0,
+          "no_kv_offload": false,
+          "flash_attn": -1,
+          "devices": "auto",
+          "tensor_split": "0.00",
+          "tensor_buft_overrides": "none",
+          "load_mode": "auto",
+          "lazy_mode": "auto",
+          "embeddings": false,
+          "no_op_offload": 0,
+          "no_host": false,
+          "repack": true,
+          "fit_target": 0,
+          "fit_min_ctx": 0,
+          "n_prompt": 0,
+          "n_gen": 32,
+          "n_depth": 0,
+          "test_time": "2026-11-06T17:07:11Z",
+          "avg_ns": 938793021,
+          "stddev_ns": 0,
+          "avg_ts": 34.086321,
+          "stddev_ts": 0.0,
+          "samples_ns": [
+            938793021
+          ],
+          "samples_ts": [
+            34.0863
+          ]
+        }
+      ]
+    },
+    {
+      "model": "qwen3-0.6b-q8-bench",
+      "repeat": 2,
+      "exit_code": 0,
+      "process_wall_seconds": 4.260715,
+      "peak_rss_kib": 711768,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v llama/bin/llama-bench -m Qwen3-0.6B-Q8_0.gguf -p 128 -n 32 -r 1 -t 2 -ngl 0 -o json",
+      "stdout_sha256": "0b04ddece399b9c817a2ee4c3302802959b63210881c24383ee4c0dfbed9067e",
+      "stderr_sha256": "92e13a773d71d36caa321b74d8c50f8d3a747a9e5c7cdaf209bbac18fcfac48b",
+      "llama_bench": [
+        {
+          "build_commit": "unknown",
+          "build_number": 0,
+          "cpu_info": "Intel(R) Core(TM) Ultra 7 258V",
+          "gpu_info": "",
+          "backends": "CPU",
+          "model_filename": "Qwen3-0.6B-Q8_0.gguf",
+          "model_type": "qwen3 0.6B Q8_0",
+          "model_size": 633495552,
+          "model_n_params": 596049920,
+          "n_batch": 2048,
+          "n_ubatch": 512,
+          "n_threads": 2,
+          "cpu_mask": "0x0",
+          "cpu_strict": false,
+          "poll": 50,
+          "type_k": "f16",
+          "type_v": "f16",
+          "n_gpu_layers": 0,
+          "n_cpu_moe": 0,
+          "split_mode": "layer",
+          "main_gpu": 0,
+          "no_kv_offload": false,
+          "flash_attn": -1,
+          "devices": "auto",
+          "tensor_split": "0.00",
+          "tensor_buft_overrides": "none",
+          "load_mode": "auto",
+          "lazy_mode": "auto",
+          "embeddings": false,
+          "no_op_offload": 0,
+          "no_host": false,
+          "repack": true,
+          "fit_target": 0,
+          "fit_min_ctx": 0,
+          "n_prompt": 128,
+          "n_gen": 0,
+          "n_depth": 0,
+          "test_time": "2026-11-06T17:07:12Z",
+          "avg_ns": 1526999254,
+          "stddev_ns": 0,
+          "avg_ts": 83.824533,
+          "stddev_ts": 0.0,
+          "samples_ns": [
+            1526999254
+          ],
+          "samples_ts": [
+            83.8245
+          ]
+        },
+        {
+          "build_commit": "unknown",
+          "build_number": 0,
+          "cpu_info": "Intel(R) Core(TM) Ultra 7 258V",
+          "gpu_info": "",
+          "backends": "CPU",
+          "model_filename": "Qwen3-0.6B-Q8_0.gguf",
+          "model_type": "qwen3 0.6B Q8_0",
+          "model_size": 633495552,
+          "model_n_params": 596049920,
+          "n_batch": 2048,
+          "n_ubatch": 512,
+          "n_threads": 2,
+          "cpu_mask": "0x0",
+          "cpu_strict": false,
+          "poll": 50,
+          "type_k": "f16",
+          "type_v": "f16",
+          "n_gpu_layers": 0,
+          "n_cpu_moe": 0,
+          "split_mode": "layer",
+          "main_gpu": 0,
+          "no_kv_offload": false,
+          "flash_attn": -1,
+          "devices": "auto",
+          "tensor_split": "0.00",
+          "tensor_buft_overrides": "none",
+          "load_mode": "auto",
+          "lazy_mode": "auto",
+          "embeddings": false,
+          "no_op_offload": 0,
+          "no_host": false,
+          "repack": true,
+          "fit_target": 0,
+          "fit_min_ctx": 0,
+          "n_prompt": 0,
+          "n_gen": 32,
+          "n_depth": 0,
+          "test_time": "2026-11-06T17:07:15Z",
+          "avg_ns": 955153466,
+          "stddev_ns": 0,
+          "avg_ts": 33.50247,
+          "stddev_ts": 0.0,
+          "samples_ns": [
+            955153466
+          ],
+          "samples_ts": [
+            33.5025
+          ]
+        }
+      ]
+    },
+    {
+      "model": "qwen3-0.6b-q8-bench",
+      "repeat": 3,
+      "exit_code": 0,
+      "process_wall_seconds": 4.525482,
+      "peak_rss_kib": 711528,
+      "remote_command": "cd /data/local/tmp/vexto-model-research && LD_LIBRARY_PATH=lib:llama/lib toybox time -v llama/bin/llama-bench -m Qwen3-0.6B-Q8_0.gguf -p 128 -n 32 -r 1 -t 2 -ngl 0 -o json",
+      "stdout_sha256": "96e34a31480298d38c730802c65a805ce90a1e2d31705805b0a8447bea1dec97",
+      "stderr_sha256": "dd6d801840f519e80b922830ce7b6501cf4b57b8a5ad95182445677bf1ba2f40",
+      "llama_bench": [
+        {
+          "build_commit": "unknown",
+          "build_number": 0,
+          "cpu_info": "Intel(R) Core(TM) Ultra 7 258V",
+          "gpu_info": "",
+          "backends": "CPU",
+          "model_filename": "Qwen3-0.6B-Q8_0.gguf",
+          "model_type": "qwen3 0.6B Q8_0",
+          "model_size": 633495552,
+          "model_n_params": 596049920,
+          "n_batch": 2048,
+          "n_ubatch": 512,
+          "n_threads": 2,
+          "cpu_mask": "0x0",
+          "cpu_strict": false,
+          "poll": 50,
+          "type_k": "f16",
+          "type_v": "f16",
+          "n_gpu_layers": 0,
+          "n_cpu_moe": 0,
+          "split_mode": "layer",
+          "main_gpu": 0,
+          "no_kv_offload": false,
+          "flash_attn": -1,
+          "devices": "auto",
+          "tensor_split": "0.00",
+          "tensor_buft_overrides": "none",
+          "load_mode": "auto",
+          "lazy_mode": "auto",
+          "embeddings": false,
+          "no_op_offload": 0,
+          "no_host": false,
+          "repack": true,
+          "fit_target": 0,
+          "fit_min_ctx": 0,
+          "n_prompt": 128,
+          "n_gen": 0,
+          "n_depth": 0,
+          "test_time": "2026-11-06T17:07:16Z",
+          "avg_ns": 1574406525,
+          "stddev_ns": 0,
+          "avg_ts": 81.300476,
+          "stddev_ts": 0.0,
+          "samples_ns": [
+            1574406525
+          ],
+          "samples_ts": [
+            81.3005
+          ]
+        },
+        {
+          "build_commit": "unknown",
+          "build_number": 0,
+          "cpu_info": "Intel(R) Core(TM) Ultra 7 258V",
+          "gpu_info": "",
+          "backends": "CPU",
+          "model_filename": "Qwen3-0.6B-Q8_0.gguf",
+          "model_type": "qwen3 0.6B Q8_0",
+          "model_size": 633495552,
+          "model_n_params": 596049920,
+          "n_batch": 2048,
+          "n_ubatch": 512,
+          "n_threads": 2,
+          "cpu_mask": "0x0",
+          "cpu_strict": false,
+          "poll": 50,
+          "type_k": "f16",
+          "type_v": "f16",
+          "n_gpu_layers": 0,
+          "n_cpu_moe": 0,
+          "split_mode": "layer",
+          "main_gpu": 0,
+          "no_kv_offload": false,
+          "flash_attn": -1,
+          "devices": "auto",
+          "tensor_split": "0.00",
+          "tensor_buft_overrides": "none",
+          "load_mode": "auto",
+          "lazy_mode": "auto",
+          "embeddings": false,
+          "no_op_offload": 0,
+          "no_host": false,
+          "repack": true,
+          "fit_target": 0,
+          "fit_min_ctx": 0,
+          "n_prompt": 0,
+          "n_gen": 32,
+          "n_depth": 0,
+          "test_time": "2026-11-06T17:07:19Z",
+          "avg_ns": 1161637307,
+          "stddev_ns": 0,
+          "avg_ts": 27.547325,
+          "stddev_ts": 0.0,
+          "samples_ns": [
+            1161637307
+          ],
+          "samples_ts": [
+            27.5473
+          ]
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Native CLI smoke tests, not an Android APK benchmark.",
+    "Separate processes; filesystem caches may be warm.",
+    "No WER/DER reference annotations or quality score.",
+    "No physical ARM phone or GPU/NPU performance measured."
+  ],
+  "runtime": {
+    "sherpa_onnx": "2.0.1",
+    "sherpa_commit": "af2d8d81",
+    "onnxruntime": "1.28.2",
+    "llama_cpp_termux": "0.9.0",
+    "llama_cpp_commit": "unknown in package build metadata",
+    "avd_ram_mb": 4096
+  },
+  "llm_qualitative_tests": {
+    "input_text": "сегодня проверим распознавание речи потом экспортируем результат",
+    "task": "Add punctuation without changing word order or content",
+    "context_tokens": 1024,
+    "max_new_tokens": [
+      96,
+      96,
+      64
+    ],
+    "runs": [
+      {
+        "configuration": "double-template",
+        "stdout": "<think>\nСегодня проверим распознавание речи, потом экспортируем результат.\n\n> EOF by user",
+        "process_wall_seconds": 3.094338,
+        "peak_rss_kib": 803340,
+        "full_prompt": "<|im_start|>system\nТы помощник для работы со стенограммами. Выполняй только указанную задачу. Не добавляй факты.\n<|im_end|>\n<|im_start|>user\nРасставь знаки препинания, не меняя слова. Верни только исправленный текст: сегодня проверим распознавание речи потом экспортируем результат\n<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n",
+        "remote_command": "cd /data/local/tmp/vexto-model-research; LD_LIBRARY_PATH=llama/lib toybox time -v llama/bin/llama-completion -m Qwen3-0.6B-Q8_0.gguf -f llm-prompt.txt -n 96 -c 1024 -t 2 -ngl 0 --temp 0.1 --seed 42 --no-display-prompt",
+        "performed_manually": true
+      },
+      {
+        "configuration": "reasoning-off-flag",
+        "stdout": "<think>\nOkay, let's see. The user wants me to split the sentence into correct grammatical structures without changing the original words. The sentence is: \"Сегодня проверим распознавание речи потом экспортируем результат\". \n\nFirst, I need to identify the main clauses. The first part is \"Сегодня проверим...\" which is a present continuous tense. Then \"распознавание речи\" is the subject. The",
+        "process_wall_seconds": 6.26595,
+        "peak_rss_kib": 800236,
+        "full_prompt": "Расставь знаки препинания, не меняя слова. Верни только исправленный текст: сегодня проверим распознавание речи потом экспортируем результат",
+        "remote_command": "cd /data/local/tmp/vexto-model-research; LD_LIBRARY_PATH=llama/lib toybox time -v llama/bin/llama-completion -m Qwen3-0.6B-Q8_0.gguf -cnv --single-turn --reasoning off -f llm-prompt-plain.txt -n 96 --simple-io -c 1024 -t 2 -ngl 0 --temp 0.1 --seed 42 --no-display-prompt",
+        "performed_manually": true
+      },
+      {
+        "configuration": "raw-template",
+        "stdout": "проверим распознавание речи сегодня экспортируем результат потом [end of text]",
+        "process_wall_seconds": 2.658918,
+        "peak_rss_kib": 802424,
+        "full_prompt": "<|im_start|>system\nТы помощник для работы со стенограммами. Выполняй только указанную задачу. Не добавляй факты.\n<|im_end|>\n<|im_start|>user\nРасставь знаки препинания, не меняя слова. Верни только исправленный текст: сегодня проверим распознавание речи потом экспортируем результат\n<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n",
+        "remote_command": "cd /data/local/tmp/vexto-model-research; LD_LIBRARY_PATH=llama/lib toybox time -v llama/bin/llama-completion -m Qwen3-0.6B-Q8_0.gguf --no-conversation -f llm-prompt.txt -n 64 --simple-io -c 1024 -t 2 -ngl 0 --temp 0.1 --seed 42 --no-display-prompt",
+        "performed_manually": true
+      }
+    ],
+    "conclusion": "Memory fit confirmed; reliable punctuation is not established. Output contains special tags, thinking, or word reordering."
+  },
+  "log_integrity": "All 30 per-run stdout/stderr files verified against their hashes after fixing filenames and Windows newline conversion."
+}

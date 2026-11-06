@@ -1,6 +1,6 @@
 # vexto
 
-vexto — Android-приложение для записи и прослушивания аудио с опциональной синхронизацией с сервером.
+vexto — Android-приложение для записи разговоров, работы с расшифровками и экспорта. Аудио сохраняется на устройстве, серверная синхронизация подключается по желанию. Локальный модельный конвейер развивается отдельно от приложения.
 
 ## Запуск Android приложения
 
@@ -42,9 +42,43 @@ adb shell am start -n com.vexto.reflect/.MainActivity
 
 Три пайплайна GitHub Actions (`.github/workflows/`):
 
-1. **[CI](.github/workflows/ci.yml)** — на PR в `dev` и push в `dev`. `smoke` (целостность репо) + `test` (слот под автотесты). Если коммиты PR уже прошли CI, после слияния в `dev` прогон не повторяется (дедуп-гейт). В слоте `test` — шаблон Gradle-шагов для будущего Android-стека.
+1. **[CI](.github/workflows/ci.yml)** — на PR в `dev` и push в `dev`. `smoke` (целостность репо) + `test` (unit-тесты утилит модельного конвейера и синтаксис shell guard). Если коммиты PR уже прошли CI, после слияния в `dev` прогон не повторяется (дедуп-гейт). Тесты работают на Python 3.12 без скачивания моделей и запуска Android.
 2. **[Release Checks](.github/workflows/release-checks.yml)** — на MR в `main` (обычно из `dev`). Не повторяет тесты: гейт проверяет зелёный CI на head-коммите, затем выполняются только релизные проверки (слот).
-3. **[Publish](.github/workflows/publish.yml)** — только после слияния в `main`: сборка Docker-образа и публикация в GitHub Packages (`ghcr.io/<owner>/vexto`, теги `latest` и SHA). `Dockerfile` — заглушка до появления настоящего кода.
+3. **[Publish](.github/workflows/publish.yml)** — только после слияния в `main`: сборка Docker-образа и публикация в GitHub Packages (`ghcr.io/<owner>/vexto`, теги `latest` и SHA). Workflow использует корневой `Dockerfile`-заглушку. Для сборки сервера используется [`backend/Dockerfile`](backend/Dockerfile).
 
 Все пайплайны можно запускать вручную (`workflow_dispatch`).
 
+## Проверки
+
+Python 3.10+, только стандартная библиотека:
+
+```text
+python -m unittest discover -s tools/benchmarks/tests -v
+```
+
+CI дополнительно выполняет `bash -n tools/benchmarks/android_memory_guard.sh`. Для локальной проверки Android выполните `./gradlew :app:assembleDebug :app:lintDebug`. Команда тестов API приведена в [руководстве сервера](backend/README.md#docker-и-проверки).
+
+## Настройки агентов и Android-эмулятор
+
+- Общие правила работы — в [`AGENTS.md`](AGENTS.md); проектные навыки — в `.agents/skills/`.
+- Навык [`android-emulator`](.agents/skills/android-emulator/SKILL.md) описывает запуск и проверку Android через SDK и ADB. Требуется **4 ГБ RAM**; по умолчанию эмулятор запускается без окна (`-no-window`), видимое окно открывается по запросу. Для Pixel 7 сохраняется штатное разрешение 1080 × 2400 (420 dpi), размер окна регулируется масштабом.
+- На каждом компьютере отдельно установить Android SDK и совместимый AVD; проверить `emulator -list-avds` и `adb devices -l`. Навык использует существующую установку, а не пути другого разработчика.
+- Личные пути и параметры можно записать в `.agents/local/android-emulator.md`; временные скриншоты, логи и резервные копии — в `.agents/work/`. Обе папки игнорируются Git. SDK и образы AVD остаются в стандартных каталогах Android вне репозитория.
+
+## Задание хакатона
+
+[Саммари презентации Nuclear IT Hack](docs/hackathon-2026-11.md): обязательные функции, офлайн-ограничения, JSON-контракт, оценивание и комплект сдачи.
+
+## Исследование локальных моделей
+
+Текущий выбранный профиль качества: **Nemotron 3 Diarization F32-linear + GigaAM v3 e2e RNNT + независимый Whisper Large v3 Q5_0 + Qwen3 1.7B с выбором дословных кандидатов по ID**. Семь этапов сквозного WAV-прогона выполнены на Android: для записи 21.012 с полное время составило 140.092 с, наблюдаемый пик — 1 830 166 528 байт, с резервом 128 MiB — 1 964 384 256 байт при бюджете 2 000 000 000. Android OS в этот бюджет не входит; sampling не является жёстким memory cap.
+
+[Методология и результаты конвейера](docs/research/pipeline-2gb.md) содержат принятые и отклонённые конфигурации, проверки возвращения голосов и ограничения. Проверено две короткие записи и синтетические повторения; корпусные WER/DER, восьмиголосный сценарий, длинный ASR и интеграция модельного конвейера в APK ещё требуют проверки. Метаданные сохраняют точные исходные строки, их смысловая релевантность не доказана. Whisper остаётся отдельной альтернативой и не переписывает автоматически GigaAM.
+
+- [Сквозной Android runner](tools/benchmarks/run_quality_pipeline.py) создаёт свежий prompt/pool на устройстве и извлекает приватные результаты после принятия всех этапов.
+- [Runner с memory guard](tools/benchmarks/bounded_android_pipeline.py) исполняет подготовленные планы моделей и сохраняет замеры, ошибки и превышения.
+- [Сборка Nemotron](docs/research/nemotron-android.md) и [сборка Whisper](docs/research/whisper-android.md) фиксируют исходники, инструменты, CPU/ABI и ограничения.
+- [Агрегаты измерений](docs/research/results/pipeline-2gb-measurements-2026-11-06.json), [модельные и runtime артефакты](docs/research/results/pipeline-2gb-artifacts-2026-11-06.json) публикуются без записей и расшифровок.
+- [Первичное исследование 4 ГБ](docs/research/android-models-4gb.md) и [исходный probe](tools/benchmarks/probe_android_models.py) сохраняют ранний baseline.
+
+[Быстрые сравнения на открытых записях, Emo и шумоподавление](docs/research/quick-audio-features.md): короткие AMI train/test проверки с DER, опциональный GigaAM-Emo и полная стенограмма без саммаризации.
