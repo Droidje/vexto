@@ -160,6 +160,14 @@ final class ReflectTranscript {
     }
 
     byte[] encode() throws IOException {
+        return encode(true);
+    }
+
+    byte[] encodeSpeakerRevision() throws IOException {
+        return encode(false);
+    }
+
+    private byte[] encode(boolean includeEmotions) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         try (JsonWriter json = new JsonWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8))) {
             json.beginObject().name("transcript").beginArray();
@@ -169,7 +177,7 @@ final class ReflectTranscript {
                         .name("start_ms").value(line.startMs)
                         .name("end_ms").value(line.endMs)
                         .name("text").value(line.text);
-                if (line.emotionProbabilities != null) {
+                if (includeEmotions && line.emotionProbabilities != null) {
                     json.name("emotion_probabilities").beginArray();
                     for (Double probability : line.emotionProbabilities.ordered()) json.value(probability);
                     json.endArray();
