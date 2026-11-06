@@ -3,7 +3,6 @@ package com.vexto.reflect;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
@@ -18,7 +17,6 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
-import androidx.core.content.FileProvider;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -333,19 +331,6 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         stopPlayer();
         view.show(HOME);
         transcripts.open(saved, defaultRecordingTitle(saved.getParentFile()), time(duration), duration, false, true);
-    }
-
-    @Override public void send() {
-        File saved = saveAudio();
-        if (saved == null) return;
-        stopPlayer();
-        Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".recordings", saved);
-        Intent send = new Intent(Intent.ACTION_SEND)
-                .setType("audio/*")
-                .putExtra(Intent.EXTRA_STREAM, uri)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        send.setClipData(ClipData.newRawUri(getString(R.string.app_name), uri));
-        startActivity(Intent.createChooser(send, "Поделиться записью"));
     }
 
     private File saveAudio() {

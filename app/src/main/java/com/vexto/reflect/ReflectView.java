@@ -39,7 +39,6 @@ final class ReflectView extends ViewGroup {
         void play();
         void save();
         void transcribeReview();
-        void send();
         void toggleSpeakerPreview();
         void openMicrophoneSettings();
         void openBackendSettings();
@@ -306,9 +305,8 @@ final class ReflectView extends ViewGroup {
                 case PAUSED: control("Продолжить запись", 245, 765, 59, 59, actions::startRecording); break;
                 case REVIEW:
                     control("Воспроизвести или приостановить", 16, 578, 361, 44, actions::play);
-                    control("Расшифровать сейчас", 84, 75, 222, 48, actions::transcribeReview);
-                    control("Расшифровать позже", 84, 133, 222, 48, actions::save);
-                    control("Поделиться записью", 245, 765, 59, 59, actions::send);
+                    control("Расшифровать в фоне", 84, 75, 222, 48, actions::save);
+                    control("Расшифровать сейчас", 245, 765, 59, 59, actions::transcribeReview);
                     break;
                 default: break;
             }
@@ -461,10 +459,8 @@ final class ReflectView extends ViewGroup {
     }
 
     private void drawReview(Canvas c) {
-        rounded(c, 84, 75, 306, 123, 24, WHITE);
-        text(c, "Расшифровать сейчас", 195, 104.8f, 16, BACKGROUND, artwork.medium, true);
-        rounded(c, 84, 133, 306, 181, 24, 0xff2c2c2a);
-        text(c, "Расшифровать позже", 195, 162.8f, 16, WHITE, artwork.medium, true);
+        rounded(c, 84, 75, 306, 123, 24, 0xff2c2c2a);
+        text(c, "Расшифровать в фоне", 195, 104.8f, 16, WHITE, artwork.medium, true);
         rounded(c, 16, 578, 377, 622, 22, 0xff090908);
         outline(c, 16, 578, 377, 622, 22, REVIEW_EDGE);
         rounded(c, 23, 585, 53, 615, 15, 0x1f767680);
