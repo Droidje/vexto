@@ -69,20 +69,16 @@ jobs:
           echo "OK: базовые файлы репозитория на месте"
 
   test:
-    name: Autotests — слот
+    name: Autotests — утилиты модельного конвейера
     runs-on: ubuntu-latest
     needs: gate
     if: needs.gate.outputs.skip != 'true'
     steps:
       - uses: actions/checkout@v7
-      # Слот автотестов: заменить шаг-заглушку на реальные команды.
-      # Планируется Android-приложение — шаблон для Gradle (раскомментировать
-      # после появления gradlew):
-      # - uses: actions/setup-java@v4
-      #   with:
-      #     distribution: temurin
-      #     java-version: 17
-      # - uses: gradle/actions/setup-gradle@v4
-      # - run: ./gradlew test --no-daemon
-      - name: Слот автотестов
-        run: echo "Автотесты ещё не настроены — заглушка, всегда зелёная (см. README → CI/CD)."
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Unit-тесты утилит
+        run: python -m unittest discover -s tools/benchmarks/tests -v
+      - name: Синтаксис Android memory guard
+        run: bash -n tools/benchmarks/android_memory_guard.sh

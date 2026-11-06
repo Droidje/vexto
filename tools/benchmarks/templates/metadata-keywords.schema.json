@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "keywords": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1, "maxLength": 100},
+      "minItems": 0,
+      "maxItems": 3
+    }
+  },
+  "required": ["keywords"],
+  "additionalProperties": false
+}

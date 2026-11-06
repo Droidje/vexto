@@ -1,0 +1,3 @@
+
+tools/benchmarks/*.sh text eol=lf
+tools/benchmarks/patches/*.patch text eol=lf
