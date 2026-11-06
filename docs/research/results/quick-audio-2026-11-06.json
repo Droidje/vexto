@@ -1,0 +1,1174 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-06",
+  "generated_utc": "2026-11-06T20:04:08.177339+00:00",
+  "environment": {
+    "device": "Pixel7 AVD",
+    "android_api": 36,
+    "abi": "x86_64",
+    "configured_ram_mb": 4096,
+    "virtual_cpus": 4,
+    "execution": "Android CPU; native CLI and Java app_process; not APK or ARM validation"
+  },
+  "budget": {
+    "bytes": 2000000000,
+    "reserve_bytes_inside_limit": 134217728,
+    "scope": "model process tree plus guard; Android OS excluded",
+    "sampling_interval_ms": 150,
+    "hard_limit_guarantee": false,
+    "limitations": "Sampling can miss transients; native MaxRSS checked. Single runs; cache not reset."
+  },
+  "fixtures": [
+    {
+      "title": "А. С. Пушкин — Я вас любил; читает Виктор Мамлютов",
+      "source_url": "https://upload.wikimedia.org/wikipedia/commons/6/6b/%D0%90.%D0%A1.%D0%9F%D1%83%D1%88%D0%BA%D0%B8%D0%BD_-_%D0%AF_%D0%92%D0%B0%D1%81_%D0%BB%D1%8E%D0%B1%D0%B8%D0%BB%2C_%D0%BB%D1%8E%D0%B1%D0%BE%D0%B2%D1%8C_%D0%B5%D1%89%D1%91_%D0%B1%D1%8B%D1%82%D1%8C_%D0%BC%D0%BE%D0%B6%D0%B5%D1%82.ogg",
+      "source_page": "https://commons.wikimedia.org/w/index.php?title=File:А.С.Пушкин_-_Я_Вас_любил,_любовь_ещё_быть_может.ogg&oldid=973667499",
+      "author": "Театр-студия «Свои»; исполнитель Виктор Мамлютов",
+      "license": "CC-BY-SA-4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "sample_rate": 16000,
+      "channels": 1,
+      "changes": "Full recording decoded/resampled to mono PCM16 16kHz with miniaudio; no trimming.",
+      "id": "public-poem",
+      "duration_seconds": 28.2645,
+      "reference_rttm_available": false,
+      "speaker_count_ground_truth": null
+    },
+    {
+      "title": "AMI ES2002a headset mix 70–100s",
+      "source_url": "https://groups.inf.ed.ac.uk/ami/AMICorpusMirror/amicorpus/ES2002a/audio/ES2002a.Mix-Headset.wav",
+      "source_page": "https://groups.inf.ed.ac.uk/ami/download/",
+      "author": "AMI Consortium / University of Edinburgh",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "sample_rate": 16000,
+      "channels": 1,
+      "changes": "30-second excerpt corresponding to source[70,100); 16kHz mono PCM16. Independent only_words RTTM clipped and shifted by -70s.",
+      "reference_source_url": "https://raw.githubusercontent.com/pyannote/AMI-diarization-setup/67c2d539286e89f68952d5dcf83912bd9f01dfae/only_words/rttms/train/ES2002a.rttm",
+      "reference_revision": "67c2d539286e89f68952d5dcf83912bd9f01dfae",
+      "reference_source_sha256": "3153efc675b16b7c47c6e49a3b48602613b3dfcf0ca16f590fb7541176c0f0b2",
+      "reference_protocol": "pyannote AMI only_words, clipped and shifted; overlap preserved",
+      "split_caveat": "Training split of published AMI setup; smoke only, not held-out evidence.",
+      "id": "ami-train-es2002a-70-100",
+      "duration_seconds": 30,
+      "source_interval_seconds": [
+        70,
+        100
+      ],
+      "split": "train",
+      "reference_rttm_available": true,
+      "reference_speaker_count": 4
+    },
+    {
+      "title": "AMI ES2004c test split, headset mix, 336–366s",
+      "source_url": "https://groups.inf.ed.ac.uk/ami/AMICorpusMirror/amicorpus/ES2004c/audio/ES2004c.Mix-Headset.wav",
+      "source_page": "https://groups.inf.ed.ac.uk/ami/download/",
+      "author": "AMI Consortium / University of Edinburgh",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "sample_rate": 16000,
+      "channels": 1,
+      "changes": "Selected existing PCM byte range; rebuilt WAV without resampling. Independent test RTTM clipped and shifted by -336s, overlaps preserved.",
+      "reference_source_url": "https://raw.githubusercontent.com/pyannote/AMI-diarization-setup/67c2d539286e89f68952d5dcf83912bd9f01dfae/only_words/rttms/test/ES2004c.rttm",
+      "reference_revision": "67c2d539286e89f68952d5dcf83912bd9f01dfae",
+      "reference_source_sha256": "fccef2416fe556133db1784f4f755029fd8961d2929b69e102375240e95493ed",
+      "selection_rule": "Earliest 1-second-grid 30s window in ES2004c test RTTM where all four labels have at least 1s reference activity; selected before inference.",
+      "split_caveat": "Published pyannote AMI test split; this label alone does not verify every model training-data provenance.",
+      "id": "ami-test-es2004c-336-366",
+      "duration_seconds": 30,
+      "source_interval_seconds": [
+        336,
+        366
+      ],
+      "split": "test",
+      "reference_rttm_available": true,
+      "reference_speaker_count": 4,
+      "reference_protocol": "pyannote AMI only_words, clipped and shifted; overlap preserved"
+    }
+  ],
+  "scoring": {
+    "protocol": "single-recording active-set DER, global one-to-one mapping",
+    "collar_seconds": 0,
+    "overlap_scored": true,
+    "uem_seconds": [
+      0,
+      30
+    ],
+    "lower_is_better": true,
+    "scope": "Two short AMI excerpts; train clip is smoke only. Published test split does not establish unseen training data for every model. Not a corpus benchmark or SOTA ranking.",
+    "poem": "No timed RTTM: speaker count sanity only, no DER."
+  },
+  "configurations": {
+    "nemo": "NeMo-Speech.cpp pinned536b17a, CPU, v3-offline forNemotron; Sortformer presetoffline; upstreamdefault4threads",
+    "embedding_models": "Sherpa-ONNX2.0.1 with shared pyannoteINT8 segmentation; auto cluster threshold0.7; no forced speaker count",
+    "denoise_routing": "GTCRN begins enabled ASR branch; original PCM retained for diarization and Emo. No accuracy gain established.",
+    "default_llm": "off; bounded explicit review only, no automatic lexical rewrites"
+  },
+  "diarization_runs": [
+    {
+      "name": "ami30-nemo-q8",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 1.501041,
+      "native_peak_rss_kib": 136916,
+      "conservative_observed_peak_bytes": 148914176,
+      "observed_peak_plus_reserve_bytes": 283131904,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.0500347,
+      "stdout_sha256": "8a178387474fac7e4c3ba398fe174f228bb23c764a3c960853d8c5a1e43dbfcb",
+      "stderr_sha256": "8ada718915982282fd0e39e6ca0c30e0602ca9207b97843510d9d74666abdf0a",
+      "model_id": "nemotron3-q8",
+      "fixture_id": "ami-train-es2002a-70-100",
+      "native_peak_rss_bytes": 140201984,
+      "score": {
+        "status": "scored",
+        "der": 0.21542342342342333,
+        "der_percent": 21.542342342342334,
+        "miss_speaker_seconds": 4.148999999999998,
+        "false_alarm_speaker_seconds": 1.370000000000001,
+        "confusion_speaker_seconds": 0.45899999999999785,
+        "error_speaker_seconds": 5.977999999999997,
+        "reference_speaker_seconds": 27.75,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 4,
+      "reference_speaker_count": 4,
+      "score_sha256": "cbb3915e89f0bbd45033e832647c2ff11140bd79daa9fd3f976582570ddd4465"
+    },
+    {
+      "name": "ami30-nemo-f32",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 1.301499,
+      "native_peak_rss_kib": 418160,
+      "conservative_observed_peak_bytes": 436924416,
+      "observed_peak_plus_reserve_bytes": 571142144,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.0433833,
+      "stdout_sha256": "43862fdaa812ec754f067418be5be21561b2559bff333393d5987f1d047bdd72",
+      "stderr_sha256": "15649841be22577292d3eba4811018a270872e85a159e98792e6d8d2eecf76a9",
+      "model_id": "nemotron3-f32-conversion",
+      "fixture_id": "ami-train-es2002a-70-100",
+      "native_peak_rss_bytes": 428195840,
+      "score": {
+        "status": "scored",
+        "der": 0.21470270270270259,
+        "der_percent": 21.47027027027026,
+        "miss_speaker_seconds": 4.148999999999998,
+        "false_alarm_speaker_seconds": 1.3500000000000005,
+        "confusion_speaker_seconds": 0.45899999999999785,
+        "error_speaker_seconds": 5.957999999999997,
+        "reference_speaker_seconds": 27.75,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 4,
+      "reference_speaker_count": 4,
+      "score_sha256": "3365c52fb3b073c7db30f4dcd2eb9a16d66e13bf455fad5a447106933cbfae7f"
+    },
+    {
+      "name": "ami30-sortformer-v2",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 2.552012,
+      "native_peak_rss_kib": 209400,
+      "conservative_observed_peak_bytes": 223301632,
+      "observed_peak_plus_reserve_bytes": 357519360,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.08506706666666666,
+      "stdout_sha256": "7b2a5f59cf468f4601a2ce5adf8ee984a19a679bde50c6a16208d51546980bad",
+      "stderr_sha256": "6765894b67b000389826a9eb4b4307c65d4422c208b06fe46a27ef1925c2d20c",
+      "model_id": "sortformer-v2-q8",
+      "fixture_id": "ami-train-es2002a-70-100",
+      "native_peak_rss_bytes": 214425600,
+      "score": {
+        "status": "scored",
+        "der": 0.1634954954954955,
+        "der_percent": 16.34954954954955,
+        "miss_speaker_seconds": 2.6369999999999996,
+        "false_alarm_speaker_seconds": 1.589999999999998,
+        "confusion_speaker_seconds": 0.3100000000000023,
+        "error_speaker_seconds": 4.537,
+        "reference_speaker_seconds": 27.75,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 4,
+      "reference_speaker_count": 4,
+      "score_sha256": "6ab238f7becbe9872b2093148d79d388ae7228a966cfa96ecfc491eeaec9a320"
+    },
+    {
+      "name": "ami30-tita-small",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 2.752803,
+      "native_peak_rss_kib": 244312,
+      "conservative_observed_peak_bytes": 254578688,
+      "observed_peak_plus_reserve_bytes": 388796416,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.0917601,
+      "stdout_sha256": "82104cdb8e856ea52c41f1af6cd18ecb50891d388411e0433c276a1e1038e7a7",
+      "stderr_sha256": "63ec7357012a3554ace482e1374ab145aea939d5b42a11e1a0c2b2167438d54d",
+      "model_id": "titanet-small",
+      "fixture_id": "ami-train-es2002a-70-100",
+      "native_peak_rss_bytes": 250175488,
+      "score": {
+        "status": "scored",
+        "der": 0.10367567567567566,
+        "der_percent": 10.367567567567566,
+        "miss_speaker_seconds": 1.047,
+        "false_alarm_speaker_seconds": 0.3309999999999995,
+        "confusion_speaker_seconds": 1.4990000000000006,
+        "error_speaker_seconds": 2.877,
+        "reference_speaker_seconds": 27.75,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 4,
+      "reference_speaker_count": 4,
+      "score_sha256": "42b8aeab3b860aabe902f3bd1a07c803be50e15a3dcd430e4b3268cabe2f9620"
+    },
+    {
+      "name": "ami30-tita-large",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 8.784902,
+      "native_peak_rss_kib": 304692,
+      "conservative_observed_peak_bytes": 321114112,
+      "observed_peak_plus_reserve_bytes": 455331840,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.29283006666666667,
+      "stdout_sha256": "b36183aff356140d82954a1998e7484a18d21eb5166865fc8f1a99ecf78a9dc0",
+      "stderr_sha256": "1fa2126f19b48d3558243ede18e357f73e64a11b6dad4082350923d35f6fae08",
+      "model_id": "titanet-large",
+      "fixture_id": "ami-train-es2002a-70-100",
+      "native_peak_rss_bytes": 312004608,
+      "score": {
+        "status": "scored",
+        "der": 0.10367567567567566,
+        "der_percent": 10.367567567567566,
+        "miss_speaker_seconds": 1.047,
+        "false_alarm_speaker_seconds": 0.3309999999999995,
+        "confusion_speaker_seconds": 1.4990000000000006,
+        "error_speaker_seconds": 2.877,
+        "reference_speaker_seconds": 27.75,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 4,
+      "reference_speaker_count": 4,
+      "score_sha256": "8e369712819bb35c7b4e31c1244ec1624aa5b3de2ac9e086eddd7a43ca476707"
+    },
+    {
+      "name": "ami30-cam-en",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 3.353921,
+      "native_peak_rss_kib": 175584,
+      "conservative_observed_peak_bytes": 188944384,
+      "observed_peak_plus_reserve_bytes": 323162112,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.11179736666666668,
+      "stdout_sha256": "c94daf98a3dc67105f6ed17e2651daf80bbf5961f52824cab4fec8c7ea76577a",
+      "stderr_sha256": "a7f41c84f54dae8e36e0005152df5ff82ee1b34022ce424c4329a31ce6933de1",
+      "model_id": "cam-en",
+      "fixture_id": "ami-train-es2002a-70-100",
+      "native_peak_rss_bytes": 179798016,
+      "score": {
+        "status": "scored",
+        "der": 0.4552072072072072,
+        "der_percent": 45.52072072072072,
+        "miss_speaker_seconds": 0.9639999999999999,
+        "false_alarm_speaker_seconds": 0.6359999999999992,
+        "confusion_speaker_seconds": 11.032,
+        "error_speaker_seconds": 12.632,
+        "reference_speaker_seconds": 27.75,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 7,
+      "reference_speaker_count": 4,
+      "score_sha256": "c3943ab141dc2c22303828a23d635563f0eb61da6e8b880c482cea3e5c7ab9db"
+    },
+    {
+      "name": "ami30-eres2v2",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 29.442982,
+      "native_peak_rss_kib": 384960,
+      "conservative_observed_peak_bytes": 403591168,
+      "observed_peak_plus_reserve_bytes": 537808896,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.9814327333333334,
+      "stdout_sha256": "619c0f942d53a2693462da1eea0cd4c5048680f62a84586d920267efcf063694",
+      "stderr_sha256": "20ff1d2d075316456ade0b487e9de75d81ecb18b700ba22e2f7ea328022858a1",
+      "model_id": "eres2netv2",
+      "fixture_id": "ami-train-es2002a-70-100",
+      "native_peak_rss_bytes": 394199040,
+      "score": {
+        "status": "scored",
+        "der": 0.129045045045045,
+        "der_percent": 12.9045045045045,
+        "miss_speaker_seconds": 1.047,
+        "false_alarm_speaker_seconds": 0.3309999999999995,
+        "confusion_speaker_seconds": 2.2029999999999994,
+        "error_speaker_seconds": 3.5809999999999986,
+        "reference_speaker_seconds": 27.75,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 3,
+      "reference_speaker_count": 4,
+      "score_sha256": "5f23a78c1611d07e75c13ccb675f3df13b98ee43b33a26c422044819d9f32e22"
+    },
+    {
+      "name": "poem-nemo-q8",
+      "kind": "diarization",
+      "audio_seconds": 28.2645,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 1.547933,
+      "native_peak_rss_kib": 136220,
+      "conservative_observed_peak_bytes": 148402176,
+      "observed_peak_plus_reserve_bytes": 282619904,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.05476597852429726,
+      "stdout_sha256": "e71e19325964470fdb6a49c6e587d40e49a7dc572bd8193373906757509ce7a5",
+      "stderr_sha256": "8ee98b8cc743747d9a0d1ca794cabfdb11fddff23b6ce84884834f78c95ccc6d",
+      "model_id": "nemotron3-q8",
+      "fixture_id": "public-poem",
+      "native_peak_rss_bytes": 139489280,
+      "hypothesis_speaker_count": 1,
+      "score": null,
+      "reference_speaker_count": null
+    },
+    {
+      "name": "poem-nemo-f32",
+      "kind": "diarization",
+      "audio_seconds": 28.2645,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 1.686031,
+      "native_peak_rss_kib": 416704,
+      "conservative_observed_peak_bytes": 435605504,
+      "observed_peak_plus_reserve_bytes": 569823232,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.05965189548727202,
+      "stdout_sha256": "eb4d189f6afb6e2f8ffb0e8fbaa4bbc5986efb04bb4a74b06b517cb9b0e737e7",
+      "stderr_sha256": "b1d3fe987be1e6c45fb723c54d4e4864c78c82c47fcb6d6660a21286f2a0a027",
+      "model_id": "nemotron3-f32-conversion",
+      "fixture_id": "public-poem",
+      "native_peak_rss_bytes": 426704896,
+      "hypothesis_speaker_count": 1,
+      "score": null,
+      "reference_speaker_count": null
+    },
+    {
+      "name": "poem-sortformer-v2",
+      "kind": "diarization",
+      "audio_seconds": 28.2645,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 4.654662,
+      "native_peak_rss_kib": 208844,
+      "conservative_observed_peak_bytes": 223326208,
+      "observed_peak_plus_reserve_bytes": 357543936,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.16468226927771584,
+      "stdout_sha256": "c8470430dc29ae25901ad1416427028df0f0b25ac1d29ffc282473dc9f96c559",
+      "stderr_sha256": "ecaf8e5c69b2031340adb39711d3282a48243128bc4036167f1618f19bba230b",
+      "model_id": "sortformer-v2-q8",
+      "fixture_id": "public-poem",
+      "native_peak_rss_bytes": 213856256,
+      "hypothesis_speaker_count": 1,
+      "score": null,
+      "reference_speaker_count": null
+    },
+    {
+      "name": "poem-tita-small",
+      "kind": "diarization",
+      "audio_seconds": 28.2645,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 3.453211,
+      "native_peak_rss_kib": 314304,
+      "conservative_observed_peak_bytes": 330964992,
+      "observed_peak_plus_reserve_bytes": 465182720,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.12217484830794813,
+      "stdout_sha256": "cc2fe73aff0b33b6d28688a5b65aadecffe1ec36ed47fadf73b61761987793a6",
+      "stderr_sha256": "6dd29af7c6fc0af86fc13f7fa59435b2c7ea80e24f8afbf5c38477a26e42ad98",
+      "model_id": "titanet-small",
+      "fixture_id": "public-poem",
+      "native_peak_rss_bytes": 321847296,
+      "hypothesis_speaker_count": 1,
+      "score": null,
+      "reference_speaker_count": null
+    },
+    {
+      "name": "poem-tita-large",
+      "kind": "diarization",
+      "audio_seconds": 28.2645,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 9.590712,
+      "native_peak_rss_kib": 380068,
+      "conservative_observed_peak_bytes": 395231232,
+      "observed_peak_plus_reserve_bytes": 529448960,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.3393200658069309,
+      "stdout_sha256": "15f518ca866abc23ded5cbb8b0095a029f98e49d2d3e2e7c2b669b1dcff228f7",
+      "stderr_sha256": "42bf5a1a967d7403aaa008ceb2054804990fca758160c4a618f702580b5f1236",
+      "model_id": "titanet-large",
+      "fixture_id": "public-poem",
+      "native_peak_rss_bytes": 389189632,
+      "hypothesis_speaker_count": 1,
+      "score": null,
+      "reference_speaker_count": null
+    },
+    {
+      "name": "poem-cam-en",
+      "kind": "diarization",
+      "audio_seconds": 28.2645,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 4.046067,
+      "native_peak_rss_kib": 194736,
+      "conservative_observed_peak_bytes": 208637952,
+      "observed_peak_plus_reserve_bytes": 342855680,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.1431501353287693,
+      "stdout_sha256": "99bab75f20b7b8c4e46d2c0b9e0db51d10075364b6199d375314299a97c76884",
+      "stderr_sha256": "e918f7626e0b6ae5a75fde1a50d0d4726bdbd5fe2e3fa336ea730654222590cc",
+      "model_id": "cam-en",
+      "fixture_id": "public-poem",
+      "native_peak_rss_bytes": 199409664,
+      "hypothesis_speaker_count": 2,
+      "score": null,
+      "reference_speaker_count": null
+    },
+    {
+      "name": "poem-eres2v2",
+      "kind": "diarization",
+      "audio_seconds": 28.2645,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 21.528706,
+      "native_peak_rss_kib": 532992,
+      "conservative_observed_peak_bytes": 555089920,
+      "observed_peak_plus_reserve_bytes": 689307648,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.7616871340373966,
+      "stdout_sha256": "b30b5db65c6b4c8d86a0536869c3dbf3af79d46d942fc3975eea182f2b7de169",
+      "stderr_sha256": "a716de67b63de96f62b3ba85098ef588135fa60f5428037122d8389c88d26f77",
+      "model_id": "eres2netv2",
+      "fixture_id": "public-poem",
+      "native_peak_rss_bytes": 545783808,
+      "hypothesis_speaker_count": 1,
+      "score": null,
+      "reference_speaker_count": null
+    },
+    {
+      "name": "heldout-nemo-f32",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 1.254321,
+      "native_peak_rss_kib": 418492,
+      "conservative_observed_peak_bytes": 437768192,
+      "observed_peak_plus_reserve_bytes": 571985920,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.0418107,
+      "stdout_sha256": "bba4f27ba188efb566706b3c7ad3c683527ac2d470d18116e14e1fda2cfc8016",
+      "stderr_sha256": "70a579fbde4cb5f2570306a32747dd92ed0d86dd0fe0a1a60ad24523b3a4504a",
+      "model_id": "nemotron3-f32-conversion",
+      "fixture_id": "ami-test-es2004c-336-366",
+      "native_peak_rss_bytes": 428535808,
+      "score": {
+        "status": "scored",
+        "der": 0.14979094076655022,
+        "der_percent": 14.979094076655022,
+        "miss_speaker_seconds": 2.9279999999999973,
+        "false_alarm_speaker_seconds": 1.1419999999999941,
+        "confusion_speaker_seconds": 0.2289999999999992,
+        "error_speaker_seconds": 4.298999999999991,
+        "reference_speaker_seconds": 28.699999999999996,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 4,
+      "reference_speaker_count": 4,
+      "score_sha256": "6da0484bd9049b0f8504a126602faba2e609e3b9d57c220826181e9c1dd3a852"
+    },
+    {
+      "name": "heldout-sortformer-v2",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 2.551376,
+      "native_peak_rss_kib": 209428,
+      "conservative_observed_peak_bytes": 223449088,
+      "observed_peak_plus_reserve_bytes": 357666816,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.08504586666666666,
+      "stdout_sha256": "7927277b35ae3a7e03c035599068e187132a1532d8fa870c5f147abaef5a9f36",
+      "stderr_sha256": "d2f856bcc0b1e35ecf7d0187b7ced2c578ec5c4195ed5065a403d869aae78acc",
+      "model_id": "sortformer-v2-q8",
+      "fixture_id": "ami-test-es2004c-336-366",
+      "native_peak_rss_bytes": 214454272,
+      "score": {
+        "status": "scored",
+        "der": 0.15832752613240375,
+        "der_percent": 15.832752613240375,
+        "miss_speaker_seconds": 3.6309999999999913,
+        "false_alarm_speaker_seconds": 0.7549999999999946,
+        "confusion_speaker_seconds": 0.15800000000000125,
+        "error_speaker_seconds": 4.543999999999987,
+        "reference_speaker_seconds": 28.699999999999996,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 3,
+      "reference_speaker_count": 4,
+      "score_sha256": "7b71c143a4e9a84e6a72a1edd34c73733cc37c3b8acfa65cd17b2dee935ccf89"
+    },
+    {
+      "name": "heldout-tita-small",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 2.774839,
+      "native_peak_rss_kib": 329676,
+      "conservative_observed_peak_bytes": 346923008,
+      "observed_peak_plus_reserve_bytes": 481140736,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.09249463333333334,
+      "stdout_sha256": "906e9aaf78fb8c0a6d71a880c8d1856b18293ce776adc0898f1a20a86d0d3087",
+      "stderr_sha256": "0570387d746a310c680ca5a2cb70e13480605562ba5153a7529bee5f9012fb27",
+      "model_id": "titanet-small",
+      "fixture_id": "ami-test-es2004c-336-366",
+      "native_peak_rss_bytes": 337588224,
+      "score": {
+        "status": "scored",
+        "der": 0.21721254355400701,
+        "der_percent": 21.721254355400703,
+        "miss_speaker_seconds": 1.7510000000000023,
+        "false_alarm_speaker_seconds": 2.7670000000000012,
+        "confusion_speaker_seconds": 1.7159999999999975,
+        "error_speaker_seconds": 6.234000000000001,
+        "reference_speaker_seconds": 28.7,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 2,
+      "reference_speaker_count": 4,
+      "score_sha256": "5b0d8d7c42f721e24a01964154ce29f45f73b55cec43cf71d492a93208f4a61a"
+    },
+    {
+      "name": "heldout-tita-large",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 8.266916,
+      "native_peak_rss_kib": 386420,
+      "conservative_observed_peak_bytes": 404643840,
+      "observed_peak_plus_reserve_bytes": 538861568,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.27556386666666666,
+      "stdout_sha256": "7c14c796f7d3cc2134f9107d9361478ae8e0640fdb0498f2e621091cb461ed90",
+      "stderr_sha256": "a8290f71a286bad3eafadf93b4cbe00482618be6257b5868a9857581bb9ce4d1",
+      "model_id": "titanet-large",
+      "fixture_id": "ami-test-es2004c-336-366",
+      "native_peak_rss_bytes": 395694080,
+      "score": {
+        "status": "scored",
+        "der": 0.2063763066202091,
+        "der_percent": 20.637630662020907,
+        "miss_speaker_seconds": 1.7510000000000023,
+        "false_alarm_speaker_seconds": 2.7670000000000012,
+        "confusion_speaker_seconds": 1.4049999999999976,
+        "error_speaker_seconds": 5.923000000000001,
+        "reference_speaker_seconds": 28.7,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 3,
+      "reference_speaker_count": 4,
+      "score_sha256": "0076a8bf2c3da96184d465b52109af5832696f3aa7c24f094772f78a46c35778"
+    },
+    {
+      "name": "heldout-eres2v2",
+      "kind": "diarization",
+      "audio_seconds": 30,
+      "status": "accepted",
+      "accepted": true,
+      "native_wall_seconds": 19.522054,
+      "native_peak_rss_kib": 583776,
+      "conservative_observed_peak_bytes": 607002624,
+      "observed_peak_plus_reserve_bytes": 741220352,
+      "budget_check_passed": true,
+      "native_budget_check_passed": true,
+      "process_rtf": 0.6507351333333333,
+      "stdout_sha256": "ba7fee5303ec941cb5fa66a2626027a4a0aa6a02c270fca0d6cfdd958c64eced",
+      "stderr_sha256": "ab1180c03114f80c2d2f538c50bcd20ace031bdf42e6eb2b08dc80eb225d6baf",
+      "model_id": "eres2netv2",
+      "fixture_id": "ami-test-es2004c-336-366",
+      "native_peak_rss_bytes": 597786624,
+      "score": {
+        "status": "scored",
+        "der": 0.21721254355400701,
+        "der_percent": 21.721254355400703,
+        "miss_speaker_seconds": 1.7510000000000023,
+        "false_alarm_speaker_seconds": 2.7670000000000012,
+        "confusion_speaker_seconds": 1.7159999999999975,
+        "error_speaker_seconds": 6.234000000000001,
+        "reference_speaker_seconds": 28.7,
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "hypothesis_speaker_count": 2,
+      "reference_speaker_count": 4,
+      "score_sha256": "9593689c9dc3f3ac7c616ea311b948a8379a04e573195f765efeee55fcb92d51"
+    }
+  ],
+  "public_poem_pipeline": {
+    "status": "completed",
+    "metadata_mode": "none",
+    "denoise": true,
+    "emo": true,
+    "denoise_alignment_verified": false,
+    "all_steps_accepted": true,
+    "accepted_pipeline_peak_bytes": 1225568256,
+    "core_steps_accepted": true,
+    "core_pipeline_peak_bytes": 439910400,
+    "fixture_id": "public-poem",
+    "accepted_peak_plus_reserve_bytes": 1359785984,
+    "steps": [
+      {
+        "name": "denoise",
+        "kind": "denoiser",
+        "status": "accepted",
+        "accepted": true,
+        "native_wall_seconds": 0.922689,
+        "native_peak_rss_kib": 86448,
+        "conservative_observed_peak_bytes": 92512256,
+        "observed_peak_plus_reserve_bytes": 226729984,
+        "budget_check_passed": true,
+        "native_budget_check_passed": true,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "3ee929082f0c5f5543ec17615a3c6fe6bf3041beb65956617962750e4700f24b"
+      },
+      {
+        "name": "restore-denoised-length",
+        "kind": "postprocess",
+        "status": "accepted",
+        "accepted": true,
+        "native_wall_seconds": 1.058334,
+        "native_peak_rss_kib": 138972,
+        "conservative_observed_peak_bytes": 151392256,
+        "observed_peak_plus_reserve_bytes": 285609984,
+        "budget_check_passed": true,
+        "native_budget_check_passed": true,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "5aa42bcb083ebbc59a4293d6c9db9083a3414c83d5ea604dea31bb134f349453"
+      },
+      {
+        "name": "diarization",
+        "kind": "diarization",
+        "audio_seconds": 28.2645,
+        "status": "accepted",
+        "accepted": true,
+        "native_wall_seconds": 1.232433,
+        "native_peak_rss_kib": 417132,
+        "conservative_observed_peak_bytes": 439910400,
+        "observed_peak_plus_reserve_bytes": 574128128,
+        "budget_check_passed": true,
+        "native_budget_check_passed": true,
+        "process_rtf": 0.04360356631109695,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "78a99856c6b9c9e7bc6906fcb21defbb32778874c32d18a88f4d04c4899a2af0"
+      },
+      {
+        "name": "giga-asr",
+        "kind": "asr",
+        "audio_seconds": 28.2645,
+        "status": "accepted",
+        "accepted": true,
+        "native_wall_seconds": 1.972011,
+        "native_peak_rss_kib": 375876,
+        "conservative_observed_peak_bytes": 397836288,
+        "observed_peak_plus_reserve_bytes": 532054016,
+        "budget_check_passed": true,
+        "native_budget_check_passed": true,
+        "process_rtf": 0.06976988802207716,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "0be8698cdf4a764402f4e5a42d0e27b0dd21346451a1ca07257b3804e839482e"
+      },
+      {
+        "name": "export-transcript",
+        "kind": "postprocess",
+        "status": "accepted",
+        "accepted": true,
+        "native_wall_seconds": 0.971313,
+        "native_peak_rss_kib": 143828,
+        "conservative_observed_peak_bytes": 156336128,
+        "observed_peak_plus_reserve_bytes": 290553856,
+        "budget_check_passed": true,
+        "native_budget_check_passed": true,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "9ec504d60684de63472a63e53bc103f3f85ffa05b05d65b75b993410e87df0b7"
+      },
+      {
+        "name": "emotion-analysis",
+        "kind": "emotion",
+        "status": "accepted",
+        "accepted": true,
+        "native_wall_seconds": 4.106151,
+        "native_peak_rss_kib": 1187968,
+        "conservative_observed_peak_bytes": 1225568256,
+        "observed_peak_plus_reserve_bytes": 1359785984,
+        "budget_check_passed": true,
+        "native_budget_check_passed": true,
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "df493e0e34653c06c7db69f1e0d69a3215e266124efa3a4ba56b9a08f08ffb86"
+      }
+    ],
+    "denoise_audit": {
+      "sample_rate": 16000,
+      "original_samples": 452232,
+      "filtered_samples": 452096,
+      "output_samples": 452232,
+      "tail_padding_samples": 136,
+      "tail_truncated_samples": 0,
+      "method": "restore_frame_count_by_tail_padding_or_truncation_only",
+      "sample_count_restored": true,
+      "alignment_verified": false,
+      "documented_algorithmic_delay_samples": null,
+      "delay_correction_applied_samples": 0,
+      "source_reference": "https://github.com/k2-fsa/sherpa-onnx/blob/v2.0.1/sherpa-onnx/csrc/offline-speech-denoiser-gtcrn-impl.h",
+      "limitation": "Original duration restored; no measured delay compensation or sample-accurate waveform alignment. ASR times retain this uncertainty.",
+      "tail_padding_seconds": 0.0085
+    },
+    "emotion_prediction": {
+      "model": "GigaAM-Emo-v1-third-party-int8",
+      "mode": "first_nonoverlapping_utterance_per_speaker",
+      "segments": [
+        {
+          "speaker_id": 1,
+          "start_ms": 3261,
+          "end_ms": 11261,
+          "label": "neutral",
+          "confidence": 0.88399994,
+          "probabilities": {
+            "angry": 0.10985684,
+            "sad": 0.0059811715,
+            "neutral": 0.88399994,
+            "positive": 0.00016210953
+          },
+          "frames": 801
+        }
+      ],
+      "sample_rate": 16000,
+      "threads": 2,
+      "frontend_wall_s": 0.180499688,
+      "model_load_wall_s": 1.605158201,
+      "inference_wall_s": 0.932401863,
+      "wall_s": 3.096125377,
+      "source": "model_prediction_not_true_emotion",
+      "accuracy_validated": false,
+      "whole_conversation_mood": false
+    },
+    "host_orchestration_wall_seconds": 12.987014
+  },
+  "models": [
+    {
+      "id": "gigaam-v3-e2e-rnnt",
+      "license": "MIT",
+      "artifacts": [
+        {
+          "filename": "decoder.onnx",
+          "size_bytes": 4600132,
+          "sha256": "38fc7475443ea2a26f63211ca350f73ac50fff824ab7a3876ee2bd610c53bbc4",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/decoder.onnx"
+        },
+        {
+          "filename": "encoder.int8.onnx",
+          "size_bytes": 224570820,
+          "sha256": "369f35a71bf288d3b8e0391fabd8dba5f2314088d440bca474056b7b4b6e66bf",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/encoder.int8.onnx"
+        },
+        {
+          "filename": "joiner.onnx",
+          "size_bytes": 2712896,
+          "sha256": "602ff7017a93311aad34df1437c8d7f49911353c13d6eae7a6ee7b041339465c",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/joiner.onnx"
+        },
+        {
+          "filename": "tokens.txt",
+          "size_bytes": 13354,
+          "sha256": "39abae20e692998290c574e606f11a9edef2902a1995463fcff63d1490cf22b7",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/tokens.txt"
+        }
+      ],
+      "repository": "csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16",
+      "revision": "a6039be7cee829a9044a69ac0ebaf1c191217c97",
+      "complete": true,
+      "android_execution_observed": true
+    },
+    {
+      "id": "titanet-large",
+      "license": "CC-BY-4.0",
+      "artifacts": [
+        {
+          "filename": "nemo_en_titanet_large.onnx",
+          "size_bytes": 101405493,
+          "sha256": "d51abcf31717ef28162f26acb9d44dd4127c3d44c9b8624f699f3425daca8e77",
+          "url": "https://huggingface.co/csukuangfj/speaker-embedding-models/resolve/0743f301363dec56491a490f6d6cbc9d67f9a3bf/nemo_en_titanet_large.onnx"
+        }
+      ],
+      "revision": "0743f301363dec56491a490f6d6cbc9d67f9a3bf",
+      "source_model_card": "https://huggingface.co/nvidia/speakerverification_en_titanet_large",
+      "android_execution_observed": true
+    },
+    {
+      "id": "qwen3-1.7b-q4-k-m",
+      "license": "apache-2.0",
+      "artifacts": [
+        {
+          "filename": "Qwen3-1.7B-Q4_K_M.gguf",
+          "size_bytes": 1282439264,
+          "sha256": "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5",
+          "url": "https://huggingface.co/ggml-org/Qwen3-1.7B-GGUF/resolve/daeb8e2d528a760970442092f6bf1e55c3b659eb/Qwen3-1.7B-Q4_K_M.gguf"
+        }
+      ],
+      "repository": "ggml-org/Qwen3-1.7B-GGUF",
+      "revision": "daeb8e2d528a760970442092f6bf1e55c3b659eb",
+      "android_execution_observed": true
+    },
+    {
+      "id": "gtcrn",
+      "license": "MIT",
+      "artifacts": [
+        {
+          "filename": "gtcrn_simple.onnx",
+          "size_bytes": 535638,
+          "sha256": "e77603ac0c23dac3227dd2d7135b3a585cbee2679048aecfa886657d3ae1b534",
+          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models/gtcrn_simple.onnx"
+        }
+      ],
+      "license_source": "https://github.com/Xiaobin-Rong/gtcrn",
+      "android_execution_observed": true
+    },
+    {
+      "id": "nemotron3-q8",
+      "license": "openmdw-1.1",
+      "artifacts": [
+        {
+          "filename": "Nemotron-3-Diarization.q8_0.gguf",
+          "size_bytes": 107012128,
+          "sha256": "08456d9e22cd9a323c0364d98375f3746d6e68507ebb705cd46438c534c7a3a1",
+          "url": "https://huggingface.co/nvidia/Nemotron-3-Diarization/resolve/f667ed73aee57d40cc39428eb768b4fd87a0a29e/Nemotron-3-Diarization.q8_0.gguf"
+        }
+      ],
+      "repository": "nvidia/Nemotron-3-Diarization",
+      "revision": "f667ed73aee57d40cc39428eb768b4fd87a0a29e",
+      "precision": "Q8_0",
+      "android_execution_observed": true
+    },
+    {
+      "id": "nemotron3-f32-conversion",
+      "license": "openmdw-1.1",
+      "artifacts": [
+        {
+          "filename": "Nemotron-3-Diarization.f32.gguf",
+          "size_bytes": 395298848,
+          "sha256": "3339eca67ba8c7bc4a67b68797b60f8956e3ba1a34d5f84b14a0157ca96185b2"
+        }
+      ],
+      "distribution": "locally_converted",
+      "source_artifact": {
+        "filename": "Nemotron-3-Diarization.nemo",
+        "size_bytes": 198676480,
+        "sha256": "867c53f552998f772e5b5e5c082962ae85ee7ca5669c2bc17d7f615133d4e96d",
+        "url": "https://huggingface.co/nvidia/Nemotron-3-Diarization/resolve/f667ed73aee57d40cc39428eb768b4fd87a0a29e/Nemotron-3-Diarization.nemo"
+      },
+      "converter_revision": "536b17a41bef62d2a67a40ed3df61df26a4389fe",
+      "tensor_count": 360,
+      "dtype_tally": {
+        "F32": 359,
+        "F16": 1
+      },
+      "precision_caveat": "Official converter --outtype f32 retains Conv1D kernels F16 due to CPU im2col requirements.",
+      "android_execution_observed": true
+    },
+    {
+      "id": "titanet-small",
+      "license": null,
+      "license_note": "Exact weight license needs retained NGC terms before redistribution; do not infer from NeMo code license.",
+      "source_model_card": "https://catalog.ngc.nvidia.com/orgs/nvidia/teams/nemo/models/titanet_small",
+      "artifacts": [
+        {
+          "filename": "titanet-small.onnx",
+          "size_bytes": 40257283,
+          "sha256": "ad4a1802485d8b34c722d2a9d04249662f2ece5d28a7a039063ca22f515a789e",
+          "url": "https://huggingface.co/csukuangfj/speaker-embedding-models/resolve/0743f301363dec56491a490f6d6cbc9d67f9a3bf/nemo_en_titanet_small.onnx"
+        }
+      ],
+      "android_execution_observed": true
+    },
+    {
+      "id": "pyannote-segmentation-int8",
+      "license": "MIT",
+      "access_conditions_note": "Upstream gated model conditions and attribution remain separate from code license; release export provenance retained in earlier artifacts manifest.",
+      "source_model_card": "https://huggingface.co/pyannote/segmentation-3.0",
+      "artifacts": [
+        {
+          "filename": "model.int8.onnx",
+          "size_bytes": 1540506,
+          "sha256": "d582f4b4c6b48205de7e0643c57df0df5615a3c176189be3fc461e9d18827b5d"
+        }
+      ],
+      "android_execution_observed": true
+    },
+    {
+      "id": "cam-en",
+      "license": null,
+      "license_note": "3D-Speaker code Apache2 is not proof of exact English checkpoint license. Retain checkpoint card before redistribution.",
+      "source_model_card": "https://modelscope.cn/models/iic/speech_campplus_sv_en_voxceleb_16k",
+      "artifacts": [
+        {
+          "file": "campplus.onnx",
+          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx",
+          "size_bytes": 29596978,
+          "sha256": "357a834f702b80161e5b981182c038e18553c1f2ca752ed6cec2052365d4129b"
+        }
+      ],
+      "android_execution_observed": true
+    },
+    {
+      "id": "sortformer-v2-q8",
+      "license": "CC-BY-4.0",
+      "license_note": "Official NVIDIA model card CC-BY-4.0.",
+      "source_model_card": "https://huggingface.co/nvidia/diar_streaming_sortformer_4spk-v2",
+      "revision": "84edd514b8ef68004c10086918cd62f2148cbd59",
+      "artifacts": [
+        {
+          "filename": "diar_streaming_sortformer_4spk-v2.q8_0.gguf",
+          "size_bytes": 147075776,
+          "sha256": "0679cfeb1ce356d0dea9470b31274f4bfc7eb927497d82005483770666da998a",
+          "url": "https://huggingface.co/nvidia/diar_streaming_sortformer_4spk-v2/resolve/84edd514b8ef68004c10086918cd62f2148cbd59/diar_streaming_sortformer_4spk-v2.q8_0.gguf"
+        }
+      ],
+      "android_execution_observed": true
+    },
+    {
+      "id": "eres2netv2",
+      "license": null,
+      "license_note": "Exact checkpoint license not independently retained in this quick probe; no inference from 3D-Speaker code license.",
+      "source_model_card": "https://modelscope.cn/models/iic/speech_eres2netv2_sv_zh-cn_16k-common",
+      "revision": "0743f301363dec56491a490f6d6cbc9d67f9a3bf",
+      "artifacts": [
+        {
+          "filename": "3dspeaker_speech_eres2netv2_sv_zh-cn_16k-common.onnx",
+          "size_bytes": 71441526,
+          "sha256": "bf1a75b9930474cf3389ef415e6e5d38ca96fea4a3a00f7e301d080a58ee2239",
+          "url": "https://huggingface.co/csukuangfj/speaker-embedding-models/resolve/0743f301363dec56491a490f6d6cbc9d67f9a3bf/3dspeaker_speech_eres2netv2_sv_zh-cn_16k-common.onnx"
+        }
+      ],
+      "android_execution_observed": true
+    },
+    {
+      "id": "gigaam-emo-v1-int8",
+      "license": "MIT (official repository and export publisher card)",
+      "generation": "v1, not GigaAM-v3",
+      "publisher": "vvpreo (third party)",
+      "revision": "03cf125f754af526260037bc96f4edf0642e963b",
+      "official_source": "https://github.com/salute-developers/GigaAM/tree/7447938d791c4f3e643386ee22c33777004293a5",
+      "official_license": "https://github.com/salute-developers/GigaAM/blob/7447938d791c4f3e643386ee22c33777004293a5/LICENSE",
+      "publisher_card": "https://huggingface.co/vvpreo/gigaam-v3-onnx/blob/03cf125f754af526260037bc96f4edf0642e963b/README.md",
+      "source_relationship": "publisher states conversion from official CDN; checkpoint-to-export equivalence not independently checked",
+      "artifacts": [
+        {
+          "filename": "emo.int8.onnx",
+          "size_bytes": 305928068,
+          "sha256": "5639b328486d5af9c1a7aff2c584df8319250034310c5a4b7ff4eae95d555b02",
+          "url": "https://huggingface.co/vvpreo/gigaam-v3-onnx/resolve/03cf125f754af526260037bc96f4edf0642e963b/emo.int8.onnx"
+        },
+        {
+          "filename": "emo.yaml",
+          "size_bytes": 537,
+          "sha256": "9211da81fc7018babed37b253700e2d58d3ce33ae4478ce9f8f771197c726103",
+          "url": "https://huggingface.co/vvpreo/gigaam-v3-onnx/resolve/03cf125f754af526260037bc96f4edf0642e963b/emo.yaml"
+        }
+      ],
+      "android_execution_observed": true,
+      "emotion_accuracy_validated": false,
+      "frontend": {
+        "sample_rate": 16000,
+        "channels": 1,
+        "pcm": "signed 16-bit normalized /32768",
+        "n_fft": 400,
+        "win_length": 400,
+        "hop_length": 160,
+        "window": "periodic Hann",
+        "center": true,
+        "pad_mode": "reflect",
+        "n_mels": 64,
+        "mel_scale": "htk",
+        "f_min": 0,
+        "f_max": 8000,
+        "power": 2,
+        "norm": null,
+        "log": "natural logarithm after clamp[1e-9,1e9]",
+        "feature_length": "floor(samples/160)+1"
+      },
+      "frontend_parity_max_abs": 4.482269287109375e-05
+    }
+  ],
+  "emotion_runtime": {
+    "runtime": "onnxruntime-android 1.28.0",
+    "abi": "x86_64",
+    "min_api": 26,
+    "aar_url": "https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/1.28.0/onnxruntime-android-1.28.0.aar",
+    "aar_sha256": "f351a0638696f54b35184290dbc001d66daae17281ad0b548d2c70347d53b8a9",
+    "source_sha256": "a2d73d013f76d0d3b9b220535e5b2577a20569fceb4deec21c72f3dbca6bb6ec",
+    "files": [
+      {
+        "file": "gigaemo.jar",
+        "bytes": 64169,
+        "sha256": "1defc2a9688e645b573f91c9d8b7c6448193b2a9355509138f6f5a7c3d2f31fb"
+      },
+      {
+        "file": "ort/jni/x86_64/libonnxruntime.so",
+        "bytes": 34640104,
+        "sha256": "8a31feb45126d981ffac430bd10bc66cfa1036e0864a9fbd80a94121f3085800"
+      },
+      {
+        "file": "ort/jni/x86_64/libonnxruntime4j_jni.so",
+        "bytes": 100016,
+        "sha256": "064dbef1fe9eab5727974b051d9249f4d4079bd059f7275efb1e2d9fcacb92c4"
+      }
+    ],
+    "android_inference_verified": true
+  },
+  "short_review": {
+    "metrics": [
+      {
+        "name": "short-asr-review",
+        "kind": "llm",
+        "status": "accepted",
+        "accepted": true,
+        "native_wall_seconds": 48.240215,
+        "native_peak_rss_kib": 1403112,
+        "conservative_observed_peak_bytes": 1445965824,
+        "observed_peak_plus_reserve_bytes": 1580183552,
+        "budget_check_passed": true,
+        "native_budget_check_passed": true
+      }
+    ],
+    "review_context_word_count": 10,
+    "lexical_proposals_applied": 0,
+    "correctness_validated": false,
+    "punctuation_preserves_words_and_case": true,
+    "punctuation_quality_validated": false,
+    "summary_or_keywords_produced": false,
+    "limitation": "One bounded discrepancy review proposed copying an alternative ASR word with uncertain justification. No user phrases, prompts or raw outputs published."
+  }
+}

@@ -4,6 +4,11 @@ All inference, prompt construction, merging and metadata filtering run on Androi
 The host orchestrates ADB, writes the plan and retrieves private results. Models,
 WAV input, postprocess DEX and templates must already exist on the device.
 Optional whisper.cpp adds an independent comparison, not an automatic ASR fix.
+GTCRN is enabled by default; diarization keeps the original WAV. Frame-count
+restoration does not establish sample-accurate denoiser alignment. LLM keyword
+modes are opt-in; optional comparison/punctuation review is a separate diagnostic.
+Optional GigaEmo uses original-wave speaker intervals after the core export;
+failure never removes the completed RAW transcript.
 """
 import argparse
 import datetime as dt
@@ -25,6 +30,13 @@ def argument_parser():
     parser.add_argument("--input-wav", required=True, help="WAV already on Android; relative to remote-root or absolute")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--giga-dir", default="pipeline2/gigaam-v3/e2e-rnnt")
+    denoise = parser.add_mutually_exclusive_group()
+    denoise.add_argument("--denoise", dest="denoise", action="store_true")
+    denoise.add_argument("--no-denoise", dest="denoise", action="store_false")
+    parser.set_defaults(denoise=True)
+    parser.add_argument("--denoiser-model", default="pipeline2/gtcrn/gtcrn_simple.onnx")
+    parser.add_argument("--emo", action="store_true", help="Optional per-speaker emotion analysis on the original WAV")
+    parser.add_argument("--emo-root", default="pipeline2/emo")
     parser.add_argument("--embedding", default="titanet-small.onnx")
     parser.add_argument("--segmentation", default="segmentation.int8.onnx")
     parser.add_argument("--diarization-engine", choices=("pyannote", "nemotron"), default="pyannote")
@@ -33,7 +45,7 @@ def argument_parser():
     parser.add_argument("--llm-model", default="pipeline2/llm/Qwen3-1.7B-Q4_K_M.gguf")
     parser.add_argument("--llm-bin", default="llama/bin/llama-completion")
     parser.add_argument("--postprocess-dex", default="pipeline2/postprocess.dex")
-    parser.add_argument("--metadata-mode", choices=("literal", "candidates"), default="literal")
+    parser.add_argument("--metadata-mode", choices=("none", "literal", "candidates"), default="none")
     parser.add_argument("--prompt-template", help="Optional template override; default depends on metadata-mode")
     parser.add_argument("--chat-template", default="pipeline2/llm/force-nonthinking.jinja")
     parser.add_argument("--metadata-schema", help="Optional schema override; default depends on metadata-mode")
@@ -72,12 +84,13 @@ def build_plan(args, session_id):
         raise ValueError("whisper beam-size, best-of and threads must be positive")
     if args.diarization_engine not in ("pyannote", "nemotron"):
         raise ValueError("unsupported diarization engine")
-    if args.metadata_mode not in ("literal", "candidates"):
+    if args.metadata_mode not in ("none", "literal", "candidates"):
         raise ValueError("unsupported metadata mode")
     job = str(root / ("quality-" + session_id))
     paths = {name: job + "/" + name for name in (
-        "diar.log", "asr.log", "prompt.txt", "llm.log", "transcript.json",
-        "transcript.provenance.json", "metadata.json", "metadata.audit.json")}
+        "diar.log", "asr.log", "transcript.json", "transcript.provenance.json")}
+    if args.metadata_mode != "none":
+        paths.update({name: job + "/" + name for name in ("prompt.txt", "llm.log", "metadata.json", "metadata.audit.json")})
     candidates = args.metadata_mode == "candidates"
     prompt_template = args.prompt_template if args.prompt_template is not None else (
         "pipeline2/llm/candidate-keywords.prompt.txt" if candidates else "pipeline2/llm/metadata-prompt.template.txt")
@@ -98,6 +111,18 @@ def build_plan(args, session_id):
             step["audio_seconds"] = args.audio_seconds
         steps.append(step)
 
+    java = ["env", "CLASSPATH=" + remote_path(root, args.postprocess_dex),
+            "app_process", "/system/bin", "VextoPostprocess"]
+    asr_source = source
+    if args.denoise:
+        paths.update({name: job + "/" + name for name in ("denoised.raw.wav", "denoised.wav", "denoise.audit.json")})
+        add("denoise", "denoiser", environment + [str(root / "bin/sherpa-onnx-offline-denoiser"),
+            "--speech-denoiser-gtcrn-model=" + remote_path(root, args.denoiser_model),
+            "--input-wav=" + source, "--output-wav=" + paths["denoised.raw.wav"]])
+        add("restore-denoised-length", "postprocess", java + ["align-denoised", source,
+            paths["denoised.raw.wav"], paths["denoised.wav"], paths["denoise.audit.json"]])
+        asr_source = paths["denoised.wav"]
+
     if args.diarization_engine == "nemotron":
         nemo_environment = ["env", "LD_LIBRARY_PATH=pipeline2/nemotron/lib:lib:llama/lib"]
         add("diarization", "diarization", nemo_environment + [remote_path(root, args.nemotron_bin),
@@ -112,19 +137,29 @@ def build_plan(args, session_id):
     add("giga-asr", "asr", environment + [str(root / "bin/sherpa-onnx-offline"),
         "--encoder=" + str(giga / "encoder.int8.onnx"), "--decoder=" + str(giga / "decoder.onnx"),
         "--joiner=" + str(giga / "joiner.onnx"), "--tokens=" + str(giga / "tokens.txt"),
-        "--model-type=nemo_transducer", "--feat-dim=64", "--num-threads=2", source], paths["asr.log"])
+        "--model-type=nemo_transducer", "--feat-dim=64", "--num-threads=2", asr_source], paths["asr.log"])
     if args.whisper_model is not None:
         binary = remote_path(root, args.whisper_bin)
         lib = str(PurePosixPath(binary).parent)
         whisper_env = ["env", environment[1] + ":" + lib + ":" + lib + "/lib"]
         paths.update({name: job + "/" + name for name in ("whisper.log", "whisper.json", "whisper.txt")})
         add("whisper-comparison", "asr-comparison", whisper_env + [binary,
-            "-m", remote_path(root, args.whisper_model), "-f", source, "-l", "ru",
+            "-m", remote_path(root, args.whisper_model), "-f", asr_source, "-l", "ru",
             "-t", str(args.whisper_threads), "-p", "1", "-bs", str(args.whisper_beam_size),
             "-bo", str(args.whisper_best_of), "-ng", "-fa" if args.whisper_flash_attn else "-nfa",
             "-ojf", "-otxt", "-of", job + "/whisper"], paths["whisper.log"])
-    java = ["env", "CLASSPATH=" + remote_path(root, args.postprocess_dex),
-            "app_process", "/system/bin", "VextoPostprocess"]
+    add("export-transcript", "postprocess", java + ["export", paths["asr.log"], paths["diar.log"],
+        paths["transcript.json"], paths["transcript.provenance.json"]])
+    if args.emo:
+        emo = PurePosixPath(remote_path(root, args.emo_root))
+        paths["emotions.json"] = job + "/emotions.json"
+        add("emotion-analysis", "emotion", ["env", "CLASSPATH=" + str(emo / "gigaemo.jar"),
+            "LD_LIBRARY_PATH=" + str(emo), "app_process", "-Djava.library.path=" + str(emo), "/", "GigaEmo",
+            str(emo / "emo.int8.onnx"), source, paths["emotions.json"], paths["diar.log"]])
+    if args.metadata_mode == "none":
+        plan = {"steps": steps}
+        bounded.validate_plan(plan)
+        return plan, paths, job
     prompt_arguments = ["prompt-candidates" if candidates else "prompt", paths["asr.log"],
         remote_path(root, prompt_template), paths["prompt.txt"]]
     if candidates:
@@ -138,8 +173,6 @@ def build_plan(args, session_id):
         "--top-k", "20", "--top-p", "0.8", "--min-p", "0", "--repeat-penalty", "1.0", "-n", "64" if candidates else "96",
         "--json-schema-file", remote_path(root, metadata_schema), "-f", paths["prompt.txt"]]
     add("llm-metadata", "llm", llm, paths["llm.log"])
-    add("export-transcript", "postprocess", java + ["export", paths["asr.log"], paths["diar.log"],
-        paths["transcript.json"], paths["transcript.provenance.json"]])
     metadata_arguments = (["metadata-candidates", paths["asr.log"], paths["candidate-pool.json"], paths["llm.log"]]
         if candidates else ["metadata", paths["asr.log"], paths["llm.log"]])
     add("validate-metadata", "postprocess", java + metadata_arguments + [paths["metadata.json"], paths["metadata.audit.json"]])
@@ -173,6 +206,9 @@ def main(argv=None):
     summary = {"schema_version": 1, "status": "running", "remote_job_directory": job,
                "diarization_engine": args.diarization_engine,
                "metadata_mode": args.metadata_mode,
+               "denoise": args.denoise,
+               "emo": args.emo,
+               "denoise_alignment_verified": False if args.denoise else None,
                "started_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
                "all_processing_location": "Android; host performs orchestration and artifact retrieval",
                "optional_whisper_role": "independent comparison; does not replace exported GigaAM text",
@@ -193,14 +229,30 @@ def main(argv=None):
         accepted = result == 0 and fully_accepted(measurements, len(plan["steps"]))
         summary["all_steps_accepted"] = accepted
         summary["accepted_pipeline_peak_bytes"] = measurements.get("accepted_pipeline_peak_bytes") if accepted else None
-        if not accepted:
+        statuses = {step["name"]: step for step in measurements.get("steps", [])}
+        core_names = [step["name"] for step in plan["steps"][:next(i for i, step in enumerate(plan["steps"]) if step["name"] == "export-transcript") + 1]]
+        core_accepted = all(statuses.get(name, {}).get("accepted") is True and statuses[name].get("status") == "accepted" for name in core_names)
+        summary["core_steps_accepted"] = core_accepted
+        summary["core_pipeline_peak_bytes"] = max((statuses[name].get("conservative_observed_peak_bytes", 0) for name in core_names), default=None) if core_accepted else None
+        if not core_accepted:
             summary.update(status="failed", error="Plan failed or exceeded the observed memory budget; custom outputs not retrieved")
             return 2
         artifacts = args.output_dir / "artifacts"
         artifacts.mkdir(exist_ok=True)
+        producers = {"diar.log": "diarization", "asr.log": "giga-asr", "transcript.json": "export-transcript",
+            "transcript.provenance.json": "export-transcript", "denoised.raw.wav": "denoise", "denoised.wav": "restore-denoised-length",
+            "denoise.audit.json": "restore-denoised-length", "prompt.txt": "build-prompt", "candidate-pool.json": "build-prompt",
+            "emotions.json": "emotion-analysis",
+            "llm.log": "llm-metadata", "metadata.json": "validate-metadata", "metadata.audit.json": "validate-metadata",
+            "whisper.log": "whisper-comparison", "whisper.json": "whisper-comparison", "whisper.txt": "whisper-comparison"}
+        retrieved = []
         for name, remote in outputs.items():
+            producer = statuses.get(producers[name], {})
+            if producer.get("accepted") is not True or producer.get("status") != "accepted":
+                continue
             subprocess.run(adb + ["pull", remote, str(artifacts / name)], capture_output=True, check=True, timeout=60)
-        summary.update(status="completed", custom_artifacts_retrieved=True, artifacts=list(outputs))
+            retrieved.append(name)
+        summary.update(status="completed" if accepted else "completed_with_optional_failures", custom_artifacts_retrieved=True, artifacts=retrieved)
         return 0
     except Exception as error:
         summary.update(status="failed", error=str(error))
