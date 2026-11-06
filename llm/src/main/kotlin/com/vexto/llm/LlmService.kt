@@ -10,6 +10,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import java.io.File
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 
 /**
@@ -27,6 +28,8 @@ class LlmService : Service() {
     @Volatile private var busy = false
     private var loadedKey: String? = null
     private var backend: String? = null
+    // Время последней загрузки, ещё не отданное клиенту: модель может загрузиться и при подсчёте токенов.
+    private var unreportedLoadMs = 0L
 
     private val binder = object : ILlmService.Stub() {
         override fun generate(request: Bundle, callback: ILlmCallback) {
@@ -47,6 +50,9 @@ class LlmService : Service() {
             }
             try {
                 return result.get()
+            } catch (e: ExecutionException) {
+                // Через Binder до клиента доходят только стандартные исключения.
+                throw IllegalStateException(e.cause?.message ?: "ошибка подсчёта токенов")
             } finally {
                 scheduleUnload(model)
             }
@@ -77,7 +83,8 @@ class LlmService : Service() {
     private fun runGenerate(request: Bundle, callback: ILlmCallback) {
         busy = true
         try {
-            val loadMs = ensureLoaded(request)
+            ensureLoaded(request)
+            val loadMs = unreportedLoadMs.also { unreportedLoadMs = 0 }
             val text = StringBuilder()
             val stats = LlamaNative.nativeGenerate(
                 handle,
@@ -105,22 +112,20 @@ class LlmService : Service() {
         }
     }
 
-    /** Возвращает время загрузки в мс (0, если модель уже была в памяти). */
-    private fun ensureLoaded(spec: Bundle): Long {
+    private fun ensureLoaded(spec: Bundle) {
         val path = ModelFiles.resolve(this, spec.getString(Protocol.MODEL_PATH))
         val nCtx = spec.getInt(Protocol.N_CTX, 4096)
         val threads = spec.getInt(Protocol.N_THREADS, 0).takeIf { it > 0 }
             ?: minOf(4, Runtime.getRuntime().availableProcessors())
         val key = "$path|$nCtx|$threads"
-        if (key == loadedKey && handle != 0L) return 0
+        if (key == loadedKey && handle != 0L) return
         unloadNow()
         if (backend == null) backend = LlamaNative.nativeInit(spec.getString(Protocol.CPU_VARIANT))
         val t0 = SystemClock.elapsedRealtime()
         handle = LlamaNative.nativeLoad(path.absolutePath, nCtx, threads)
-        val loadMs = SystemClock.elapsedRealtime() - t0
+        unreportedLoadMs = SystemClock.elapsedRealtime() - t0
         loadedKey = key
-        Log.i(TAG, "модель ${path.name} загружена за $loadMs мс, ctx=$nCtx, потоков=$threads, backend=$backend")
-        return loadMs
+        Log.i(TAG, "модель ${path.name} загружена за $unreportedLoadMs мс, ctx=$nCtx, потоков=$threads, backend=$backend")
     }
 
     private fun unloadNow() {

@@ -149,6 +149,9 @@ Java_com_vexto_llm_LlamaNative_nativeLoad(JNIEnv * env, jobject, jstring jpath, 
 
     llama_model_params mp = llama_model_default_params();
     mp.load_mode = LLAMA_LOAD_MODE_MMAP;
+    // Перепаковка весов под SIMD копирует их в анонимную память: RSS растёт на размер
+    // модели, а на 4 ГБ устройства это своп и замедление в разы. Веса остаются в mmap.
+    mp.use_extra_bufts = false;
     llama_model * model = llama_model_load_from_file(path.c_str(), mp);
     if (model == nullptr) {
         throw_error(env, "не удалось загрузить модель: " + path);
