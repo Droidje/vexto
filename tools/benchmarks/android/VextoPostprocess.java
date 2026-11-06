@@ -347,6 +347,8 @@ public final class VextoPostprocess {
                 CandidateKeywords.prompt(args[1], args[2], args[3], args[4]);
             } else if (args.length == 6 && args[0].equals("metadata-candidates")) {
                 CandidateKeywords.metadata(args[1], args[2], args[3], args[4], args[5]);
+            } else if (args.length == 5 && args[0].equals("align-denoised")) {
+                WaveLength.align(args[1], args[2], args[3], args[4]);
             } else if (args.length == 5 && args[0].equals("export")) {
                 distinctPaths(new String[]{args[1], args[2]}, new String[]{args[3], args[4]}); export(args[1], args[2], args[3], args[4]);
             } else if (args.length == 5 && args[0].equals("metadata")) {

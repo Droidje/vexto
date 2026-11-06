@@ -16,7 +16,7 @@ from run_quality_pipeline import argument_parser, build_plan, fully_accepted, ma
 class QualityPipelinePlanTests(unittest.TestCase):
     def args(self, *extra):
         return argument_parser().parse_args(["--serial", "test-device", "--remote-root", "/data/local/tmp/models",
-            "--input-wav", "fixture.wav", "--output-dir", "unused-test-output"] + list(extra))
+            "--input-wav", "fixture.wav", "--output-dir", "unused-test-output", "--metadata-mode", "literal"] + list(extra))
 
     def command(self, step):
         if step["argv"][:2] == ["sh", "-c"]:
@@ -48,10 +48,95 @@ class QualityPipelinePlanTests(unittest.TestCase):
         args = self.args("--input-wav", hostile, "--remote-root", "/data/local/tmp/root with space")
         plan, paths, _ = build_plan(args, "safe")
         command, target = self.command(next(s for s in plan["steps"] if s["name"] == "giga-asr"))
-        self.assertEqual(command[-1], "/data/local/tmp/root with space/" + hostile)
+        self.assertEqual(command[-1], paths["denoised.wav"])
         self.assertEqual(target, paths["asr.log"])
         self.assertIn("--feat-dim=64", command)
         self.assertIn("--num-threads=2", command)
+
+    def test_denoise_default_routes_original_only_to_diarization(self):
+        args = self.args("--whisper-model", "comparison.bin", "--metadata-mode", "none")
+        plan, paths, _ = build_plan(args, "denoise")
+        self.assertEqual([s["name"] for s in plan["steps"]][:2], ["denoise", "restore-denoised-length"])
+        diar, _ = self.command(next(s for s in plan["steps"] if s["name"] == "diarization"))
+        primary, _ = self.command(next(s for s in plan["steps"] if s["name"] == "giga-asr"))
+        secondary, _ = self.command(next(s for s in plan["steps"] if s["name"] == "whisper-comparison"))
+        self.assertEqual(diar[-1], "/data/local/tmp/models/fixture.wav")
+        self.assertEqual(primary[-1], paths["denoised.wav"])
+        self.assertEqual(secondary[secondary.index("-f") + 1], paths["denoised.wav"])
+        align = plan["steps"][1]["argv"]
+        self.assertEqual(align[-5:], ["align-denoised", "/data/local/tmp/models/fixture.wav", paths["denoised.raw.wav"], paths["denoised.wav"], paths["denoise.audit.json"]])
+        self.assertNotIn("llm-metadata", [s["name"] for s in plan["steps"]])
+
+    def test_no_denoise_keeps_original_asr_and_default_no_keywords(self):
+        args = self.args("--no-denoise", "--metadata-mode", "none")
+        plan, paths, _ = build_plan(args, "original")
+        self.assertNotIn("denoised.wav", paths)
+        primary, _ = self.command(next(s for s in plan["steps"] if s["name"] == "giga-asr"))
+        self.assertEqual(primary[-1], "/data/local/tmp/models/fixture.wav")
+        defaults = argument_parser().parse_args(["--serial", "fake", "--remote-root", "/models", "--input-wav", "x.wav", "--output-dir", "unused"])
+        self.assertTrue(defaults.denoise)
+        self.assertEqual(defaults.metadata_mode, "none")
+
+    def test_emo_is_opt_in_and_uses_original_speaker_intervals_after_export(self):
+        self.assertFalse(self.args().emo)
+        plan, paths, job = build_plan(self.args("--emo", "--metadata-mode", "none"), "emotion")
+        names = [s["name"] for s in plan["steps"]]
+        self.assertGreater(names.index("emotion-analysis"), names.index("export-transcript"))
+        command = next(s for s in plan["steps"] if s["name"] == "emotion-analysis")["argv"]
+        self.assertEqual(command[:7], ["env", "CLASSPATH=/data/local/tmp/models/pipeline2/emo/gigaemo.jar",
+            "LD_LIBRARY_PATH=/data/local/tmp/models/pipeline2/emo", "app_process",
+            "-Djava.library.path=/data/local/tmp/models/pipeline2/emo", "/", "GigaEmo"])
+        self.assertEqual(command[7:], ["/data/local/tmp/models/pipeline2/emo/emo.int8.onnx",
+            "/data/local/tmp/models/fixture.wav", job + "/emotions.json", paths["diar.log"]])
+        self.assertNotIn(paths["denoised.wav"], command)
+
+    def test_emo_root_override_remains_literal(self):
+        plan, _, _ = build_plan(self.args("--emo", "--emo-root", "/custom/emotion ' models"), "override")
+        command = next(s for s in plan["steps"] if s["name"] == "emotion-analysis")["argv"]
+        self.assertIn("CLASSPATH=/custom/emotion ' models/gigaemo.jar", command)
+        self.assertEqual(command[7], "/custom/emotion ' models/emo.int8.onnx")
+
+    def test_optional_emo_failure_keeps_primary_and_drops_emotion_output(self):
+        with tempfile.TemporaryDirectory() as temp:
+            def rejected(arguments):
+                plan = json.loads(Path(arguments[arguments.index("--plan") + 1]).read_text(encoding="utf-8"))
+                steps = [{"name": s["name"], "status": "failed" if s["name"] == "emotion-analysis" else "accepted",
+                    "accepted": s["name"] != "emotion-analysis", "conservative_observed_peak_bytes": 1000} for s in plan["steps"]]
+                destination = Path(arguments[arguments.index("--output-dir") + 1]); destination.mkdir(parents=True)
+                (destination / "results.json").write_text(json.dumps({"all_steps_accepted": False, "steps": steps}), encoding="utf-8")
+                return 2
+            with mock.patch("run_quality_pipeline.bounded.main", side_effect=rejected), \
+                    mock.patch("run_quality_pipeline.subprocess.run"), contextlib.redirect_stdout(io.StringIO()):
+                result = main(["--serial", "fake", "--remote-root", "/models", "--input-wav", "synthetic.wav",
+                    "--output-dir", temp, "--emo"])
+            self.assertEqual(result, 0)
+            summary = json.loads((Path(temp) / "pipeline.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["status"], "completed_with_optional_failures")
+            self.assertIn("transcript.json", summary["artifacts"])
+            self.assertNotIn("emotions.json", summary["artifacts"])
+
+    def test_optional_llm_failure_keeps_exported_primary_result(self):
+        with tempfile.TemporaryDirectory() as temp:
+            def optional_failure(arguments):
+                plan = json.loads(Path(arguments[arguments.index("--plan") + 1]).read_text(encoding="utf-8"))
+                steps = []
+                for step in plan["steps"]:
+                    failed = step["name"] == "llm-metadata"
+                    steps.append({"name": step["name"], "status": "failed" if failed else "accepted", "accepted": not failed,
+                                  "conservative_observed_peak_bytes": 1000})
+                    if failed: break
+                destination = Path(arguments[arguments.index("--output-dir") + 1]); destination.mkdir(parents=True)
+                (destination / "results.json").write_text(json.dumps({"all_steps_accepted": False, "steps": steps}), encoding="utf-8")
+                return 2
+            with mock.patch("run_quality_pipeline.bounded.main", side_effect=optional_failure), \
+                    mock.patch("run_quality_pipeline.subprocess.run") as adb, contextlib.redirect_stdout(io.StringIO()):
+                result = main(["--serial", "fake", "--remote-root", "/models", "--input-wav", "synthetic.wav",
+                    "--output-dir", temp, "--metadata-mode", "literal"])
+            self.assertEqual(result, 0)
+            summary = json.loads((Path(temp) / "pipeline.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["status"], "completed_with_optional_failures")
+            self.assertIn("transcript.json", summary["artifacts"])
+            self.assertNotIn("metadata.json", summary["artifacts"])
 
     def test_nemotron_uses_fixed_native_preset_and_rttm_dataflow(self):
         plan, paths, _ = build_plan(self.args("--diarization-engine", "nemotron"), "nemo")
@@ -68,7 +153,7 @@ class QualityPipelinePlanTests(unittest.TestCase):
     def test_nemotron_model_and_binary_overrides_are_literal(self):
         plan, _, _ = build_plan(self.args("--diarization-engine", "nemotron", "--nemotron-model", "custom ' model.gguf",
             "--nemotron-bin", "/custom/nemo tool"), "custom")
-        command, _ = self.command(plan["steps"][0])
+        command, _ = self.command(next(s for s in plan["steps"] if s["name"] == "diarization"))
         self.assertEqual(command[2], "/custom/nemo tool")
         self.assertEqual(command[3], "/data/local/tmp/models/custom ' model.gguf")
         self.assertEqual(self.args().diarization_engine, "pyannote")
@@ -109,7 +194,7 @@ class QualityPipelinePlanTests(unittest.TestCase):
         llm, _ = self.command(next(s for s in plan["steps"] if s["name"] == "llm-metadata"))
         self.assertEqual(llm[llm.index("--json-schema-file") + 1], "/data/local/tmp/models/custom schema.json")
         self.assertEqual(self.args().metadata_mode, "literal")
-        self.assertEqual(len(paths), 9)
+        self.assertEqual(len(paths), 12)
 
     def test_candidate_schema_and_prompt_only_request_selection_ids(self):
         template_dir = Path(__file__).resolve().parents[1] / "templates"
@@ -127,7 +212,7 @@ class QualityPipelinePlanTests(unittest.TestCase):
 
     def test_optional_whisper_does_not_replace_primary_asr(self):
         plan, paths, job = build_plan(self.args("--whisper-model", "comparison.bin"), "second-pass")
-        self.assertEqual(len(plan["steps"]), 7)
+        self.assertEqual(len(plan["steps"]), 9)
         command, _ = self.command(next(s for s in plan["steps"] if s["name"] == "whisper-comparison"))
         self.assertIn("-nfa", command)
         self.assertNotIn("-fa", command)
@@ -207,7 +292,7 @@ class QualityPipelinePlanTests(unittest.TestCase):
                 result = main(["--serial", "fake", "--remote-root", "/data/local/tmp/models",
                     "--input-wav", "synthetic.wav", "--output-dir", temp])
             self.assertEqual(result, 0)
-            self.assertEqual(sum("pull" in call.args[0] for call in adb.call_args_list), 8)
+            self.assertEqual(sum("pull" in call.args[0] for call in adb.call_args_list), 7)
             summary = json.loads((Path(temp) / "pipeline.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["status"], "completed")
             self.assertTrue(summary["custom_artifacts_retrieved"])

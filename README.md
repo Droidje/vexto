@@ -52,3 +52,5 @@ CI дополнительно выполняет `bash -n tools/benchmarks/andro
 - [Сборка Nemotron](docs/research/nemotron-android.md) и [сборка Whisper](docs/research/whisper-android.md) фиксируют исходники, инструменты, CPU/ABI и ограничения.
 - [Агрегаты измерений](docs/research/results/pipeline-2gb-measurements-2026-11-06.json), [модельные и runtime артефакты](docs/research/results/pipeline-2gb-artifacts-2026-11-06.json) публикуются без записей и расшифровок.
 - [Первичное исследование 4 ГБ](docs/research/android-models-4gb.md) и [исходный probe](tools/benchmarks/probe_android_models.py) сохраняют ранний baseline.
+
+[Быстрые сравнения на открытых записях, Emo и шумоподавление](docs/research/quick-audio-features.md): короткие AMI train/test проверки с DER, опциональный GigaAM-Emo и полная стенограмма без саммаризации.

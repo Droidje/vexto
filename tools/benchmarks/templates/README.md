@@ -86,3 +86,45 @@ Candidate mode uses temperature 0 and a 64-token output limit. The context remai
 `--prompt-template` and `--metadata-schema` can override the mode-specific paths.
 All pools, rendered prompts, model outputs and audits contain private recording
 content and belong in ignored local output directories.
+
+## Optional ASR disagreement and punctuation review
+
+The quick runner now defaults to `--metadata-mode none`; historical keyword modes
+remain explicit opt-ins. This removes the keyword-generation delay from the main
+ASR/export path. It does not replace the product requirement for a local LLM:
+the new role is a separate, bounded ASR review with suggestions and punctuation.
+
+Prepare short diagnostic prompts from two complete saved ASR outputs:
+
+```text
+python tools/benchmarks/review_asr.py prepare --primary asr.log --secondary whisper.json --output-dir review-local --fragment-words 20 --max-fragments 1
+```
+
+The host utility locates disagreements and writes a context and prompt per bounded
+fragment. It performs no inference and never rewrites either full transcript.
+Prompts contain at most 50 words from each ASR; the default maximum is three
+fragments, so the review is intentionally not exhaustive. Run one generated prompt
+and `asr-review.schema.json` with the local Android LLM as a separate optional task.
+The second ASR is an alternative, not ground truth.
+
+```text
+python tools/benchmarks/review_asr.py validate --context review-local/fragment-1.context.json --model-output review.stdout.txt --output review-local/review.json
+```
+
+The result contains proposed local replacements and a separate punctuation variant.
+No lexical proposal is applied automatically. Punctuation is accepted only when
+all Unicode words, case, protected non-punctuation characters and word order are
+preserved. Original ASR remains read-only; rejected punctuation and invalid or
+nonliteral proposals receive audit reasons. A valid suggestion is not proof of
+what the audio contains. Review failures do not invalidate the main RAW export.
+
+## Denoiser timing
+
+`run_quality_pipeline.py` enables GTCRN by default (`--no-denoise` disables it).
+Diarization uses the untouched original; both ASR passes use a separate filtered
+WAV. Android `align-denoised` requires PCM16 mono 16 kHz and restores the original
+sample count by tail padding or truncation. Its sidecar explicitly records
+`alignment_verified=false`: no undocumented algorithmic delay is guessed, and
+restoring duration is not sample-accurate waveform alignment. Timing after the
+filter retains this uncertainty. Compile `WaveLength.java` with the other Java
+sources and include every generated class in the DEX.
