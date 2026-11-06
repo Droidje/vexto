@@ -285,15 +285,28 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private void refreshRecordings() {
         if (designPreview) {
             view.setRecordings(ReflectDesignPreview.recordings());
+            view.setConversations(ReflectDesignPreview.conversations());
             return;
         }
         File directory = new File(getFilesDir(), "recordings");
         imports.execute(() -> {
             var recordings = ReflectCatalog.localRecordings(directory);
             runOnUiThread(() -> {
-                if (!isDestroyed()) view.setRecordings(recordings);
+                if (!isDestroyed()) {
+                    view.setRecordings(recordings);
+                    view.setConversations(ReflectCatalog.localConversations(recordings));
+                }
             });
         });
+    }
+
+    @Override public void openConversation(ReflectCatalog.Conversation conversation) {
+        if (conversation.recording != null) {
+            openRecording(conversation.recording);
+        } else {
+            new AlertDialog.Builder(this).setTitle(conversation.title).setMessage(conversation.preview)
+                    .setPositiveButton(android.R.string.ok, null).show();
+        }
     }
 
     @Override public void toggleSpeakerPreview() {

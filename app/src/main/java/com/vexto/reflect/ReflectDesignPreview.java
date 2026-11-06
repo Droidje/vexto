@@ -25,4 +25,12 @@ final class ReflectDesignPreview {
                 new ReflectCatalog.Speaker("alexey-ivanov", "Алексей Иванов", "80 минут", "speaker_alexey"),
                 new ReflectCatalog.Speaker("mikhail-gvozdev", "Михаил Гвоздев", "42 минут", "speaker_mikhail"));
     }
+
+    static List<ReflectCatalog.Conversation> conversations() {
+        var sprint = new ReflectCatalog.Conversation("Спринт тайп", "3:57 PM",
+                "Алекс: Здорово! Буду рада, если поделишься какими-то советами.", false, null);
+        var room = new ReflectCatalog.Conversation("Переговорная 2", "1:34 PM",
+                "Настя: Все они показывают разные аспекты моих навыков.", true, null);
+        return Arrays.asList(sprint, room, room, sprint);
+    }
 }

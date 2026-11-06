@@ -50,6 +50,20 @@ final class ReflectCatalog {
         }
     }
 
+    static final class Conversation {
+        final String title, time, preview;
+        final boolean roomCover;
+        final Recording recording;
+
+        Conversation(String title, String time, String preview, boolean roomCover, Recording recording) {
+            this.title = title;
+            this.time = time;
+            this.preview = preview;
+            this.roomCover = roomCover;
+            this.recording = recording;
+        }
+    }
+
     private ReflectCatalog() {}
 
     static List<Recording> localRecordings(File directory) {
@@ -86,5 +100,14 @@ final class ReflectCatalog {
             if (!normalized.contains(term)) return false;
         }
         return true;
+    }
+
+    static List<Conversation> localConversations(List<Recording> recordings) {
+        List<Conversation> conversations = new ArrayList<>(recordings.size());
+        for (Recording recording : recordings) {
+            conversations.add(new Conversation(recording.title, recording.time,
+                    "Локальная аудиозапись · " + recording.length, false, recording));
+        }
+        return Collections.unmodifiableList(conversations);
     }
 }

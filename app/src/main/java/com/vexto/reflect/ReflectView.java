@@ -50,7 +50,7 @@ final class ReflectView extends ViewGroup {
     private final Actions actions;
     private final boolean designPreview;
     private final ReflectArtwork artwork;
-    private final ReflectLibraryView records, speakers;
+    private final ReflectLibraryView records, speakers, conversations;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final List<RectF> childAreas = new ArrayList<>();
     private final Path stage = new Path();
@@ -74,6 +74,7 @@ final class ReflectView extends ViewGroup {
         artwork = new ReflectArtwork(context.getAssets());
         records = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.RECORDS, actions);
         speakers = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.SPEAKERS, actions);
+        conversations = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.CONVERSATIONS, actions);
         setWillNotDraw(false);
         stage.addRoundRect(0, 0, WIDTH, HEIGHT, 47, 47, Path.Direction.CW);
         glass.addRoundRect(175, 661, 377, 749, 26, 26, Path.Direction.CW);
@@ -91,6 +92,14 @@ final class ReflectView extends ViewGroup {
     Screen tab() { return tab; }
     void setRecordings(List<ReflectCatalog.Recording> recordings) { records.setRecordings(recordings); }
     void setSpeakers(List<ReflectCatalog.Speaker> entries) { speakers.setSpeakers(entries); }
+    void setConversations(List<ReflectCatalog.Conversation> entries) {
+        boolean hadConversations = conversations.hasConversations();
+        conversations.setConversations(entries);
+        if (navigation(screen) && tab == Screen.HOME && hadConversations != conversations.hasConversations()) {
+            rebuildControls();
+            invalidate();
+        }
+    }
 
     void show(Screen next) {
         if (next == screen) return;
@@ -163,7 +172,7 @@ final class ReflectView extends ViewGroup {
         removeAllViews();
         childAreas.clear();
         setAccessibilityPaneTitle(switch (screen) {
-            case HOME -> "Начните работу с Reflect";
+            case HOME -> conversations.hasConversations() ? "Ваши разговоры" : "Начните работу с Reflect";
             case RECORDS -> "Ваши записи";
             case SPEAKERS -> "Спикеры";
             case MENU -> "Добавить аудио";
@@ -175,6 +184,9 @@ final class ReflectView extends ViewGroup {
             float contentHeight = screen == Screen.MENU ? 578 : 653;
             if (tab == Screen.RECORDS) place(records, 0, 83, 393, contentHeight);
             if (tab == Screen.SPEAKERS) place(speakers, 0, 83, 393, contentHeight);
+            if (tab == Screen.HOME && conversations.hasConversations()) {
+                place(conversations, 0, 83, 393, contentHeight);
+            }
             control(screen == Screen.MENU ? "Закрыть меню" : "Добавить", 318, 765, 59, 59, actions::toggleMenu);
             control("Главная", 22, 771, 67, 47, () -> show(Screen.HOME)).setSelected(tab == Screen.HOME);
             control("Записи", 89, 771, 65, 47, () -> show(Screen.RECORDS)).setSelected(tab == Screen.RECORDS);
@@ -250,7 +262,7 @@ final class ReflectView extends ViewGroup {
     private void drawScreen(Canvas canvas, Screen page, float menu) {
         if (navigation(page)) {
             Screen active = page == Screen.MENU ? tab : page;
-            if (active == Screen.HOME) drawHome(canvas);
+            if (active == Screen.HOME && !conversations.hasConversations()) drawHome(canvas);
             int selected = switch (active) {
                 case RECORDS -> 1;
                 case SPEAKERS -> 2;

@@ -78,6 +78,56 @@ final class ReflectLibraryRow extends View {
         });
     }
 
+    static ReflectLibraryRow conversation(Context context, ReflectArtwork art, ReflectCatalog.Conversation item,
+                                          Runnable open) {
+        ReflectLibraryRow row = new ReflectLibraryRow(context, 91,
+                item.title + ", " + item.time + ", " + item.preview, (canvas, paint) -> {
+            if (item.recording != null) recordingCover(canvas, art, item.recording.waveCover, 21);
+            else conversationCover(canvas, art, item.roomCover);
+            textRight(canvas, paint, item.time, 361, 29, 17, MUTED, art.duration, -.43f);
+            float available = 279 - paint.measureText(item.time);
+            text(canvas, paint, item.title, 74, 29, 18, Color.WHITE, art.semibold, -.43f);
+            preview(canvas, paint, art, item.preview, available);
+            chevron(canvas, paint, 373, 23);
+            separator(canvas, paint, 88);
+        });
+        row.setFocusable(true);
+        row.setOnClickListener(view -> open.run());
+        return row;
+    }
+
+    private static void preview(Canvas canvas, Paint paint, ReflectArtwork art, String value, float width) {
+        style(paint, 16, MUTED, art.regular, -.23f);
+        int split = paint.breakText(value, true, width, null);
+        if (split >= value.length()) {
+            text(canvas, paint, value, 74, 51, 16, MUTED, art.regular, -.23f);
+            return;
+        }
+        int lastSpace = value.lastIndexOf(' ', split);
+        if (lastSpace > 0) split = lastSpace;
+        text(canvas, paint, value.substring(0, split), 74, 51, 16, MUTED, art.regular, -.23f);
+        String rest = value.substring(split).trim();
+        if (paint.measureText(rest) > width) {
+            int chars = paint.breakText(rest, true, width - paint.measureText("…"), null);
+            rest = rest.substring(0, chars).trim() + "…";
+        }
+        text(canvas, paint, rest, 74, 71, 16, MUTED, art.regular, -.23f);
+    }
+
+    private static void conversationCover(Canvas canvas, ReflectArtwork art, boolean room) {
+        canvas.save();
+        Path clip = new Path();
+        clip.addCircle(39, 44, 23, Path.Direction.CW);
+        canvas.clipPath(clip);
+        if (room) {
+            art.image(canvas, "conversation_room", -29, -203, 261, 564);
+        } else {
+            canvas.scale(-1, 1, 39.5f, 43.5f);
+            art.image(canvas, "conversation_sprint", 14, 11, 51, 65);
+        }
+        canvas.restore();
+    }
+
     private static void recordingCover(Canvas canvas, ReflectArtwork art, boolean wave, float y) {
         canvas.save();
         Path clip = new Path();

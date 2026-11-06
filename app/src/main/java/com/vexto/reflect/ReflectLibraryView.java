@@ -25,10 +25,11 @@ import java.util.List;
 
 /** Content above the shared navigation. Geometry follows the 393 dp design stage. */
 final class ReflectLibraryView extends ViewGroup {
-    enum Page { RECORDS, SPEAKERS }
+    enum Page { RECORDS, SPEAKERS, CONVERSATIONS }
 
     interface Actions {
         void openRecording(ReflectCatalog.Recording recording);
+        void openConversation(ReflectCatalog.Conversation conversation);
         void inviteSpeakers();
     }
 
@@ -42,6 +43,7 @@ final class ReflectLibraryView extends ViewGroup {
     private final Button invite;
     private List<ReflectCatalog.Recording> recordings = Collections.emptyList();
     private List<ReflectCatalog.Speaker> speakers = Collections.emptyList();
+    private List<ReflectCatalog.Conversation> conversations = Collections.emptyList();
     private float scale = 1;
 
     ReflectLibraryView(Context context, ReflectArtwork artwork, Page page, Actions actions) {
@@ -110,11 +112,18 @@ final class ReflectLibraryView extends ViewGroup {
         updateContent();
     }
 
+    void setConversations(List<ReflectCatalog.Conversation> conversations) {
+        this.conversations = conversations;
+        renderRows(false);
+    }
+
+    boolean hasConversations() { return !conversations.isEmpty(); }
+
     private boolean emptySpeakers() { return page == Page.SPEAKERS && speakers.isEmpty(); }
 
     private void updateContent() {
         boolean empty = emptySpeakers();
-        search.setVisibility(empty ? GONE : VISIBLE);
+        search.setVisibility(empty || page == Page.CONVERSATIONS ? GONE : VISIBLE);
         scroller.setVisibility(empty ? GONE : VISIBLE);
         invite.setVisibility(empty ? VISIBLE : GONE);
         renderRows(false);
@@ -131,13 +140,23 @@ final class ReflectLibraryView extends ViewGroup {
     private void renderRows(boolean scrollToTop) {
         rows.removeAllViews();
         String query = search.getText().toString();
-        if (page == Page.RECORDS) renderRecordings(query);
-        else for (ReflectCatalog.Speaker speaker : speakers) {
-            if (ReflectCatalog.matches(speaker.name + " " + speaker.id, query)) {
-                rows.addView(ReflectLibraryRow.speaker(getContext(), artwork, speaker));
+        switch (page) {
+            case RECORDS -> renderRecordings(query);
+            case SPEAKERS -> {
+                for (ReflectCatalog.Speaker speaker : speakers) {
+                    if (ReflectCatalog.matches(speaker.name + " " + speaker.id, query)) {
+                        rows.addView(ReflectLibraryRow.speaker(getContext(), artwork, speaker));
+                    }
+                }
+            }
+            case CONVERSATIONS -> {
+                for (ReflectCatalog.Conversation conversation : conversations) {
+                    rows.addView(ReflectLibraryRow.conversation(getContext(), artwork, conversation,
+                            () -> actions.openConversation(conversation)));
+                }
             }
         }
-        if (rows.getChildCount() == 0 && !emptySpeakers()) {
+        if (rows.getChildCount() == 0 && !emptySpeakers() && page != Page.CONVERSATIONS) {
             String message = query.trim().isEmpty() ? "Сохранённых записей пока нет" : "Ничего не найдено";
             rows.addView(ReflectLibraryRow.message(getContext(), artwork, message));
         }
@@ -190,16 +209,28 @@ final class ReflectLibraryView extends ViewGroup {
             paint.setTextAlign(Paint.Align.CENTER);
             canvas.drawText("Позови своих друзей!", 197.5f, 419, paint);
         } else {
-            String title = page == Page.RECORDS ? "Ваши записи" : "Все участники";
+            String title = switch (page) {
+                case RECORDS -> "Ваши записи";
+                case SPEAKERS -> "Все участники";
+                case CONVERSATIONS -> "Ваши разговоры";
+            };
             ReflectLibraryRow.text(canvas, paint, title, 16, 27, 24, Color.WHITE, artwork.display, -.24f);
-            paint.setColor(0xff333333);
-            canvas.drawRoundRect(16, 51, 377, 99, 24, 24, paint);
-            artwork.icon(canvas, "search", 28, 63);
+            if (page != Page.CONVERSATIONS) {
+                paint.setColor(0xff333333);
+                canvas.drawRoundRect(16, 51, 377, 99, 24, 24, paint);
+                artwork.icon(canvas, "search", 28, 63);
+            }
         }
         canvas.restore();
     }
 
     private int px(float design) { return Math.round(design * scale); }
-    private int scrollTop() { return page == Page.RECORDS ? 125 : 131; }
+    private int scrollTop() {
+        return switch (page) {
+            case RECORDS -> 125;
+            case SPEAKERS -> 131;
+            case CONVERSATIONS -> 51;
+        };
+    }
     private static int exact(int size) { return MeasureSpec.makeMeasureSpec(size, MeasureSpec.EXACTLY); }
 }
