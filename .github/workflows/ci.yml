@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Smoke — целостность репозитория
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Базовые файлы на месте
+        run: |
+          test -f README.md
+          echo "OK: базовые файлы репозитория на месте"
+
+  test:
+    name: Autotests — слот
+    runs-on: ubuntu-latest
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      # Слот автотестов: когда будет выбран стек, заменить шаг-заглушку на реальные
+      # команды. Пример для Node-стека (раскомментировать и подогнать):
+      # - uses: actions/setup-node@v4
+      #   with:
+      #     node-version: 22
+      #     cache: npm
+      # - run: npm ci
+      # - run: npm test
+      - name: Слот автотестов
+        run: echo "Автотесты ещё не настроены — заглушка, всегда зелёная (см. README → CI/CD)."
