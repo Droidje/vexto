@@ -6,7 +6,7 @@ README-заглушка: проект на стадии инициализаци
 
 ## CI/CD
 
-- GitHub Actions: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — запускается на push в `main`, на PR и вручную (`workflow_dispatch`).
+- GitHub Actions: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — запускается на push в `main` и `dev`, на PR и вручную (`workflow_dispatch`).
 - Job `smoke` — проверка целостности репозитория.
 - Job `test` — слот под автотесты: сейчас шаг-заглушка. Когда будет выбран стек, заменить её на реальные команды запуска тестов (пример для Node — в комментариях workflow).
 
