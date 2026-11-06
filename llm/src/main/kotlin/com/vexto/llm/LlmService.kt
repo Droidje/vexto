@@ -117,12 +117,13 @@ class LlmService : Service() {
         val nCtx = spec.getInt(Protocol.N_CTX, 4096)
         val threads = spec.getInt(Protocol.N_THREADS, 0).takeIf { it > 0 }
             ?: minOf(4, Runtime.getRuntime().availableProcessors())
-        val key = "$path|$nCtx|$threads"
+        val repack = spec.getBoolean(Protocol.REPACK)
+        val key = "$path|$nCtx|$threads|$repack"
         if (key == loadedKey && handle != 0L) return
         unloadNow()
         if (backend == null) backend = LlamaNative.nativeInit(spec.getString(Protocol.CPU_VARIANT))
         val t0 = SystemClock.elapsedRealtime()
-        handle = LlamaNative.nativeLoad(path.absolutePath, nCtx, threads)
+        handle = LlamaNative.nativeLoad(path.absolutePath, nCtx, threads, repack)
         unreportedLoadMs = SystemClock.elapsedRealtime() - t0
         loadedKey = key
         Log.i(TAG, "модель ${path.name} загружена за $unreportedLoadMs мс, ctx=$nCtx, потоков=$threads, backend=$backend")
@@ -151,13 +152,14 @@ class LlmService : Service() {
         val status = readStatus()
         putLong(Protocol.STAT_PEAK_RSS_KB, status["VmHWM"] ?: 0)
         putLong(Protocol.STAT_RSS_KB, status["VmRSS"] ?: 0)
+        putLong(Protocol.STAT_RSS_ANON_KB, status["RssAnon"] ?: 0)
         putString(Protocol.STAT_BACKEND, backend)
         putString(Protocol.STAT_MODEL, loadedKey?.substringBefore('|')?.let { File(it).name })
     }
 
     private fun readStatus(): Map<String, Long> =
         File("/proc/self/status").readLines()
-            .filter { it.startsWith("Vm") }
+            .filter { it.startsWith("Vm") || it.startsWith("Rss") }
             .associate { line ->
                 val (k, v) = line.split(':', limit = 2)
                 k to (v.trim().substringBefore(' ').toLongOrNull() ?: 0)

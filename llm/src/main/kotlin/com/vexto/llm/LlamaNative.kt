@@ -14,7 +14,7 @@ internal object LlamaNative {
     /** Загружает CPU-бэкенд ggml и возвращает имя выбранного варианта (haswell, sse42, ...). */
     external fun nativeInit(forcedVariant: String?): String
 
-    external fun nativeLoad(path: String, nCtx: Int, nThreads: Int): Long
+    external fun nativeLoad(path: String, nCtx: Int, nThreads: Int, repack: Boolean): Long
 
     external fun nativeCountTokens(handle: Long, texts: Array<String>): IntArray
 

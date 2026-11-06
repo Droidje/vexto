@@ -16,7 +16,7 @@ import java.io.File
 
 /**
  * Прогон трёх задач на реальной модели через процесс `:llm`. Команды запуска — в llm/README.md.
- * Аргументы инструментации: `modelPath` (по умолчанию filesDir/model.gguf), `cpuVariant`.
+ * Аргументы инструментации: `modelPath` (по умолчанию filesDir/model.gguf), `threads`, `cpuVariant`, `repack`.
  */
 @RunWith(AndroidJUnit4::class)
 class LlmTasksTest {
@@ -27,7 +27,13 @@ class LlmTasksTest {
     private val modelPath = args.getString("modelPath")
         ?: File(context.filesDir, "model.gguf").path
     private val stats = mutableListOf<GenerationStats>()
-    private val client = LlmClient(context, LlmConfig(modelPath = modelPath, cpuVariant = args.getString("cpuVariant")))
+    private val config = LlmConfig(
+        modelPath = modelPath,
+        threads = args.getString("threads")?.toInt() ?: 0,
+        cpuVariant = args.getString("cpuVariant"),
+        repackWeights = args.getString("repack").toBoolean(),
+    )
+    private val client = LlmClient(context, config)
         .apply { statsListener = LlmClient.StatsListener { synchronized(stats) { stats += it } } }
 
     @After
@@ -35,7 +41,7 @@ class LlmTasksTest {
 
     @Test
     fun runsAllTasksOnFixture() = runBlocking {
-        report("model=$modelPath")
+        report("config=$config")
 
         val title = timed("title") { client.title(Fixture.transcript) }
         report("title: $title")
@@ -64,11 +70,11 @@ class LlmTasksTest {
         report("$name: $wall мс, вызовов модели ${calls.size}")
         calls.forEach {
             report(
-                "  load=%d мс, prompt=%d ток за %d мс (%.1f ток/с), gen=%d ток за %d мс (%.1f ток/с), RSS=%d МиБ, пик=%d МиБ, backend=%s"
+                "  load=%d мс, prompt=%d ток за %d мс (%.1f ток/с), gen=%d ток за %d мс (%.1f ток/с), RSS=%d МиБ (anon %d), пик=%d МиБ, backend=%s"
                     .format(
                         it.loadMs, it.promptTokens, it.prefillMs, it.prefillTokensPerSec,
                         it.generatedTokens, it.generationMs, it.generationTokensPerSec,
-                        it.rssKb / 1024, it.peakRssKb / 1024, it.backend,
+                        it.rssKb / 1024, it.rssAnonKb / 1024, it.peakRssKb / 1024, it.backend,
                     ),
             )
         }

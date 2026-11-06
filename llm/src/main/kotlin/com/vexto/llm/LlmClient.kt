@@ -266,6 +266,7 @@ class LlmClient @JvmOverloads constructor(
         loadMs = getLong(Protocol.STAT_LOAD_MS),
         peakRssKb = getLong(Protocol.STAT_PEAK_RSS_KB),
         rssKb = getLong(Protocol.STAT_RSS_KB),
+        rssAnonKb = getLong(Protocol.STAT_RSS_ANON_KB),
         backend = getString(Protocol.STAT_BACKEND).orEmpty(),
         model = getString(Protocol.STAT_MODEL).orEmpty(),
     )

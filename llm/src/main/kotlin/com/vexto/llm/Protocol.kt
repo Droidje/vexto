@@ -8,6 +8,7 @@ internal object Protocol {
     const val N_CTX = "nCtx"
     const val N_THREADS = "nThreads"
     const val CPU_VARIANT = "cpuVariant"
+    const val REPACK = "repack"
     const val IDLE_UNLOAD_MS = "idleUnloadMs"
 
     const val SYSTEM = "system"
@@ -23,6 +24,7 @@ internal object Protocol {
     const val STAT_LOAD_MS = "loadMs"
     const val STAT_PEAK_RSS_KB = "peakRssKb"
     const val STAT_RSS_KB = "rssKb"
+    const val STAT_RSS_ANON_KB = "rssAnonKb"
     const val STAT_BACKEND = "backend"
     const val STAT_MODEL = "model"
 
@@ -31,6 +33,7 @@ internal object Protocol {
         putInt(N_CTX, config.contextSize)
         putInt(N_THREADS, config.threads)
         putString(CPU_VARIANT, config.cpuVariant)
+        putBoolean(REPACK, config.repackWeights)
         putLong(IDLE_UNLOAD_MS, config.idleUnloadMs)
     }
 }
