@@ -27,6 +27,8 @@ class QualityModels(val dir: File, val manifest: QualityManifest) {
     fun file(id: String): File = JobFiles.inside(dir, manifest.artifacts.getValue(id).path)
 }
 
+class OfflineModelPackException(message: String) : IOException(message)
+
 /** Offline packs live in app-scoped storage. No multi-GB duplicate copy inside APK/filesDir. */
 object QualityModelStore {
     fun manifest(context: Context): QualityManifest = context.assets.open("quality/manifest.json").bufferedReader().use {
@@ -42,7 +44,7 @@ object QualityModelStore {
             currentCoroutineContext().ensureActive()
             val file = JobFiles.inside(root, artifact.path)
             if (!file.isFile || file.length() != artifact.bytes || JobFiles.sha256(file) != artifact.sha256) {
-                throw IOException("Не установлен полный набор моделей: $id. Загрузите проверенный офлайн-пакет ${manifest.version} в ${root.name}.")
+                throw OfflineModelPackException("Не установлен полный набор моделей: $id. Загрузите проверенный офлайн-пакет ${manifest.version} в ${root.name}.")
             }
             progress((i + 1f) / manifest.artifacts.size)
         }
