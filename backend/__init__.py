@@ -1,1 +1,0 @@
-"""Vexto recording service."""

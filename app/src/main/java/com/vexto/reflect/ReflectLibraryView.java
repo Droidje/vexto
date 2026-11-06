@@ -32,7 +32,6 @@ final class ReflectLibraryView extends ViewGroup {
     interface Actions {
         void openRecording(ReflectCatalog.Recording recording);
         void openConversation(ReflectCatalog.Conversation conversation);
-        void inviteSpeakers();
         void addSpeaker();
         void openSpeaker(ReflectCatalog.Speaker speaker);
     }
@@ -44,7 +43,6 @@ final class ReflectLibraryView extends ViewGroup {
     private final ListView scroller;
     private final RowAdapter adapter;
     private final EditText search;
-    private final Button invite;
     private final Button addSpeaker;
     private List<ReflectCatalog.Recording> recordings = Collections.emptyList();
     private List<ReflectCatalog.Speaker> speakers = Collections.emptyList();
@@ -73,11 +71,9 @@ final class ReflectLibraryView extends ViewGroup {
         scroller.setAdapter(adapter);
 
         search = page == Page.CONVERSATIONS ? null : createSearch(context);
-        invite = page == Page.SPEAKERS ? speakerButton(context, "Отправить ссылку", actions::inviteSpeakers) : null;
         addSpeaker = page == Page.SPEAKERS ? speakerButton(context, "Добавить спикера", actions::addSpeaker) : null;
         if (search != null) addView(search);
         addView(scroller);
-        if (invite != null) addView(invite);
         if (addSpeaker != null) addView(addSpeaker);
         updateContent();
         requestFocus();
@@ -152,7 +148,6 @@ final class ReflectLibraryView extends ViewGroup {
         boolean empty = emptySpeakers();
         if (search != null) search.setVisibility(empty ? GONE : VISIBLE);
         scroller.setVisibility(empty ? GONE : VISIBLE);
-        if (invite != null) invite.setVisibility(empty ? VISIBLE : GONE);
         if (addSpeaker != null) addSpeaker.setVisibility(managingSpeakers ? VISIBLE : GONE);
         renderRows(false);
         invalidate();
@@ -253,13 +248,11 @@ final class ReflectLibraryView extends ViewGroup {
                 search.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16 * scale);
                 search.setPadding(px(48), 0, px(12), 0);
             }
-            if (invite != null) styleSpeakerButton(invite);
             if (addSpeaker != null) styleSpeakerButton(addSpeaker);
         }
         if (search != null && search.getVisibility() != GONE) search.measure(exact(px(361)), exact(px(48)));
         if (scroller.getVisibility() != GONE) scroller.measure(exact(width),
                 exact(Math.max(0, height - px(scrollTop() + (managingSpeakers ? 72 : 0)))));
-        if (invite != null && invite.getVisibility() != GONE) invite.measure(exact(px(195)), exact(px(48)));
         if (addSpeaker != null && managingSpeakers) addSpeaker.measure(exact(px(195)), exact(px(48)));
     }
 
@@ -267,9 +260,8 @@ final class ReflectLibraryView extends ViewGroup {
         if (search != null && search.getVisibility() != GONE) search.layout(px(16), px(51), px(377), px(99));
         if (scroller.getVisibility() != GONE) scroller.layout(0, px(scrollTop()), getWidth(),
                 Math.max(px(scrollTop()), getHeight() - px(managingSpeakers ? 72 : 0)));
-        if (invite != null && invite.getVisibility() != GONE) invite.layout(px(100), px(446), px(295), px(494));
-        if (addSpeaker != null && managingSpeakers) addSpeaker.layout(px(100), getHeight() - px(60),
-                px(295), getHeight() - px(12));
+        if (addSpeaker != null && managingSpeakers) addSpeaker.layout(px(100), emptySpeakers() ? px(446) : getHeight() - px(60),
+                px(295), emptySpeakers() ? px(494) : getHeight() - px(12));
     }
 
     private void styleSpeakerButton(Button button) {
@@ -287,7 +279,7 @@ final class ReflectLibraryView extends ViewGroup {
             artwork.icon(canvas, "invite_cards", 100.81f, 121.1f);
             ReflectLibraryRow.style(paint, 22, 0xfff5f5f5, artwork.display, -.22f);
             paint.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText("Позови своих друзей!", 197.5f, 419, paint);
+            canvas.drawText("Добавьте спикера", 197.5f, 419, paint);
         } else {
             String title = switch (page) {
                 case RECORDS -> "Ваши записи";

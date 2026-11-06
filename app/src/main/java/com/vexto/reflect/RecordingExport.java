@@ -49,6 +49,11 @@ enum RecordingExport {
     }
 
     void write(OutputStream stream, File audio, ReflectTranscript transcript, String title) throws IOException {
+        write(stream, audio, transcript, title, java.util.Collections.emptyMap());
+    }
+
+    void write(OutputStream stream, File audio, ReflectTranscript transcript, String title,
+               java.util.Map<String, String> names) throws IOException {
         if (this == AUDIO) {
             Files.copy(audio.toPath(), stream);
             return;
@@ -60,7 +65,7 @@ enum RecordingExport {
             Writer markdown = new OutputStreamWriter(stream, StandardCharsets.UTF_8);
             markdown.write("# " + escape(title).replace('\n', ' ').replace('\r', ' ') + "\n\n");
             for (ReflectTranscript.Line line : transcript.lines) {
-                String speaker = escape(line.speakerId).replace('\n', ' ').replace('\r', ' ');
+                String speaker = escape(names.getOrDefault(line.speakerId, line.speakerId)).replace('\n', ' ').replace('\r', ' ');
                 markdown.write("**" + timestamp(line.startMs) + " – " + timestamp(line.endMs)
                         + " · " + speaker + "**\n\n> ");
                 markdown.write(escape(line.text).replace("\r\n", "\n").replace('\r', '\n').replace("\n", "\n> "));

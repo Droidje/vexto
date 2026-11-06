@@ -25,7 +25,7 @@ final class ReflectLocalTranscription {
     private static final String SAVE_FAILED = "Не удалось сохранить расшифровку.";
     private final Context context;
     private final ReflectTranscriptStore store;
-    private final ReflectBackendSync backend;
+    private final SpeakerProfiles profiles;
     private final Executor io;
     private final Consumer<File> changed;
     private final Consumer<Result> finished;
@@ -33,11 +33,11 @@ final class ReflectLocalTranscription {
     private Job job;
     private boolean closed;
 
-    ReflectLocalTranscription(Context context, ReflectTranscriptStore store, ReflectBackendSync backend,
+    ReflectLocalTranscription(Context context, ReflectTranscriptStore store, SpeakerProfiles profiles,
                               Executor io, Consumer<File> changed, Consumer<Result> finished) {
         this.context = context.getApplicationContext();
         this.store = store;
-        this.backend = backend;
+        this.profiles = profiles;
         this.io = io;
         this.changed = changed;
         this.finished = finished;
@@ -49,10 +49,9 @@ final class ReflectLocalTranscription {
         return job != null && job.recording.equals(recording) ? job.progress : null;
     }
 
-    void start(File recording, String title, int duration) {
+    void start(File recording) {
         if (closed || busy()) return;
         Job started = new Job(recording);
-        String scope = backend.syncScope();
         job = started;
         changed.accept(recording);
         started.task = ReflectEngine.transcribe(context, Uri.fromFile(recording),
@@ -73,7 +72,7 @@ final class ReflectLocalTranscription {
                 }
                 started.progress = new Progress("Сохраняю расшифровку", 100, false);
                 changed.accept(recording);
-                io.execute(() -> persist(started, transcript, title, duration, scope));
+                io.execute(() -> persist(started, transcript));
             }
 
             @Override public void onError(Throwable error) {
@@ -101,7 +100,7 @@ final class ReflectLocalTranscription {
         job = null;
     }
 
-    private void persist(Job started, Transcript output, String title, int duration, String scope) {
+    private void persist(Job started, Transcript output) {
         File recording = started.recording;
         try {
             List<ReflectTranscript.Line> lines = new ArrayList<>(output.getUtterances().size());
@@ -116,10 +115,13 @@ final class ReflectLocalTranscription {
                 main.post(() -> complete(started, existing, "У записи уже есть расшифровка."));
                 return;
             }
-            boolean queued = scope == null || backend.onGenerated(recording, store.title(recording, title),
-                    duration, scope);
-            main.post(() -> complete(started, transcript, queued ? null
-                    : "Расшифровка сохранена на устройстве. Отправку можно повторить из меню записи."));
+            String warning = null;
+            try { profiles.saveEmbeddings(recording, transcript, output.getSpeakers()); }
+            catch (IOException | RuntimeException unavailable) {
+                warning = "Расшифровка сохранена. Не удалось сохранить голосовые профили.";
+            }
+            String message = warning;
+            main.post(() -> complete(started, transcript, message));
         } catch (IOException | RuntimeException failure) {
             main.post(() -> complete(started, null, SAVE_FAILED));
         }

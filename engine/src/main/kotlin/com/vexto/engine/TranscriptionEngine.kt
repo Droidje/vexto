@@ -65,9 +65,9 @@ class TranscriptionEngine(context: Context) {
         val models = stage(Stage.Preparing) { ModelStore.install(context, it) }
         val cacheDir = File(context.cacheDir, "engine").apply { mkdirs() }
         stage(Stage.Decoding) { AudioDecoder.decode(context, uri, cacheDir, it) }.use { audio ->
-            val turns = stage(Stage.Diarization) { progress ->
+            val diarization = stage(Stage.Diarization) { progress ->
                 val speech = VoiceDetector.segments(models, audio, VoiceDetector.Diarization) { progress(it * VadShare) }
-                Diarizer.run(models, audio, speech, options.speakerCount, threads) { progress(VadShare + (1 - VadShare) * it) }
+                Diarizer.analyze(models, audio, speech, options.speakerCount, threads) { progress(VadShare + (1 - VadShare) * it) }
             }
             val assembler = TranscriptAssembler()
             val words = stage(Stage.Recognition) { progress ->
@@ -80,14 +80,14 @@ class TranscriptionEngine(context: Context) {
                         words += recognizer.recognize(audio, segment)
                         progress(VadShare + (1 - VadShare) * (i + 1) / segments.size)
                         if (SystemClock.elapsedRealtime() - lastPartial > PartialIntervalMs) {
-                            send(TranscriptionEvent.Partial(assembler.assemble(words, turns)))
+                            send(TranscriptionEvent.Partial(assembler.assemble(words, diarization.turns, diarization.voices)))
                             lastPartial = SystemClock.elapsedRealtime()
                         }
                     }
                 }
                 words
             }
-            var transcript: Transcript = stage(Stage.Assembly) { assembler.assemble(words, turns) }
+            var transcript: Transcript = stage(Stage.Assembly) { assembler.assemble(words, diarization.turns, diarization.voices) }
             if (options.punctuation && !models.manifest.asr.punctuation) {
                 transcript = stage(Stage.Punctuation) { SimplePunctuation.apply(transcript) }
             }
