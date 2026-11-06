@@ -99,13 +99,17 @@ final class ReflectLibraryRow extends View {
                 if (open != null) chevron(canvas, paint, 373, 33);
                 return;
             }
-            text(canvas, paint, item.name, 92, 38.5f, 18, Color.WHITE, nameFont, -.306f);
-            float badgeX = 104 + paint.measureText(item.name);
             style(paint, 14, 0xffae86e8, art.medium, -.42f);
             float badgeWidth = paint.measureText(item.duration) + 16;
+            style(paint, 18, Color.WHITE, nameFont, -.306f);
+            float nameWidth = (open == null ? 377 : 354) - 104 - badgeWidth;
+            String name = TextUtils.ellipsize(item.name, paint, Math.max(0, nameWidth), TextUtils.TruncateAt.END).toString();
+            float badgeX = 104 + paint.measureText(name);
+            text(canvas, paint, name, 92, 38.5f, 18, Color.WHITE, nameFont, -.306f);
             paint.setColor(0xff220053);
             canvas.drawRoundRect(badgeX, 19, badgeX + badgeWidth, 45, 10, 10, paint);
             text(canvas, paint, item.duration, badgeX + 8, 37, 14, 0xffae86e8, art.medium, -.42f);
+            if (open != null) chevron(canvas, paint, 373, 33);
         });
     }
 

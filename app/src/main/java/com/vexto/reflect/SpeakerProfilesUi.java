@@ -16,33 +16,43 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-/** Existing speaker actions backed only by the private on-device database. */
+/** Speaker directory navigation and actions backed by local recordings and profiles. */
 final class SpeakerProfilesUi {
     private final Activity activity;
     private final ReflectView view;
     private final SpeakerProfiles profiles;
+    private final SpeakerDirectory directory;
     private final Executor io;
     private final Consumer<String> notice;
     private final Runnable changed;
     private final Handler main = new Handler(Looper.getMainLooper());
     private boolean closed;
+    private String profileId;
+    private SpeakerDirectory.Detail detail;
+    private int listGeneration;
+    private int detailGeneration;
 
-    SpeakerProfilesUi(Activity activity, ReflectView view, SpeakerProfiles profiles, Executor io,
+    SpeakerProfilesUi(Activity activity, ReflectView view, SpeakerProfiles profiles, SpeakerDirectory directory, Executor io,
                       Consumer<String> notice, Runnable changed) {
-        this.activity = activity; this.view = view; this.profiles = profiles;
+        this.activity = activity; this.view = view; this.profiles = profiles; this.directory = directory;
         this.io = io; this.notice = notice; this.changed = changed;
     }
 
     void close() { closed = true; }
 
     void refreshSpeakers() {
-        run(profiles::list, entries -> {
+        int request = ++listGeneration;
+        run(directory::list, () -> request == listGeneration, entries -> {
             List<ReflectCatalog.Speaker> rows = new ArrayList<>();
-            for (var profile : entries) rows.add(new ReflectCatalog.Speaker(profile.id(), profile.name(), "", null));
+            for (var entry : entries) {
+                var profile = entry.profile();
+                rows.add(new ReflectCatalog.Speaker(profile.id(), profile.name(), profile.self() ? "Я" : "", null));
+            }
             view.setSpeakers(rows);
         });
     }
@@ -51,35 +61,127 @@ final class SpeakerProfilesUi {
         editName("Новый спикер", "", name -> run(() -> profiles.create(name), value -> updated()));
     }
 
-    void manageSpeaker(ReflectCatalog.Speaker speaker) {
-        new AlertDialog.Builder(activity).setTitle(speaker.name)
-                .setItems(new String[]{"Переименовать", "Удалить"}, (dialog, which) -> {
-                    if (which == 0) editName("Имя спикера", speaker.name,
-                            name -> run(() -> { profiles.rename(speaker.id, name); return null; }, value -> updated()));
-                    else new AlertDialog.Builder(activity).setTitle("Удалить профиль?")
-                            .setMessage("Привязки к «" + speaker.name + "» будут сняты. Записи и текст сохранятся.")
-                            .setNegativeButton("Отмена", null)
-                            .setPositiveButton("Удалить", (d, i) -> run(() -> { profiles.delete(speaker.id); return null; }, value -> updated()))
-                            .show();
+    String profileId() { return profileId; }
+
+    void selectProfile(String id) {
+        if (Objects.equals(profileId, id)) return;
+        detailGeneration++;
+        profileId = id;
+        detail = null;
+        view.speakerProfileView().content(null);
+    }
+
+    void openProfile(String id) {
+        selectProfile(id);
+        view.show(ReflectView.Screen.SPEAKER_PROFILE);
+        refreshProfile();
+    }
+
+    void closeProfile() {
+        selectProfile(null);
+        view.show(ReflectView.Screen.SPEAKERS);
+    }
+
+    private boolean isOpen(String id) {
+        return id.equals(profileId) && view.screen() == ReflectView.Screen.SPEAKER_PROFILE;
+    }
+
+    private void refreshProfile() {
+        String id = profileId;
+        if (id == null || !isOpen(id)) return;
+        int request = ++detailGeneration;
+        run(() -> {
+            try { return directory.detail(id); }
+            catch (IOException | RuntimeException unavailable) { return null; }
+        }, () -> request == detailGeneration && isOpen(id), next -> {
+            if (next == null) {
+                closeProfile();
+                notice.accept("Не удалось открыть профиль спикера");
+                return;
+            }
+            detail = next;
+            view.speakerProfileView().content(next);
+        });
+    }
+
+    void openMenu() {
+        if (detail == null || !isOpen(detail.profile().id())) return;
+        var profile = detail.profile();
+        String[] options = profile.self() ? new String[]{"Переименовать", "Объединить с другим спикером"}
+                : new String[]{"Переименовать", "Объединить с другим спикером", "Отметить как «Я»"};
+        new AlertDialog.Builder(activity).setTitle(profile.name()).setItems(options, (dialog, which) -> {
+            if (!isOpen(profile.id())) return;
+            switch (which) {
+                case 0 -> editName("Имя спикера", profile.name(), name -> {
+                    if (isOpen(profile.id())) run(() -> {
+                        profiles.rename(profile.id(), name);
+                        return null;
+                    }, ignored -> updated());
+                });
+                case 1 -> chooseMergeTarget(profile);
+                case 2 -> run(() -> {
+                    profiles.markSelf(profile.id());
+                    return null;
+                }, ignored -> updated());
+                default -> { }
+            }
+        }).show();
+    }
+
+    private void chooseMergeTarget(SpeakerProfiles.Profile source) {
+        run(() -> {
+            List<SpeakerProfiles.Profile> targets = new ArrayList<>();
+            for (var profile : profiles.visibleProfiles()) if (!source.id().equals(profile.id())) targets.add(profile);
+            return targets;
+        }, () -> isOpen(source.id()), targets -> {
+            if (targets.isEmpty()) {
+                notice.accept("Добавьте другого спикера, чтобы объединить профили");
+                return;
+            }
+            String[] names = targets.stream().map(p -> p.name() + (p.self() ? " · Я" : "")).toArray(String[]::new);
+            new AlertDialog.Builder(activity).setTitle("Выберите спикера")
+                    .setItems(names, (dialog, which) -> confirmMerge(source, targets.get(which)))
+                    .setNegativeButton("Отмена", null).show();
+        });
+    }
+
+    private void confirmMerge(SpeakerProfiles.Profile source, SpeakerProfiles.Profile target) {
+        if (!isOpen(source.id())) return;
+        new AlertDialog.Builder(activity).setTitle("Объединить спикеров?")
+                .setMessage("Все реплики и голосовые образцы «" + source.name() + "» будут связаны с профилем «"
+                        + target.name() + "».")
+                .setNegativeButton("Отмена", null)
+                .setPositiveButton("Объединить", (dialog, which) -> {
+                    if (!isOpen(source.id())) return;
+                    run(() -> {
+                        profiles.merge(source.id(), target.id());
+                        return null;
+                    }, ignored -> {
+                        if (source.id().equals(profileId)) selectProfile(target.id());
+                        updated();
+                    });
                 }).show();
     }
 
     void linkSpeaker(File recording, ReflectTranscript transcript, String localId,
                      BooleanSupplier active, Runnable linked) {
         run(() -> {
-            List<SpeakerProfiles.Profile> available = profiles.list();
+            String selected = profiles.assign(recording, transcript).get(localId);
+            List<SpeakerProfiles.Profile> available = profiles.visibleProfiles();
             Map<String, Double> scores = new HashMap<>();
             for (var candidate : profiles.suggestions(recording, transcript, localId))
                 scores.put(candidate.profile().id(), candidate.score());
-            return new Selection(available, profiles.links(recording, transcript).get(localId), scores);
-        }, selection -> {
-            if (!active.getAsBoolean()) return;
+            return new Selection(available, selected, scores);
+        }, active, selection -> {
             String[] names = new String[selection.profiles.size() + 2];
-            int selected = 0; names[0] = "Без привязки"; names[names.length - 1] = "Новый профиль…";
+            int selected = -1;
+            names[0] = "Отдельный спикер";
+            names[names.length - 1] = "Новый профиль…";
             for (int i = 0; i < selection.profiles.size(); i++) {
                 var profile = selection.profiles.get(i);
                 Double score = selection.scores.get(profile.id());
-                names[i + 1] = profile.name() + (score == null ? "" : String.format(Locale.ROOT, " · сходство %.2f", score));
+                names[i + 1] = profile.name() + (profile.self() ? " · Я" : "")
+                        + (score == null ? "" : String.format(Locale.ROOT, " · сходство %.2f", score));
                 if (profile.id().equals(selection.linked)) selected = i + 1;
             }
             new AlertDialog.Builder(activity).setTitle("Спикер этой записи")
@@ -94,28 +196,45 @@ final class SpeakerProfilesUi {
                                 }, value -> { updated(); if (active.getAsBoolean()) linked.run(); });
                             });
                         } else {
-                            String id = which == 0 ? null : selection.profiles.get(which - 1).id();
-                            run(() -> { profiles.link(recording, transcript, localId, id); return null; },
-                                    value -> { updated(); if (active.getAsBoolean()) linked.run(); });
+                            run(() -> {
+                                if (which == 0) profiles.separate(recording, transcript, localId);
+                                else profiles.link(recording, transcript, localId, selection.profiles.get(which - 1).id());
+                                return null;
+                            }, value -> { updated(); if (active.getAsBoolean()) linked.run(); });
                         }
                     }).setNegativeButton("Отмена", null).show();
         });
     }
 
     void speakerNames(File recording, ReflectTranscript transcript, Consumer<Map<String, String>> loaded) {
-        run(() -> profiles.names(recording, transcript), loaded);
+        run(() -> {
+            profiles.assign(recording, transcript);
+            return profiles.names(recording, transcript);
+        }, loaded);
     }
 
-    private void updated() { refreshSpeakers(); changed.run(); }
+    private void updated() {
+        refreshSpeakers();
+        refreshProfile();
+        changed.run();
+    }
 
     private <T> void run(Query<T> query, Consumer<T> done) {
+        run(query, () -> true, done);
+    }
+
+    private <T> void run(Query<T> query, BooleanSupplier active, Consumer<T> done) {
         if (closed) return;
         io.execute(() -> {
             try {
                 T value = query.get();
-                main.post(() -> { if (!closed && !activity.isDestroyed()) done.accept(value); });
+                main.post(() -> { if (!closed && !activity.isDestroyed() && active.getAsBoolean()) done.accept(value); });
             } catch (IOException | RuntimeException error) {
-                main.post(() -> { if (!closed && !activity.isDestroyed()) notice.accept("Не удалось сохранить или прочитать профиль спикера"); });
+                main.post(() -> {
+                    if (!closed && !activity.isDestroyed() && active.getAsBoolean()) {
+                        notice.accept("Не удалось сохранить или прочитать профиль спикера");
+                    }
+                });
             }
         });
     }

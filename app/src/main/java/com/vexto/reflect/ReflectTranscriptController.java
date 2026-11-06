@@ -242,6 +242,12 @@ final class ReflectTranscriptController {
                         imported = ReflectTranscript.parse(input);
                     }
                     store.save(recording, imported);
+                    String message = "Транскрипт импортирован";
+                    try { profiles.assign(recording, imported); }
+                    catch (IOException | RuntimeException indexFailure) {
+                        message = "Транскрипт импортирован. Не удалось обновить список спикеров.";
+                    }
+                    String resultMessage = message;
                     deliver(current, () -> {
                         transcript = imported;
                         loading = false;
@@ -249,7 +255,7 @@ final class ReflectTranscriptController {
                         view.transcriptView().speakerNames(Collections.emptyMap());
                         render();
                         refreshSpeakerNames(current, recording);
-                        notice.accept("Транскрипт импортирован");
+                        notice.accept(resultMessage);
                     });
                 } else {
                     ReflectTranscript source = snapshot;
@@ -394,6 +400,7 @@ final class ReflectTranscriptController {
         if (result.transcript() != null || !result.recording().equals(file)) {
             notice.accept(result.message() == null ? "Расшифровка готова" : result.message());
         }
+        if (result.transcript() != null && view.screen() == ReflectView.Screen.SPEAKERS) profilesUi.refreshSpeakers();
     }
 
     private void showTranscriptAfterProcessing() {

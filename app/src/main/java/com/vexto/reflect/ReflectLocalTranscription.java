@@ -130,6 +130,10 @@ final class ReflectLocalTranscription {
             catch (IOException | RuntimeException unavailable) {
                 warning = "Расшифровка сохранена. Не удалось сохранить голосовые профили.";
             }
+            try { profiles.assign(recording, transcript); }
+            catch (IOException | RuntimeException unavailable) {
+                warning = "Расшифровка сохранена. Не удалось обновить список спикеров.";
+            }
             String message = warning;
             main.post(() -> complete(started, transcript, message));
         } catch (IOException | RuntimeException failure) {
