@@ -1,0 +1,75 @@
+{
+  "version": "quality-508faa2fac36",
+  "artifacts": {
+    "giga_decoder": {
+      "path": "gigaam-v3-e2e-rnnt/decoder.onnx",
+      "sha256": "38fc7475443ea2a26f63211ca350f73ac50fff824ab7a3876ee2bd610c53bbc4",
+      "bytes": 4600132,
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/decoder.onnx",
+      "license": "MIT"
+    },
+    "giga_encoder": {
+      "path": "gigaam-v3-e2e-rnnt/encoder.int8.onnx",
+      "sha256": "369f35a71bf288d3b8e0391fabd8dba5f2314088d440bca474056b7b4b6e66bf",
+      "bytes": 224570820,
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/encoder.int8.onnx",
+      "license": "MIT"
+    },
+    "giga_joiner": {
+      "path": "gigaam-v3-e2e-rnnt/joiner.onnx",
+      "sha256": "602ff7017a93311aad34df1437c8d7f49911353c13d6eae7a6ee7b041339465c",
+      "bytes": 2712896,
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/joiner.onnx",
+      "license": "MIT"
+    },
+    "giga_tokens": {
+      "path": "gigaam-v3-e2e-rnnt/tokens.txt",
+      "sha256": "39abae20e692998290c574e606f11a9edef2902a1995463fcff63d1490cf22b7",
+      "bytes": 13354,
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-punct-giga-am-v3-russian-2025-12-16/resolve/a6039be7cee829a9044a69ac0ebaf1c191217c97/tokens.txt",
+      "license": "MIT"
+    },
+    "emotion": {
+      "path": "emotion/emo.int8.onnx",
+      "sha256": "5639b328486d5af9c1a7aff2c584df8319250034310c5a4b7ff4eae95d555b02",
+      "bytes": 305928068,
+      "url": "https://huggingface.co/vvpreo/gigaam-v3-onnx/resolve/03cf125f754af526260037bc96f4edf0642e963b/emo.int8.onnx",
+      "license": "MIT"
+    },
+    "gtcrn": {
+      "path": "gtcrn/gtcrn_simple.onnx",
+      "sha256": "e77603ac0c23dac3227dd2d7135b3a585cbee2679048aecfa886657d3ae1b534",
+      "bytes": 535638,
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models/gtcrn_simple.onnx",
+      "license": "MIT"
+    },
+    "nemotron": {
+      "path": "nemotron/Nemotron-3-Diarization.f32.gguf",
+      "sha256": "3339eca67ba8c7bc4a67b68797b60f8956e3ba1a34d5f84b14a0157ca96185b2",
+      "bytes": 395298848,
+      "url": "",
+      "license": "OpenMDW-1.1; locally converted from pinned official .nemo (see docs/research/nemotron-android.md)"
+    },
+    "whisper": {
+      "path": "whisper/ggml-large-v3-q5_0.bin",
+      "sha256": "d75795ecff3f83b5faa89d1900604ad8c780abd5739fae406de19f23ecd98ad1",
+      "bytes": 1081140203,
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-q5_0.bin",
+      "license": "MIT"
+    },
+    "qwen": {
+      "path": "qwen/Qwen3-1.7B-Q4_K_M.gguf",
+      "sha256": "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5",
+      "bytes": 1282439264,
+      "url": "https://huggingface.co/ggml-org/Qwen3-1.7B-GGUF/resolve/daeb8e2d528a760970442092f6bf1e55c3b659eb/Qwen3-1.7B-Q4_K_M.gguf",
+      "license": "Apache-2.0"
+    },
+    "voiceprint_embedding": {
+      "path": "voiceprints/3dspeaker_speech_eres2net_base_200k_sv_zh-cn_16k-common.onnx",
+      "sha256": "e2d2048292e055f7b61cdec3db010503f35369b245bf0b3bbad021c9a91e4053",
+      "bytes": 39593765,
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_200k_sv_zh-cn_16k-common.onnx",
+      "license": "Apache-2.0 (3D-Speaker)"
+    }
+  }
+}

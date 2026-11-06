@@ -12,16 +12,30 @@ android {
 
     defaultConfig {
         minSdk 28
-        consumerProguardFiles 'consumer-rules.pro'
         ndk { abiFilters 'arm64-v8a', 'x86_64' }
-        externalNativeBuild {
-            cmake { arguments '-DANDROID_STL=none' }
+        consumerProguardFiles 'consumer-rules.pro'
+        if (!providers.gradleProperty('vextoSkipNative').isPresent()) {
+            externalNativeBuild { cmake { cppFlags '-std=c++17'; arguments '-DANDROID_STL=c++_static' } }
         }
     }
 
-    externalNativeBuild {
-        cmake { path 'src/main/cpp/CMakeLists.txt' }
+    // Runtime sources/headers are prepared offline by scripts; no build-time downloads.
+    if (!providers.gradleProperty('vextoSkipNative').isPresent()) {
+        externalNativeBuild { cmake {
+            path 'src/main/cpp/CMakeLists.txt'
+            version providers.gradleProperty('vextoCmakeVersion').orElse('3.22.1').get()
+        } }
     }
+    ndkVersion '28.2.13676358'
+    if (providers.gradleProperty('vextoNdkPath').isPresent()) {
+        ndkPath providers.gradleProperty('vextoNdkPath').get()
+    }
+    sourceSets { main {
+        // Explicit source roots keep the legacy multi-GB embedded pack out of quality APKs.
+        assets.srcDirs = ['src/main/quality-assets', "$rootDir/tools/native/licenses"]
+    } }
+
+    packaging { jniLibs { useLegacyPackaging = true } }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -41,3 +55,19 @@ dependencies {
 
     testImplementation 'junit:junit:4.13.2'
 }
+
+// Fail before packaging a default build with silently missing recognizers.
+tasks.register('verifyQualityRuntime') {
+    onlyIf { !providers.gradleProperty('vextoSkipNative').isPresent() }
+    doLast {
+        android.defaultConfig.ndk.abiFilters.each { abi ->
+            ['libvexto_nemotron_exec.so', 'libvexto_whisper_exec.so', 'libvexto_llama_exec.so',
+             'libnemo_speech_asr.so', 'libnemo_speech_asr_c.so'].each { name ->
+                if (!file("src/main/jniLibs/$abi/$name").isFile()) {
+                    throw new GradleException("Missing quality native runtime $abi/$name; run scripts/build_native_runtime.py (engine/README.md)")
+                }
+            }
+        }
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'verifyQualityRuntime' }

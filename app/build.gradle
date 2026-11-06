@@ -27,6 +27,7 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    packaging { jniLibs { useLegacyPackaging = true } }
     testOptions {
         unitTests.includeAndroidResources = true
         unitTests.all {

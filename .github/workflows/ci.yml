@@ -86,7 +86,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: AAR без весов моделей
-        run: bash scripts/fetch_models.sh --aar-only
-      - name: JVM-тесты движка, локальной базы и сборка APK
-        run: ./gradlew --no-daemon --max-workers=2 :engine:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug
+      - name: SDK и Java API без весов моделей
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+          bash scripts/fetch_models.sh --aar-only
+      - name: JVM-тесты движка и локальной базы, проверка Java APK
+        run: bash ./gradlew --no-daemon --max-workers=2 -PvextoSkipNative=true :engine:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug
+
