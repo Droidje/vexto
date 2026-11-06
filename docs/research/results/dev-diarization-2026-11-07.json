@@ -1,0 +1,367 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "pipeline": "dev production Silero VAD + ERes2Net-base + custom clustering, raw turns",
+  "protocol": {
+    "collar_seconds": 0,
+    "overlap_scored": true,
+    "uem": "each fixture [0,duration)",
+    "mapping": "global one-to-one per recording; micro DER from pooled speaker-seconds",
+    "same_clips_and_reference_hashes_as_baseline": true,
+    "scope": "diagnostic Pears subset; not cross-corpus benchmarking",
+    "reference_caveat": "Only primary N/C/R manual Words tiers; Listener unannotated; completeness/listening not independently confirmed"
+  },
+  "manifest_sha256": "a1dd270e2655bcf9be8fc94383e5bbf1100e46fc1accb97138e86bb695f16c60",
+  "baseline_json_sha256": "23f615fd31b279a03ff040288d6359907a5a0e1879ac8a7395bb55f25c3703ef",
+  "baseline_model_id": "nemotron-f32",
+  "fixtures": [
+    {
+      "fixture_id": "pears04-301-331",
+      "audio_sha256": "a38e06480bad82f0344ad208fa2cf12b4ed06e0b4d05e474a0a8a0ad0ad864e8",
+      "reference_rttm_sha256": "bed5db83ed0ebc1786f48f175cb7ddb89ade05b14d493d67b01ffdb52fcc5304",
+      "duration_seconds": 30,
+      "status": "scored",
+      "score": {
+        "status": "scored",
+        "der": 0.1952493342762813,
+        "der_percent": 19.52493342762813,
+        "miss_speaker_seconds": 1.8598149789999936,
+        "false_alarm_speaker_seconds": 2.4804613940000273,
+        "confusion_speaker_seconds": 0.7185076660000043,
+        "error_speaker_seconds": 5.058784039000026,
+        "reference_speaker_seconds": 25.909353584999966,
+        "mapping_hypothesis_to_reference": {
+          "speaker_0": "N",
+          "speaker_1": "R",
+          "speaker_2": "C"
+        },
+        "unmapped_reference_labels": [],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_0",
+          "speaker_1",
+          "speaker_2"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "measurements": {
+        "wall_seconds": 2.564,
+        "process_rtf": 0.08546666666666666,
+        "stage_seconds": {
+          "prepare": 0.016,
+          "decode": 0.72,
+          "vad": 0.271,
+          "diarization": 1.495
+        },
+        "peak_rss_bytes": 276250624,
+        "peak_reset_succeeded": true,
+        "peak_scope": "after_model_installation",
+        "memory_metric": "Android app process VmHWM; not PSS or a hard memory bound",
+        "threads": 4,
+        "model_manifest_sha256": "820d248360b807dd02cc108704c67ef9a0de18b95810aeab6796b47b6c9330c9",
+        "forced_speaker_count": null,
+        "asr_executed": false
+      },
+      "hypothesis_rttm_sha256": "e19216c11e7d7b6f2ef64565e33f8d9f407c2d5d8748b2a65b789850c855ce03",
+      "stats_sha256": "52969b4f304089387b13bc7d5d29aa7f6328262d427ba5f023566a61d27bcc18",
+      "nemotron_baseline": {
+        "miss_speaker_seconds": 0.3072099069999954,
+        "false_alarm_speaker_seconds": 2.531856322000029,
+        "confusion_speaker_seconds": 0.0,
+        "error_speaker_seconds": 2.8390662290000246,
+        "reference_speaker_seconds": 25.909353584999966,
+        "der": 0.10957688387269073,
+        "der_percent": 10.957688387269073
+      },
+      "delta_der_percentage_points": 8.567245040359058
+    },
+    {
+      "fixture_id": "pears22-345-375",
+      "audio_sha256": "95b5330f8d4e45890ae50f6ee5b719cc1e029ef89358ed9cc72b406d1c8271ec",
+      "reference_rttm_sha256": "a7c4192133d0af5c57e754e6a7404f7eb5151c871a83216029a0a286184af4a3",
+      "duration_seconds": 30,
+      "status": "scored",
+      "score": {
+        "status": "scored",
+        "der": 0.3676444913008636,
+        "der_percent": 36.764449130086355,
+        "miss_speaker_seconds": 5.740785368999992,
+        "false_alarm_speaker_seconds": 3.5622053460000114,
+        "confusion_speaker_seconds": 1.696410418000002,
+        "error_speaker_seconds": 10.999401133000006,
+        "reference_speaker_seconds": 29.91858002299998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_0": "C",
+          "speaker_1": "N"
+        },
+        "unmapped_reference_labels": [
+          "R"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_0",
+          "speaker_1"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "measurements": {
+        "wall_seconds": 2.72,
+        "process_rtf": 0.09066666666666667,
+        "stage_seconds": {
+          "prepare": 0.008,
+          "decode": 0.722,
+          "vad": 0.337,
+          "diarization": 1.645
+        },
+        "peak_rss_bytes": 280489984,
+        "peak_reset_succeeded": true,
+        "peak_scope": "after_model_installation",
+        "memory_metric": "Android app process VmHWM; not PSS or a hard memory bound",
+        "threads": 4,
+        "model_manifest_sha256": "820d248360b807dd02cc108704c67ef9a0de18b95810aeab6796b47b6c9330c9",
+        "forced_speaker_count": null,
+        "asr_executed": false
+      },
+      "hypothesis_rttm_sha256": "73bf552905ac04504fed86de5a63cdcf705debb9e6afe4e1a9b75cd95b54239e",
+      "stats_sha256": "12d75ea0bc133f1517a1b47fb8d674d5a5924bddeccb50e878796d289695544a",
+      "nemotron_baseline": {
+        "miss_speaker_seconds": 0.48682916600000503,
+        "false_alarm_speaker_seconds": 5.9422491430000255,
+        "confusion_speaker_seconds": 1.699586930999999,
+        "error_speaker_seconds": 8.128665240000029,
+        "reference_speaker_seconds": 29.91858002299998,
+        "der": 0.2716928822741954,
+        "der_percent": 27.169288227419543
+      },
+      "delta_der_percentage_points": 9.595160902666812
+    },
+    {
+      "fixture_id": "pears23-382-412",
+      "audio_sha256": "ced9218b27536bdbb137b6901e6e261b534f37dea395d6845ddc99590b6f6732",
+      "reference_rttm_sha256": "a697abac98fd7774ac6d2ac09247b24ba0ac131d9f5d27e8d8178cb44291cc38",
+      "duration_seconds": 30,
+      "status": "scored",
+      "score": {
+        "status": "scored",
+        "der": 0.3534708537658055,
+        "der_percent": 35.34708537658055,
+        "miss_speaker_seconds": 5.407664563999993,
+        "false_alarm_speaker_seconds": 2.5464782400000106,
+        "confusion_speaker_seconds": 1.6712878749999973,
+        "error_speaker_seconds": 9.625430679,
+        "reference_speaker_seconds": 27.23118632399998,
+        "mapping_hypothesis_to_reference": {
+          "speaker_0": "C",
+          "speaker_1": "N"
+        },
+        "unmapped_reference_labels": [
+          "R"
+        ],
+        "reference_labels": [
+          "C",
+          "N",
+          "R"
+        ],
+        "hypothesis_labels": [
+          "speaker_0",
+          "speaker_1"
+        ],
+        "collar_seconds": 0,
+        "overlap_scored": true,
+        "uem": {
+          "start": 0,
+          "end": 30.0
+        },
+        "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored"
+      },
+      "measurements": {
+        "wall_seconds": 2.736,
+        "process_rtf": 0.0912,
+        "stage_seconds": {
+          "prepare": 0.02,
+          "decode": 1.179,
+          "vad": 0.221,
+          "diarization": 1.312
+        },
+        "peak_rss_bytes": 272760832,
+        "peak_reset_succeeded": true,
+        "peak_scope": "after_model_installation",
+        "memory_metric": "Android app process VmHWM; not PSS or a hard memory bound",
+        "threads": 4,
+        "model_manifest_sha256": "820d248360b807dd02cc108704c67ef9a0de18b95810aeab6796b47b6c9330c9",
+        "forced_speaker_count": null,
+        "asr_executed": false
+      },
+      "hypothesis_rttm_sha256": "419c8f11407c874302cd0010ea88067b2d5cdef833e26eba328dcaba1302ac3b",
+      "stats_sha256": "57211e6d36a5bb76820c0ef61ab7b0d2540d73d190532b65bd00c83eb8fb7092",
+      "nemotron_baseline": {
+        "miss_speaker_seconds": 0.7678799669999954,
+        "false_alarm_speaker_seconds": 5.7246936430000135,
+        "confusion_speaker_seconds": 0.600669486000001,
+        "error_speaker_seconds": 7.09324309600001,
+        "reference_speaker_seconds": 27.23118632399998,
+        "der": 0.26048233858061626,
+        "der_percent": 26.048233858061625
+      },
+      "delta_der_percentage_points": 9.298851518518926
+    }
+  ],
+  "aggregate": {
+    "miss_speaker_seconds": 13.008264911999978,
+    "false_alarm_speaker_seconds": 8.58914498000005,
+    "confusion_speaker_seconds": 4.0862059590000035,
+    "error_speaker_seconds": 25.683615851000035,
+    "reference_speaker_seconds": 83.05911993199993,
+    "der": 0.3092209003903133,
+    "der_percent": 30.922090039031332,
+    "median_app_wall_seconds": 2.72,
+    "max_app_process_peak_rss_bytes": 280489984
+  },
+  "comparison": {
+    "nemotron_micro": {
+      "miss_speaker_seconds": 1.5619190399999958,
+      "false_alarm_speaker_seconds": 14.198799108000069,
+      "confusion_speaker_seconds": 2.300256417,
+      "error_speaker_seconds": 18.060974565000063,
+      "reference_speaker_seconds": 83.05911993199993,
+      "der": 0.2174472180753479,
+      "der_percent": 21.744721807534788
+    },
+    "delta_der_percentage_points": 9.177368231496544,
+    "interpretation": "negative delta means lower DER on these identical clips only",
+    "measurement_note": "Dev timings/RSS cover Android app process; baseline uses native CLI; no direct memory equivalence is assumed"
+  },
+  "date": "2026-11-07",
+  "execution": {
+    "location": "Android APK, x86_64 AVD Pixel_7 RAM4096MB",
+    "api": "36",
+    "source_dev_commit": "b751007f07b2998c6452c0c66769abf1f96eeb9e",
+    "production_core_unchanged": true,
+    "source_git_blob_sha256": {
+      "engine/src/main/kotlin/com/vexto/engine/diarization/Diarizer.kt": "42c31a5f50a7e64d0f346f2ec7a53dc178c03e46d7d03bf6a75bd69e0851111a",
+      "engine/src/main/kotlin/com/vexto/engine/diarization/SpeakerClustering.kt": "604324db312430e515943bcad626f5d8394c868792a1945a69f96ee1886bdf5d",
+      "engine/src/main/kotlin/com/vexto/engine/pipeline/VoiceDetector.kt": "b69e0c3b29a25bddee07e17176f945ccc3235d7f2e577fc84164042898420840",
+      "engine/src/main/kotlin/com/vexto/engine/audio/PcmAudio.kt": "eec31c3b8d3a5b40570c48c601277b0eeff6e3475c8798a1aa105185f8d4d8c5",
+      "engine/src/main/kotlin/com/vexto/engine/audio/AudioDecoder.kt": "e9bf23edf02a68d9545171abf6343557495147978f65bab84a616b0d30479c57"
+    },
+    "apk_sha256": "4e8a7d29f4c4fa5a5f2a1714fd774de3d33363cc2f51430f6c2a0d3481d144b1",
+    "harness_package": "com.vexto.reflect.diarprobe",
+    "compile_sdk": 36,
+    "target_sdk": 35,
+    "compile_note": "private Gradle init uses installed SDK36; target/min SDK and production algorithms unchanged; no new SDK license accepted",
+    "asr_executed": false,
+    "fresh_app_process_per_clip": true,
+    "known_speaker_count_supplied": false,
+    "threshold": 0.35,
+    "vad_agc": true,
+    "short_cluster_absorption_seconds": 5,
+    "single_active_label_per_frame": true,
+    "threads": 4,
+    "models": {
+      "fetch_script_sha256": "8019105423c0a6aa53170d31c4b0ea966274f988d841d1a5c0648ce554c5791e",
+      "asset_manifest_sha256": "820d248360b807dd02cc108704c67ef9a0de18b95810aeab6796b47b6c9330c9",
+      "asset_manifest_version": "e3353c8690dc",
+      "artifacts": [
+        {
+          "name": "AAR",
+          "file": "engine/libs/com/k2fsa/sherpa-onnx/2.0.1/sherpa-onnx-2.0.1.aar",
+          "bytes": 49441341,
+          "sha256": "a8d09d1d32f3eb8520482c6d3d43fae674681c5b050385967c70a3c2c9bf0ee7",
+          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/sherpa-onnx-2.0.1.aar",
+          "provision_method": "existing_sha_verified",
+          "seconds": 0.094
+        },
+        {
+          "name": "decoder.onnx",
+          "file": "engine/src/main/assets/models/asr/gigaam-v3-rnnt/decoder.onnx",
+          "bytes": 3331651,
+          "sha256": "5d1cfef155d8e07f213bd2f3229b5f6c5c29355c7fa5c1b9eb62cb1925725254",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16/resolve/main/decoder.onnx",
+          "provision_method": "existing_sha_verified",
+          "seconds": 0.063
+        },
+        {
+          "name": "encoder.int8.onnx",
+          "file": "engine/src/main/assets/models/asr/gigaam-v3-rnnt/encoder.int8.onnx",
+          "bytes": 224570814,
+          "sha256": "0ec54e5f130a91c0f228d21795ede10b31c992a1f73e45dcd827e843a71a9b50",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16/resolve/main/encoder.int8.onnx",
+          "provision_method": "existing_sha_verified",
+          "seconds": 0.407
+        },
+        {
+          "name": "joiner.onnx",
+          "file": "engine/src/main/assets/models/asr/gigaam-v3-rnnt/joiner.onnx",
+          "bytes": 1440448,
+          "sha256": "fd1d02f45c2ad3d6b67cc149811ad794ab4b020ed49a0a9e2790a8619d1cddd8",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16/resolve/main/joiner.onnx",
+          "provision_method": "existing_sha_verified",
+          "seconds": 0.015
+        },
+        {
+          "name": "tokens.txt",
+          "file": "engine/src/main/assets/models/asr/gigaam-v3-rnnt/tokens.txt",
+          "bytes": 196,
+          "sha256": "17cc514451bcceac9c280068c71502f8448f99e9fb1456b8d0761651fd0392f2",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16/resolve/main/tokens.txt",
+          "provision_method": "existing_sha_verified",
+          "seconds": 0.016
+        },
+        {
+          "name": "3dspeaker_speech_eres2net_base_200k_sv_zh-cn_16k-common.onnx",
+          "file": "engine/src/main/assets/models/diarization/3dspeaker_speech_eres2net_base_200k_sv_zh-cn_16k-common.onnx",
+          "bytes": 39593765,
+          "sha256": "e2d2048292e055f7b61cdec3db010503f35369b245bf0b3bbad021c9a91e4053",
+          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_200k_sv_zh-cn_16k-common.onnx",
+          "provision_method": "existing_sha_verified",
+          "seconds": 0.094
+        },
+        {
+          "name": "silero_vad.onnx",
+          "file": "engine/src/main/assets/models/vad/silero_vad.onnx",
+          "bytes": 643854,
+          "sha256": "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6",
+          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx",
+          "provision_method": "existing_sha_verified",
+          "seconds": 0.031
+        }
+      ]
+    }
+  },
+  "validation": {
+    "gradle_build": "passed",
+    "engine_jvm_unit_tests": 24,
+    "engine_test_failures": 0,
+    "python_unit_tests": 94,
+    "python_test_failures": 0
+  },
+  "reference_overlap_diagnostic": {
+    "extra_speaker_seconds_by_fixture": {
+      "pears04-301-331": 1.573836809999996,
+      "pears22-345-375": 4.46713398399999,
+      "pears23-382-412": 4.473900560999997
+    },
+    "single_active_speaker_unavoidable_miss_seconds": 10.514871354999983,
+    "scope": "reference-only lower bound when overlap is scored; not a model-derived reference or a causal ablation"
+  }
+}

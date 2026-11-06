@@ -84,6 +84,31 @@ adb logcat -s VextoEval                      # RTF, пик памяти и вр�
 
 Каталог должно создать само приложение: если создать его через `adb shell mkdir`, приложение не сможет туда писать.
 
+## Raw DER без распознавания текста
+
+В debug-сборке есть `com.vexto.engine.eval.DiarizationEvalActivity`. Она вызывает
+тот же production-декодер, VAD и `Diarizer` с `speakerCount=null`, но сохраняет
+сырой `<stem>.rttm` до ASR, `<stem>.stats.json` и `_done` (`ok N` / `error`).
+Stats содержат SHA256 WAV/RTTM/манифеста, времена этапов и VmHWM процесса.
+
+Intent `--es dir <unique-slug>` выбирает app-owned подкаталог
+`getExternalFilesDir("diar-eval")/<unique-slug>`; `--ei threads 4` задаёт 1–4 потока.
+Пустой каталог делает bootstrap установки моделей. После `ok 0` поместите туда
+тестовые WAV и удалите только `_done` своего bootstrap-запуска перед повторным стартом.
+Готовые RTTM/stats не перезаписываются: следующий независимый прогон использует
+новый slug. Для отдельных замеров запускайте каждый клип в свежем процессе.
+
+После `adb pull` оценка на ноутбуке (reference модели на Android не передаётся):
+
+```sh
+python tools/benchmarks/score_dev_diarization.py --manifest MANIFEST.json --hypotheses-dir HYP_DIR --output SCORE.json
+```
+
+Scorer требует те же хеши русских фикстур, что у сохранённого Nemotron baseline,
+`status=completed`, `forced_speaker_count=null`, `asr_executed=false` и связанный
+хеш RTTM. При неполном/невалидном прогоне успешный pooled DER не публикуется.
+[Результат прямого сравнения dev](../docs/research/russian-diarization.md#прямое-сравнение-с-диаризатором-из-dev-apk).
+
 ## Замеры на эмуляторе
 
 AVD Android 35 arm64, 4 vCPU, 4 ГБ RAM, хост Apple M4 Max, 4 потока, 24 wav-файла 16 кГц общей длиной 16,6 мин:
