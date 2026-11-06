@@ -6,12 +6,13 @@ enum class Stage(val title: String) {
     Decoding("Декодирую аудио"),
     Denoising("Убираю шум"),
     Diarization("Разделяю голоса"),
+    Voiceprints("Сохраняю голоса"),
     Recognition("Распознаю речь"),
     Comparison("Распознаю Whisper"),
     Selection("Сравниваю варианты"),
-    Emotion("Оцениваю эмоциональную окраску"),
     Assembly("Собираю расшифровку"),
     Punctuation("Расставляю знаки"),
+    Emotion("Определяю эмоции реплик"),
 }
 
 sealed interface TranscriptionEvent {

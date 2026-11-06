@@ -9,6 +9,13 @@ import java.nio.file.Files
 import kotlin.math.ln
 
 class QualityProvidersTest {
+    @Test fun `portable Android word pattern handles unicode whitespace without Java U flag`() {
+        val text = "Один\u00a0два\u2003три"
+        val (tokens, words) = GigaTokenAlignment.align(text, arrayOf("Один", "\u00a0два", "\u2003три"),
+            floatArrayOf(0f, .3f, .6f), 1000)
+        assertEquals(text, tokens.joinToString("") { it.text })
+        assertEquals(listOf("Один", "два", "три"), words.map { it.text })
+    }
     @Test fun `native tokens keep punctuation case whitespace and relative offsets`() {
         val text = "Привет, мир!"
         val (tokens,words) = GigaTokenAlignment.align(text,arrayOf(" Привет",","," мир","!"),

@@ -7,9 +7,15 @@ import com.vexto.engine.review.ImmutableAsrCandidate
 import com.vexto.engine.review.LocalNativeExecutor
 import com.vexto.engine.review.LocalNativeResult
 import com.vexto.engine.review.sha256
+import com.vexto.engine.review.writeImmutableArtifact
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -33,6 +39,7 @@ class WhisperComparisonProvider(
     private val bestOf: Int = 1,
     private val flashAttention: Boolean = true,
     private val timeoutMs: Long = 600_000,
+    private val audioContext: Int = 768,
 ) {
     suspend fun generate(chunk: ComparisonChunk, artifactFile: File): ImmutableAsrCandidate =
         generateMeasured(chunk, artifactFile).first
@@ -51,6 +58,9 @@ class WhisperComparisonProvider(
     private suspend fun generateMeasured(chunk: ComparisonChunk, artifactFile: File): Pair<ImmutableAsrCandidate, LocalNativeResult> {
         require(chunk.id.matches(Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,95}"))) { "invalid_chunk_id" }
         require(chunk.durationMs in 1L..15_000L) { "comparison_chunk_too_long" }
+        require(audioContext in 1..1500) { "invalid_audio_context" }
+        // Pinned whisper.cpp: 2 mel frames per encoder frame, HOP160 / 16kHz = 10ms.
+        require(chunk.durationMs <= audioContext * 20L) { "chunk_exceeds_audio_context" }
         require(chunk.inputSha256.matches(Regex("[0-9a-f]{64}"))) { "invalid_chunk_hash" }
         require(sha256(chunk.wav.readBytes()) == chunk.inputSha256) { "chunk_input_hash_mismatch" }
         require(modelFile.isFile) { "whisper_model_missing" }
@@ -63,19 +73,50 @@ class WhisperComparisonProvider(
         require(!original.exists()) { "native_artifact_already_exists" }
         val arguments = mutableListOf("-m", modelFile.absolutePath, "-f", chunk.wav.absolutePath,
             "-of", prefix.absolutePath, "-ojf", "-l", "ru", "-ng", "-t", threads.toString(),
-            "-bs", beamSize.toString(), "-bo", bestOf.toString())
+            "-bs", beamSize.toString(), "-bo", bestOf.toString(), "-ac", audioContext.toString())
         if (flashAttention) arguments += "-fa"
         val result = executor.run("libvexto_whisper_exec.so", arguments, dir,
             File(dir, artifactFile.nameWithoutExtension + ".stdout"),
             File(dir, artifactFile.nameWithoutExtension + ".stderr"), timeoutMs)
         require(sha256(chunk.wav.readBytes()) == chunk.inputSha256) { "chunk_input_hash_mismatch_after_inference" }
         require(original.isFile && original.length() <= 4_000_000) { "whisper_json_missing_or_oversized" }
-        val parsed = parseNativeJson(original.readText(), chunk.durationMs)
+        val nativeBytes = original.readBytes()
+        val nativeHash = sha256(nativeBytes)
+        val parsed = parseNativeJson(nativeBytes.toString(Charsets.UTF_8), chunk.durationMs)
+        val profile = buildJsonObject {
+            put("schema_version", 1); put("chunk_id", chunk.id); put("input_sha256", chunk.inputSha256)
+            put("native_json_sha256", nativeHash)
+            put("model_file", modelFile.name); put("model_size_bytes", modelFile.length())
+            put("audio_context_frames", audioContext); put("encoder_frame_ms", 20)
+            put("audio_context_capacity_ms", audioContext * 20L); put("input_duration_ms", chunk.durationMs)
+            put("threads", threads); put("beam_size", beamSize); put("best_of", bestOf)
+            put("flash_attention", flashAttention); put("use_gpu", false); put("language", "ru")
+            put("elapsed_ms", result.elapsedMs); put("peak_combined_rss_bytes", result.peakCombinedRssBytes)
+        }
+        writeImmutableArtifact(File(dir, artifactFile.nameWithoutExtension + ".profile-audit.json"),
+            profile.toString().toByteArray(Charsets.UTF_8))
+        val timing = buildJsonObject {
+            put("schema_version", 1); put("chunk_id", chunk.id); put("input_sha256", chunk.inputSha256)
+            put("native_json_sha256", nativeHash)
+            put("policy", "unavailable_or_invalid_offset_pair_to_null_no_interpolation")
+            put("issues", buildJsonArray {
+                parsed.timingIssues.forEach { issue -> add(buildJsonObject {
+                    put("segment_index", issue.segmentIndex); put("token_index", issue.tokenIndex)
+                    put("reason", issue.reason); put("native_from", issue.nativeFrom ?: JsonNull)
+                    put("native_to", issue.nativeTo ?: JsonNull)
+                }) }
+            })
+        }
+        writeImmutableArtifact(File(dir, artifactFile.nameWithoutExtension + ".timing-audit.json"),
+            timing.toString().toByteArray(Charsets.UTF_8))
         return ImmutableAsrCandidate.create(chunk.id, AsrSource.WHISPER, chunk.inputSha256,
             parsed.text, parsed.tokens, parsed.words, artifactFile) to result
     }
 
-    data class ParsedWhisper(val text: String, val tokens: List<AsrToken>, val words: List<Word>)
+    data class TokenTimingIssue(val segmentIndex: Int, val tokenIndex: Int, val reason: String,
+        val nativeFrom: JsonElement?, val nativeTo: JsonElement?)
+    data class ParsedWhisper(val text: String, val tokens: List<AsrToken>, val words: List<Word>,
+        val timingIssues: List<TokenTimingIssue> = emptyList())
 
     companion object {
         /** Parse the official -ojf file; stdout is never used as an ASR candidate. */
@@ -85,17 +126,33 @@ class WhisperComparisonProvider(
             val text = StringBuilder()
             val tokens = mutableListOf<AsrToken>()
             val words = mutableListOf<Word>()
-            for (item in segments) {
+            val timingIssues = mutableListOf<TokenTimingIssue>()
+            for ((segmentIndex, item) in segments.withIndex()) {
                 val segment = item.jsonObject
                 val segmentText = segment.getValue("text").jsonPrimitive.also { require(it.isString) }.content
                 text.append(segmentText) // no trim/rewriting: the entire original native text survives
                 val segmentTokens = segment["tokens"]?.let { value ->
-                    if (value == JsonNull) emptyList() else value.jsonArray.map { tokenValue ->
+                    if (value == JsonNull) emptyList() else value.jsonArray.mapIndexed { tokenIndex, tokenValue ->
                         val token = tokenValue.jsonObject
                         val tokenText = token.getValue("text").jsonPrimitive.also { require(it.isString) }.content
-                        val offsets = token["offsets"]?.jsonObject
-                        fun time(key: String): Long? = offsets?.get(key)?.jsonPrimitive?.longOrNull
-                        AsrToken(tokenText, time("from"), time("to"), token["id"]?.jsonPrimitive?.intOrNull)
+                        val offsets = token["offsets"] as? JsonObject
+                        val nativeFrom = offsets?.get("from")
+                        val nativeTo = offsets?.get("to")
+                        fun time(value: JsonElement?): Long? = (value as? JsonPrimitive)
+                            ?.takeUnless { it.isString }?.longOrNull
+                        val from = time(nativeFrom)
+                        val to = time(nativeTo)
+                        val reason = when {
+                            from == null || to == null -> "unavailable_or_noninteger_offsets"
+                            from < 0 || to < 0 -> "negative_offsets"
+                            to < from -> "reversed_offsets"
+                            else -> null
+                        }
+                        if (reason != null) timingIssues += TokenTimingIssue(segmentIndex, tokenIndex,
+                            reason, nativeFrom, nativeTo)
+                        // Native JSON remains unchanged. Invalid pairs cannot become word timing evidence.
+                        AsrToken(tokenText, if (reason == null) from else null,
+                            if (reason == null) to else null, token["id"]?.jsonPrimitive?.intOrNull)
                     }
                 } ?: emptyList()
                 tokens += segmentTokens
@@ -104,7 +161,7 @@ class WhisperComparisonProvider(
                     words += tokenWords(lexical, durationMs)
                 }
             }
-            return ParsedWhisper(text.toString(), tokens.toList(), words.toList())
+            return ParsedWhisper(text.toString(), tokens.toList(), words.toList(), timingIssues.toList())
         }
 
         private fun tokenWords(tokens: List<AsrToken>, durationMs: Long): List<Word> {

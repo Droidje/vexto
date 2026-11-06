@@ -1,6 +1,7 @@
 import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtSession;
+import com.vexto.engine.emotion.GigaAmMel;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -27,8 +28,8 @@ import java.util.regex.Pattern;
  * Feature contract: GigaAM commit 7447938d791c4f3e643386ee22c33777004293a5.
  */
 public final class GigaEmo {
-    private static final int RATE = 16000, FFT = 400, HOP = 160, MELS = 64;
-    private static final int MAX_SAMPLES = 30 * RATE, MAX_WAV_SAMPLES = 30 * 60 * RATE;
+    private static final int RATE = 16000, FFT = 400, MELS = 64;
+    private static final int MAX_WAV_SAMPLES = 30 * 60 * RATE;
     private static final String[] LABELS = {"angry", "sad", "neutral", "positive"};
 
     private GigaEmo() {}
@@ -70,60 +71,6 @@ public final class GigaEmo {
             for (int i = 0; i < audio.length; i++) audio[i] = (short)u16(in) / 32768.0f;
             return audio;
         }
-    }
-
-    /** Torchaudio defaults: power=2, periodic Hann400, center/reflection200,
-     * HTK mel64 over [0,8000], no normalization, ln(clamp(power,1e-9,1e9)).
-     * Result is mel-major contiguous [64,T], T=floor(samples/160)+1.
-     */
-    static float[] logMel(float[] audio) {
-        if (audio.length <= FFT / 2 || audio.length > MAX_SAMPLES)
-            throw new IllegalArgumentException("Audio length outside frontend contract");
-        int bins = FFT / 2 + 1, frames = audio.length / HOP + 1;
-        double[][] cos = new double[bins][FFT], sin = new double[bins][FFT];
-        double[] window = new double[FFT];
-        for (int n = 0; n < FFT; n++) {
-            window[n] = (float)(0.5 - 0.5 * Math.cos(2 * Math.PI * n / FFT));
-            for (int k = 0; k < bins; k++) {
-                double phase = 2 * Math.PI * k * n / FFT;
-                cos[k][n] = Math.cos(phase); sin[k][n] = Math.sin(phase);
-            }
-        }
-        float[] hz = new float[MELS + 2];
-        float maxMel = (float)(2595 * Math.log10(1 + 8000.0 / 700));
-        for (int m = 0; m < hz.length; m++) {
-            float mel = maxMel * m / (MELS + 1);
-            hz[m] = (float)(700 * (Math.pow(10, mel / 2595.0f) - 1));
-        }
-        float[][] filter = new float[MELS][bins];
-        for (int m = 0; m < MELS; m++) for (int k = 0; k < bins; k++) {
-            float freq = (float)RATE * k / FFT;
-            filter[m][k] = Math.max(0, Math.min((freq - hz[m]) / (hz[m+1] - hz[m]),
-                (hz[m+2] - freq) / (hz[m+2] - hz[m+1])));
-        }
-        float[] result = new float[MELS * frames];
-        double[] segment = new double[FFT]; float[] power = new float[bins];
-        for (int t = 0; t < frames; t++) {
-            for (int n = 0; n < FFT; n++) {
-                int index = t * HOP + n - FFT / 2;
-                if (index < 0) index = -index;
-                if (index >= audio.length) index = 2 * audio.length - 2 - index;
-                segment[n] = (float)(audio[index] * window[n]);
-            }
-            for (int k = 0; k < bins; k++) {
-                double re = 0, im = 0;
-                for (int n = 0; n < FFT; n++) {
-                    re += segment[n] * cos[k][n]; im -= segment[n] * sin[k][n];
-                }
-                power[k] = (float)(re * re + im * im);
-            }
-            for (int m = 0; m < MELS; m++) {
-                double value = 0;
-                for (int k = 0; k < bins; k++) value += (float)(power[k] * filter[m][k]);
-                result[m * frames + t] = (float)Math.log(Math.max(1e-9, Math.min(1e9, value)));
-            }
-        }
-        return result;
     }
 
     private static Map<String,String> arguments(String[] args) {
@@ -205,8 +152,9 @@ public final class GigaEmo {
         if (threads < 1 || threads > 8) throw new IllegalArgumentException("threads must be 1..8");
         long begin = System.nanoTime();
         float[] audio = readWav(a.get("--wav"));
+        GigaAmMel frontend = new GigaAmMel();
         if (a.containsKey("--frontend-only")) {
-            float[] features = logMel(audio); int frames=audio.length/HOP+1;
+            float[] features = frontend.logMel(audio); int frames=GigaAmMel.frames(audio.length);
             ByteBuffer raw = ByteBuffer.allocate(features.length * 4).order(ByteOrder.LITTLE_ENDIAN);
             raw.asFloatBuffer().put(features); Files.write(Paths.get(a.get("--features-out")), raw.array());
             System.out.println("frontend_only frames=" + frames + " mel_bins=64"); return;
@@ -230,8 +178,8 @@ public final class GigaEmo {
                 double frontendSeconds=0, inferenceSeconds=0; int count=0;
                 for(Clip clip:clips) {
                 long frontendBegin=System.nanoTime();
-                float[] features=logMel(Arrays.copyOfRange(audio,clip.start,clip.end));
-                int frames=(clip.end-clip.start)/HOP+1;
+                float[] features=frontend.logMel(Arrays.copyOfRange(audio,clip.start,clip.end));
+                int frames=GigaAmMel.frames(clip.end-clip.start);
                 frontendSeconds+=(System.nanoTime()-frontendBegin)/1e9;
                 try (OnnxTensor x = OnnxTensor.createTensor(env, FloatBuffer.wrap(features), new long[]{1,MELS,frames});
                      OnnxTensor lens = OnnxTensor.createTensor(env, LongBuffer.wrap(new long[]{frames}), new long[]{1})) {

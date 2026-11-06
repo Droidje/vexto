@@ -21,12 +21,14 @@ data class Utterance(
     val endMs: Long,
     val text: String,
     val words: List<Word> = emptyList(),
+    val emotionProbabilities: EmotionProbabilities? = null,
 )
 
 /** Участник разговора. [id] стабилен и уходит в экспорт, [name] задаёт пользователь. */
 data class Speaker(
     val id: String,
     val name: String? = null,
+    val voice: VoiceEmbedding? = null,
 ) {
     fun displayName(): String = name ?: "Спикер ${id.substringAfterLast('_')}"
 }

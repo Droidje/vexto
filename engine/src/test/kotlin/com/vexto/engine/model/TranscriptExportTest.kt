@@ -35,6 +35,18 @@ class TranscriptExportTest {
     }
 
     @Test
+    fun `gigaam scores are exported in design order without adding scores to legacy lines`() {
+        val scores = EmotionProbabilities.fromModel(floatArrayOf(0.125f, 0f, 0.25f, 0.625f))
+        assertEquals(Emotion.Joy, scores.strongest())
+        val updated = transcript.copy(utterances = listOf(
+            transcript.utterances.first().copy(emotionProbabilities = scores), transcript.utterances.last(),
+        ))
+        val parsed = TranscriptExport.parseJson(TranscriptExport.json(updated))
+        assertEquals(listOf(0.25, 0.625, 0.0, 0.125), parsed[0].emotionProbabilities)
+        assertEquals(null, parsed[1].emotionProbabilities)
+    }
+
+    @Test
     fun `text uses names and clock`() {
         assertEquals(
             "[00:01] Мурзик: Добрый день!\n\n[00:04] Спикер 2: Здравствуйте.",

@@ -16,6 +16,7 @@ __pycache__/
 # Android и Gradle
 .gradle/
 .kotlin/
+**/.cxx/
 **/build/
 local.properties
 *.iml

@@ -9,6 +9,7 @@ import com.vexto.engine.model.*
 import com.vexto.engine.models.QualityModelStore
 import com.vexto.engine.quality.*
 import com.vexto.engine.review.*
+import com.vexto.engine.pipeline.UtteranceEmotionAnnotations
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.flow.Flow
@@ -37,7 +38,7 @@ class TranscriptionEngine(context: Context) {
             progress(0f)
             val value = block(progress)
             progress(1f)
-            times[name] = SystemClock.elapsedRealtime() - t0
+            times[name] = (times[name] ?: 0L) + SystemClock.elapsedRealtime() - t0
             return value
         }
         val models = stage(Stage.Preparing) { QualityModelStore.prepare(context, it) }
@@ -71,12 +72,19 @@ class TranscriptionEngine(context: Context) {
         val diarization = worker(WorkerStage.DIARIZE, Stage.Diarization, "original.wav")
         val turns = diarization.turns
         JobFiles.save(File(job, "turns.json"), turns)
+        // Signature extraction uses original audio and its own model lifetime, never clustering again.
+        val voices = worker(WorkerStage.VOICEPRINT, Stage.Voiceprints, "original.wav").voices
+        fun attachVoices(transcript: Transcript): Transcript = transcript.copy(speakers = transcript.speakers.map { speaker ->
+            val acousticId = speaker.id.takeIf { it.startsWith("speaker_") }
+                ?.removePrefix("speaker_")?.toIntOrNull()?.minus(1)
+            speaker.copy(voice = acousticId?.let(voices::get))
+        })
         val plan = ChunkPlan.create(File(job, view), job)
         val assembler = CandidateTranscriptAssembler()
         val giga = worker(WorkerStage.GIGAAM, Stage.Recognition, view)
         val gigaCandidates = loadCandidates(job, plan, giga.candidates, warnings)
         if (gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
-            val core = assembler.assemble(plan, gigaCandidates, turns).transcript
+            val core = attachVoices(assembler.assemble(plan, gigaCandidates, turns).transcript)
             // Originals are already durable before this callback. Refinement never destroys this checkpoint.
             JobFiles.write(File(job, "core.txt"), plan.chunks.joinToString("\n") { gigaCandidates.getValue(it.id).text }.toByteArray())
             send(TranscriptionEvent.CoreReady(core, job.absolutePath))
@@ -105,7 +113,15 @@ class TranscriptionEngine(context: Context) {
         if (unresolved > 0) warnings += "LLM_UNRESOLVED:$unresolved (display fallback only; both originals retained)"
         JobFiles.save(File(job, "selection.json"), choices.values.sortedBy { it.chunkId })
         JobFiles.write(File(job, "selected.txt"), plan.chunks.mapNotNull { selected[it.id]?.text }.joinToString("\n").toByteArray())
-        worker(WorkerStage.EMOTION, Stage.Emotion, "original.wav")
+        var transcript = attachVoices(assembled.transcript)
+        val emotionTargets = UtteranceEmotionAnnotations.targets(transcript)
+        JobFiles.save(File(job, "emotion-targets.json"), emotionTargets)
+        // The worker receives exact line identity and returns a score only for that line's original audio.
+        val emotions = worker(WorkerStage.EMOTION, Stage.Emotion, "original.wav")
+        transcript = runCatching { UtteranceEmotionAnnotations.attach(transcript, emotions.emotions) }
+            .getOrElse { warnings += "EMOTION_MAPPING_FAILED:${it.javaClass.simpleName}"; transcript }
+        val unscored = transcript.utterances.count { it.endMs > it.startMs && it.emotionProbabilities == null }
+        if (unscored > 0) warnings += "EMOTION_FAILED:unscored_utterances=$unscored"
         val stats = ProcessingStats(audioMs, SystemClock.elapsedRealtime() - started, times,
             peak / (1024 * 1024), "GigaAM-v3-e2e+Whisper-large-v3-q5_0; selection-only Qwen3-1.7B-Q4_K_M", 4,
             artifactDirectory = job.absolutePath, warnings = warnings.distinct(), complete = selected.size == plan.chunks.size,
@@ -113,7 +129,7 @@ class TranscriptionEngine(context: Context) {
             selectionResolved = unresolved == 0)
         JobFiles.save(File(job, "completion.json"), mapOf("complete" to stats.complete.toString(),
             "warnings" to stats.warnings.joinToString("\n"), "peak_rss_bytes" to peak.toString()))
-        send(TranscriptionEvent.Done(assembled.transcript, stats))
+        send(TranscriptionEvent.Done(transcript, stats))
     }
 
     private fun loadCandidates(job: File, plan: ChunkPlan, refs: List<CandidateRef>, warnings: MutableList<String>,

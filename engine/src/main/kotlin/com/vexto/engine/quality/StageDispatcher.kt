@@ -1,7 +1,6 @@
 package com.vexto.engine.quality
 
 import android.content.Context
-import com.vexto.engine.model.SpeakerTurn
 import com.vexto.engine.models.QualityModelStore
 import com.vexto.engine.pipeline.*
 import com.vexto.engine.review.*
@@ -53,6 +52,12 @@ internal object StageDispatcher {
                 }
                 JobFiles.save(File(job, "diarization/speaker-map.json"), ids)
                 WorkerResult(request.stage, turns = turns, peakCombinedRssBytes = result.process.peakCombinedRssBytes)
+            }
+            WorkerStage.VOICEPRINT -> {
+                val turns = JobFiles.load<List<PipelineTurn>>(File(job, "turns.json"))
+                val voices = VoiceprintProvider.run(models.file("voiceprint_embedding"), input, turns)
+                JobFiles.save(File(job, "voiceprints.json"), voices)
+                WorkerResult(request.stage, voices = voices)
             }
             WorkerStage.GIGAAM -> {
                 val refs = mutableListOf<CandidateRef>()
@@ -111,11 +116,17 @@ internal object StageDispatcher {
                 WorkerResult(request.stage, choices = choices, warnings = warnings, peakCombinedRssBytes = nativePeak)
             }
             WorkerStage.EMOTION -> {
-                val turns = JobFiles.load<List<PipelineTurn>>(File(job, "turns.json"))
-                EmotionProvider(models.file("emotion")).use { provider ->
-                    provider.annotate(input, turns.map { SpeakerTurn(it.speaker, it.startMs, it.endMs) }, File(job, "emotion.json"))
+                val targets = JobFiles.load<List<UtteranceEmotionTarget>>(File(job, "emotion-targets.json"))
+                fun save(emotions: List<UtteranceEmotionEvidence>) {
+                    JobFiles.save(File(job, "emotion.json"), UtteranceEmotionArtifact(emotions))
+                    checkpoint(WorkerResult(request.stage, emotions = emotions))
                 }
-                WorkerResult(request.stage)
+                save(emptyList())
+                EmotionProvider(models.file("emotion")).use { provider ->
+                    val emotions = provider.annotateUtterances(input, targets, ::save)
+                    save(emotions)
+                    WorkerResult(request.stage, emotions = emotions)
+                }
             }
         }
     }

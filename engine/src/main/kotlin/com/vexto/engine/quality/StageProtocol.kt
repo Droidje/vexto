@@ -2,8 +2,10 @@ package com.vexto.engine.quality
 
 import java.io.File
 import kotlinx.serialization.Serializable
+import com.vexto.engine.model.VoiceEmbedding
+import com.vexto.engine.pipeline.UtteranceEmotionEvidence
 
-@Serializable enum class WorkerStage { DENOISE, DIARIZE, GIGAAM, WHISPER, SELECT, EMOTION }
+@Serializable enum class WorkerStage { DENOISE, DIARIZE, VOICEPRINT, GIGAAM, WHISPER, SELECT, EMOTION }
 @Serializable data class WorkerRequest(val stage: WorkerStage, val jobDir: String, val inputWav: String, val requestId: String = java.util.UUID.randomUUID().toString())
 @Serializable data class CandidateRef(val chunkId: String, val source: String, val file: String, val sha256: String)
 @Serializable data class ChoiceRef(val chunkId: String, val candidate: CandidateRef, val status: String, val reason: String)
@@ -17,6 +19,8 @@ import kotlinx.serialization.Serializable
     val candidates: List<CandidateRef> = emptyList(),
     val choices: List<ChoiceRef> = emptyList(),
     val turns: List<PipelineTurn> = emptyList(),
+    val voices: Map<Int, VoiceEmbedding> = emptyMap(),
+    val emotions: List<UtteranceEmotionEvidence> = emptyList(),
     val warnings: List<String> = emptyList(),
     val error: String? = null,
 )

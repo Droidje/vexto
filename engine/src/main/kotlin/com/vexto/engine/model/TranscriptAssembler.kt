@@ -13,7 +13,8 @@ class TranscriptAssembler(
     private val maxPauseMs: Long = 1_000,
 ) {
 
-    fun assemble(words: List<Word>, turns: List<SpeakerTurn>): Transcript {
+    fun assemble(words: List<Word>, turns: List<SpeakerTurn>,
+                 voices: Map<Int, VoiceEmbedding> = emptyMap()): Transcript {
         if (words.isEmpty()) return Transcript.Empty
         val sortedWords = words.sortedBy { it.startMs }
         val sortedTurns = turns.sortedBy { it.startMs }
@@ -47,7 +48,8 @@ class TranscriptAssembler(
                 start = i
             }
         }
-        val speakers = ids.values.sortedBy { it.substringAfterLast('_').toInt() }.map { Speaker(it) }
+        val speakers = ids.entries.sortedBy { it.value.substringAfterLast('_').toInt() }
+            .map { Speaker(it.value, voice = voices[it.key]) }
         return Transcript(utterances, speakers)
     }
 

@@ -2,10 +2,15 @@ package com.vexto.engine.pipeline
 
 import com.vexto.engine.model.Word
 import com.vexto.engine.review.AsrSource
+import com.vexto.engine.review.ImmutableAsrCandidate
 import com.vexto.engine.review.LocalNativeExecutor
 import com.vexto.engine.review.LocalNativeResult
 import com.vexto.engine.review.sha256
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -46,6 +51,7 @@ class WhisperComparisonProviderTest {
             assertEquals("1", args[args.indexOf("-bs") + 1])
             assertEquals("1", args[args.indexOf("-bo") + 1])
             assertEquals("4", args[args.indexOf("-t") + 1])
+            assertEquals("768", args[args.indexOf("-ac") + 1])
             assertTrue(args.contains("-fa")); assertTrue(args.contains("-ng"))
             calls += dir.name
             if (dir.name == "two") throw IOException("simulated native failure")
@@ -62,6 +68,49 @@ class WhisperComparisonProviderTest {
         assertNotNull(result[2].candidate)
         assertEquals(nativeJson, temp.root.resolve("comparison/one/whisper.native.json").readText())
         assertEquals(chunks[0].inputSha256, result[0].candidate!!.inputSha256)
+    }
+
+    @Test fun `reversed and negative native offsets remain auditable without rejecting complete ASR`() = runBlocking {
+        val raw = """{"transcription":[{"text":" Один два три.","tokens":[
+            {"text":"[_BEG_]","id":50000,"offsets":{"from":-1,"to":-1}},
+            {"text":" Один","id":1,"offsets":{"from":240,"to":203}},
+            {"text":" два","id":2,"offsets":{"from":-1,"to":300}},
+            {"text":" три.","id":3,"offsets":{"from":500,"to":900}}]}]}"""
+        val wav = temp.newFile("timing.wav").apply { writeText("synthetic WAV identity") }
+        val chunk = ComparisonChunk("timing", wav, sha256(wav.readBytes()), 1000)
+        val executor = LocalNativeExecutor { _, args, _, _, _, _ ->
+            File(args[args.indexOf("-of") + 1] + ".json").writeText(raw)
+            LocalNativeResult(10, 100)
+        }
+        val artifact = temp.root.resolve("timing/whisper.json")
+        val candidate = WhisperComparisonProvider(executor, temp.newFile("model.bin")).generate(chunk, artifact)
+        assertEquals(" Один два три.", candidate.text)
+        assertEquals(listOf("[_BEG_]", " Один", " два", " три."), candidate.tokens.map { it.text })
+        candidate.tokens.take(3).forEach { assertNull(it.startMs); assertNull(it.endMs) }
+        assertEquals(listOf(Word("три.", 500, 900)), candidate.words)
+        assertEquals(candidate.text, ImmutableAsrCandidate.load(artifact, candidate.artifactSha256).text)
+        assertEquals(raw, artifact.parentFile.resolve("whisper.native.json").readText())
+        val audit = Json.parseToJsonElement(artifact.parentFile.resolve("whisper.timing-audit.json").readText()).jsonObject
+        assertEquals(sha256(raw.toByteArray()), audit.getValue("native_json_sha256").jsonPrimitive.content)
+        val issues = audit.getValue("issues").jsonArray.map { it.jsonObject }
+        assertEquals(listOf("negative_offsets", "reversed_offsets", "negative_offsets"),
+            issues.map { it.getValue("reason").jsonPrimitive.content })
+        assertEquals("240", issues[1].getValue("native_from").jsonPrimitive.content)
+        assertEquals("203", issues[1].getValue("native_to").jsonPrimitive.content)
+        val profile = Json.parseToJsonElement(artifact.parentFile.resolve("whisper.profile-audit.json").readText()).jsonObject
+        assertEquals("768", profile.getValue("audio_context_frames").jsonPrimitive.content)
+        assertEquals("15360", profile.getValue("audio_context_capacity_ms").jsonPrimitive.content)
+        assertEquals("1000", profile.getValue("input_duration_ms").jsonPrimitive.content)
+    }
+
+    @Test fun `audio exceeding explicit context is rejected instead of silently truncated`() = runBlocking {
+        val wav = temp.newFile("long.wav").apply { writeText("synthetic WAV identity") }
+        var calls = 0
+        val executor = LocalNativeExecutor { _, _, _, _, _, _ -> calls++; error("must not run") }
+        val result = WhisperComparisonProvider(executor, temp.newFile("model.bin"), audioContext = 50).generateAll(
+            listOf(ComparisonChunk("long", wav, sha256(wav.readBytes()), 1001)), temp.root.resolve("comparison"))
+        assertEquals(0, calls)
+        assertNull(result.single().candidate)
     }
 
     @Test fun `changed input hash is rejected before any native execution`() = runBlocking {

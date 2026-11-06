@@ -8,6 +8,7 @@ android {
     namespace 'com.vexto.engine'
     compileSdk 35
     buildToolsVersion '35.0.0'
+    ndkVersion '28.2.13676358'
 
     defaultConfig {
         minSdk 28

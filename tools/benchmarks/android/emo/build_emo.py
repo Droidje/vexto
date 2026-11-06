@@ -54,13 +54,16 @@ def main() -> None:
     java = a.java_home / f"bin/java{exe}"
     javac = a.java_home / f"bin/javac{exe}"
     source = Path(__file__).with_name("GigaEmo.java")
+    frontend = Path(__file__).resolve().parents[4] / "engine/src/main/java/com/vexto/engine/emotion/GigaAmMel.java"
     subprocess.run([str(javac), "--release", "11", "-cp", str(ort / "classes.jar"),
-                    "-d", str(classes), str(source)], check=True)
+                    "-d", str(classes), str(source), str(frontend)], check=True)
     app_jar = work / "gigaemo-classes.jar"
     with zipfile.ZipFile(app_jar, "w", zipfile.ZIP_DEFLATED) as archive:
         # Only this launcher's classes; do not include stale unrelated files.
         for path in sorted(classes.glob("GigaEmo*.class")):
             archive.write(path, path.name)
+        path = classes / "com/vexto/engine/emotion/GigaAmMel.class"
+        archive.write(path, path.relative_to(classes).as_posix())
     output = work / "gigaemo.jar"
     d8 = a.sdk / "build-tools" / a.build_tools / "lib/d8.jar"
     android = a.sdk / "platforms" / a.platform / "android.jar"
@@ -72,7 +75,7 @@ def main() -> None:
     manifest = {
         "runtime": f"onnxruntime-android {ORT_VERSION}", "abi": "x86_64", "min_api": 26,
         "aar_url": ORT_URL, "aar_sha256": ORT_SHA256,
-        "source_sha256": sha256(source), "build_only": True,
+        "source_sha256": sha256(source), "frontend_sha256": sha256(frontend), "build_only": True,
         "android_inference_verified": False,
         "files": [{"file": str(f.relative_to(work)).replace("\\", "/"),
                    "bytes": f.stat().st_size, "sha256": sha256(f)} for f in artifacts],

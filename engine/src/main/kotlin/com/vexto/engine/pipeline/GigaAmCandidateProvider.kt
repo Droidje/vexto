@@ -94,7 +94,9 @@ internal object GigaTokenAlignment {
         }
         val offsets = IntArray(pieces.size+1)
         surfaces.forEachIndexed { i, piece -> offsets[i+1] = offsets[i]+piece.length }
-        val words = Regex("(?U)\\S+").findAll(joined).map { match ->
+        // Android's ICU Pattern rejects Java's (?U) flag. Explicit Unicode separators
+        // preserve the same word boundaries on Android and the host JVM.
+        val words = Regex("[^\\s\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]+").findAll(joined).map { match ->
             val first = pieces.indices.first { offsets[it+1] > match.range.first }
             val last = pieces.indices.last { offsets[it] <= match.range.last && offsets[it+1] > offsets[it] }
             Word(match.value, tokens[first].startMs!!, tokens[last].endMs!!)

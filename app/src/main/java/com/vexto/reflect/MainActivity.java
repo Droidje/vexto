@@ -38,8 +38,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private ReflectPreferences preferences;
     private ReflectTranscriptStore transcriptStore;
     private ReflectTranscriptController transcripts;
-    private ReflectBackendSync backend;
-    private ReflectBackendUi backendUi;
+    private SpeakerProfiles profiles;
+    private SpeakerProfilesUi profilesUi;
     private File audio;
     private int duration;
     private MediaPlayer player;
@@ -66,16 +66,12 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         preferences = new ReflectPreferences(this);
         view = new ReflectView(this, this, designPreview, preferences);
         transcriptStore = new ReflectTranscriptStore(getFilesDir());
-        backend = new ReflectBackendSync(this);
-        backendUi = new ReflectBackendUi(this, view, backend, this::notice, () -> {
-            view.backendEnabled(!designPreview && backend.enabled());
-            view.setSpeakers(Collections.emptyList());
-            refreshSpeakers();
-            backend.retry();
-        });
+        profiles = new SpeakerProfiles(this);
+        profilesUi = new SpeakerProfilesUi(this, view, profiles, imports, this::notice,
+                () -> { if (transcripts != null) transcripts.refreshSpeakerNames(); });
         transcripts = new ReflectTranscriptController(this, view, preferences, transcriptStore, imports,
-                this::notice, this::playFrom, this::play, this::refreshRecordings, backend, backendUi);
-        view.backendEnabled(!designPreview && backend.enabled());
+                this::notice, this::playFrom, this::play, this::refreshRecordings, profiles, profilesUi);
+        view.manageSpeakers(!designPreview);
         setContentView(view);
         fullscreen();
         refreshRecordings();
@@ -91,7 +87,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
                 try {
                     if (state.getBoolean("transcript")) {
                         openLocalDetail(new File(file), state.getString("transcriptTitle", "Запись"),
-                                state.getBoolean("recordingDetails"));
+                                state.getBoolean("recordingDetails"), state.getBoolean("transcriptProcessing"));
                     } else review(new File(file));
                 }
                 catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
@@ -220,8 +216,9 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         session.cancel();
         stopPlayer();
         discardDraft();
-        if (view.screen() == TRANSCRIPT) transcripts.close();
-        view.show(view.tab());
+        boolean processing = view.screen() == PROCESSING;
+        if (processing || view.screen() == TRANSCRIPT) transcripts.close();
+        view.show(processing ? HOME : view.tab());
     }
 
     @Override public void attach() {
@@ -346,9 +343,6 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             stopPlayer();
             discardDraft();
             audio = saved;
-            if (!designPreview && backend.enabled()) {
-                backend.onSaved(saved, defaultRecordingTitle(directory), duration);
-            }
             refreshRecordings();
             return saved;
         } catch (IOException error) {
@@ -372,17 +366,18 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             if (designPreview) transcripts.openPreview(recording.title);
             return;
         }
-        try { openLocalDetail(recording.file, recording.title, recordingDetails); }
+        try { openLocalDetail(recording.file, recording.title, recordingDetails, false); }
         catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
     }
 
-    private void openLocalDetail(File file, String title, boolean recordingDetails) throws IOException {
+    private void openLocalDetail(File file, String title, boolean recordingDetails, boolean startImmediately)
+            throws IOException {
         int length = RecordingSession.duration(file);
         stopPlayer();
         discardDraft();
         audio = file;
         duration = length;
-        transcripts.open(file, title, time(length), length, recordingDetails);
+        transcripts.open(file, title, time(length), length, recordingDetails, startImmediately);
     }
 
     private void refreshRecordings() {
@@ -428,26 +423,11 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override public void refreshSpeakers() {
         if (designPreview) {
             view.setSpeakers(previewSpeakersEmpty ? Collections.emptyList() : ReflectDesignPreview.speakers());
-        } else backendUi.refreshSpeakers();
+        } else profilesUi.refreshSpeakers();
     }
 
-    @Override public void openBackendSettings() { backendUi.settings(); }
-    @Override public void addSpeaker() { backendUi.addSpeaker(); }
-    @Override public void openSpeaker(ReflectCatalog.Speaker speaker) { backendUi.manageSpeaker(speaker); }
-
-    @Override public void inviteSpeakers() {
-        String configuredUrl = BuildConfig.REFLECT_INVITE_URL.trim();
-        Uri uri = Uri.parse(configuredUrl);
-        if (!"https".equals(uri.getScheme()) || uri.getHost() == null || uri.getHost().isEmpty()
-                || uri.getUserInfo() != null) {
-            notice("Ссылка для приглашения ещё не настроена");
-            return;
-        }
-        Intent invitation = new Intent(Intent.ACTION_SEND)
-                .setType("text/plain")
-                .putExtra(Intent.EXTRA_TEXT, configuredUrl);
-        startActivity(Intent.createChooser(invitation, "Отправить ссылку"));
-    }
+    @Override public void addSpeaker() { profilesUi.addSpeaker(); }
+    @Override public void openSpeaker(ReflectCatalog.Speaker speaker) { profilesUi.manageSpeaker(speaker); }
 
     @Override public void openMicrophoneSettings() {
         startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -490,7 +470,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override protected void onResume() {
         super.onResume();
-        if (!designPreview) backend.retry();
+        if (!designPreview) { refreshSpeakers(); transcripts.refreshSpeakerNames(); }
     }
 
     @Override public void onTrimMemory(int level) {
@@ -502,8 +482,9 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         session.cancel();
         if (isFinishing()) discardDraft();
         transcripts.destroy();
+        profilesUi.close();
+        imports.execute(profiles::close);
         imports.shutdown();
-        backend.close();
         super.onDestroy();
     }
 }

@@ -27,6 +27,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import com.vexto.engine.model.Emotion;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -34,14 +35,10 @@ import java.util.Map;
 
 /** Native conversation detail with a virtualized, scrollable transcript. */
 final class ReflectTranscriptView extends FrameLayout {
-    private static final Avatar GREEN = new Avatar("transcript_avatar_base_green", "transcript_avatar_green");
-    private static final Avatar AMBER = new Avatar("transcript_avatar_base_amber", "transcript_avatar_amber");
-    private static final Avatar ROSE = new Avatar("transcript_avatar_base_rose", "transcript_avatar_rose");
-    private static final Avatar PREVIEW_PORTRAIT = new Avatar("transcript_avatar_base_green", null);
-    private static final Avatar[] SPEAKER_AVATARS = {GREEN, AMBER, ROSE};
-    private static final Avatar[] PREVIEW_AVATARS = {GREEN, AMBER,
-            new Avatar("transcript_avatar_base_rose", "transcript_avatar_green"), ROSE,
-            PREVIEW_PORTRAIT, PREVIEW_PORTRAIT};
+    private static final Avatar NEUTRAL = new Avatar("transcript_avatar_neutral", "Оценка эмоции: нейтральная");
+    private static final Avatar JOY = new Avatar("transcript_avatar_joy", "Оценка эмоции: радость");
+    private static final Avatar SADNESS = new Avatar("transcript_avatar_sadness", "Оценка эмоции: грусть");
+    private static final Avatar ANGER = new Avatar("transcript_avatar_anger", "Оценка эмоции: злость");
 
     interface Actions {
         void closeTranscript();
@@ -61,7 +58,7 @@ final class ReflectTranscriptView extends FrameLayout {
     private ReflectPageStyle style;
     private int layoutWidth;
     private boolean refresh = true;
-    private boolean preview, loading, hasAudio, playing, recordingDetails;
+    private boolean loading, hasAudio, playing, recordingDetails;
     private boolean hasTranscript;
     private RecordingMetadata metadata;
     private String title = "", length = "", issue;
@@ -86,13 +83,12 @@ final class ReflectTranscriptView extends FrameLayout {
         setClipToOutline(true);
     }
 
-    void content(String title, String length, ReflectTranscript transcript, boolean preview,
+    void content(String title, String length, ReflectTranscript transcript,
                  boolean hasAudio, boolean loading, String issue, boolean recordingDetails,
                  RecordingMetadata metadata, ReflectLocalTranscription.Progress transcription) {
         if (!title.equals(this.title)) list = null;
         this.title = title;
         this.length = length;
-        this.preview = preview;
         this.hasAudio = hasAudio;
         this.loading = loading;
         this.issue = issue;
@@ -261,7 +257,7 @@ final class ReflectTranscriptView extends FrameLayout {
 
     private void updateProgress() {
         if (progressText == null || progressBar == null) return;
-        progressText.setText(transcription.stage() + " · " + transcription.percent() + "%");
+        progressText.setText(transcription.title() + " · " + transcription.percent() + "%");
         progressBar.setProgress(transcription.percent());
     }
 
@@ -338,17 +334,24 @@ final class ReflectTranscriptView extends FrameLayout {
         addView(view, params);
     }
 
-    private record Avatar(String base, String picture) {}
+    private record Avatar(String asset, String description) {}
 
     private final class AvatarView extends View {
         private Avatar avatar;
 
         AvatarView() {
             super(ReflectTranscriptView.this.getContext());
-            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
         }
 
-        void show(Avatar value) {
+        void show(Emotion emotion) {
+            Avatar value = switch (emotion == null ? Emotion.Neutral : emotion) {
+                case Neutral -> NEUTRAL;
+                case Joy -> JOY;
+                case Sadness -> SADNESS;
+                case Anger -> ANGER;
+            };
+            setContentDescription(emotion == null ? "Эмоция не определена" : value.description());
             if (avatar == value) return;
             avatar = value;
             invalidate();
@@ -356,9 +359,15 @@ final class ReflectTranscriptView extends FrameLayout {
 
         @Override protected void onDraw(Canvas canvas) {
             if (avatar == null) return;
-            artwork.imagePixels(canvas, avatar.base(), 0, 0, getWidth(), getHeight());
-            if (avatar.picture() != null) {
-                artwork.imagePixels(canvas, avatar.picture(), 0, 0, getWidth(), getHeight());
+            if (avatar == JOY) {
+                // The original 254×254 Figma PNG has a 201×201 visible disk starting at (26, 26).
+                int saved = canvas.save();
+                canvas.clipRect(0, 0, getWidth(), getHeight());
+                float sx = getWidth() / 201f, sy = getHeight() / 201f;
+                artwork.imagePixels(canvas, avatar.asset(), -26 * sx, -26 * sy, 254 * sx, 254 * sy);
+                canvas.restoreToCount(saved);
+            } else {
+                artwork.imagePixels(canvas, avatar.asset(), 0, 0, getWidth(), getHeight());
             }
         }
     }
@@ -422,9 +431,7 @@ final class ReflectTranscriptView extends FrameLayout {
         }
 
         void bind(ReflectTranscript.Line line, int position) {
-            boolean designRow = preview && "Спринт по портфолио".equals(title);
-            if (designRow && position < PREVIEW_AVATARS.length) avatar.show(PREVIEW_AVATARS[position]);
-            else avatar.show(SPEAKER_AVATARS[Math.floorMod(line.speakerId.hashCode(), SPEAKER_AVATARS.length)]);
+            avatar.show(line.emotionProbabilities == null ? null : line.emotionProbabilities.strongest());
             SpannableStringBuilder label = new SpannableStringBuilder(
                     speakerNames.getOrDefault(line.speakerId, line.speakerId));
             if (preferences.timestamps()) {

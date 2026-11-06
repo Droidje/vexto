@@ -2,6 +2,7 @@ package com.vexto.engine.pipeline
 
 import com.vexto.engine.audio.PcmWave
 import com.vexto.engine.model.SpeakerTurn
+import com.vexto.engine.model.EmotionProbabilities
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.encodeToString
@@ -18,6 +19,45 @@ class EmotionProvider private constructor(private val factory: () -> Predictor) 
         fun predict(features: FloatArray, frames: Int): FloatArray
     }
     private var predictor: Predictor? = null
+
+    /** Incoming dev per-utterance semantics, with bounded original-audio reads in a fresh worker. */
+    suspend fun annotateUtterances(
+        originalWav: File,
+        targets: List<UtteranceEmotionTarget>,
+        checkpoint: (List<UtteranceEmotionEvidence>) -> Unit = {},
+    ): List<UtteranceEmotionEvidence> {
+        val info = PcmWave.inspect(originalWav)
+        require(info.sampleRate == 16000)
+        require(targets.map { it.index }.distinct().size == targets.size)
+        val results = mutableListOf<UtteranceEmotionEvidence>()
+        for (target in targets) {
+            currentCoroutineContext().ensureActive()
+            require(target.endMs <= info.sampleCount / 16 + 1) { "Emotion target outside audio" }
+            val start = (target.startMs * 16).coerceAtMost(info.sampleCount)
+            val end = (target.endMs * 16).coerceAtMost(info.sampleCount)
+            val duration = end - start
+            if (duration == 0L) continue
+            val windows = ((duration + 127999) / 128000).toInt()
+            val totals = DoubleArray(4)
+            for (i in 0 until windows) {
+                currentCoroutineContext().ensureActive()
+                val from = start + duration * i / windows
+                val to = start + duration * (i + 1) / windows
+                val clip = PcmWave.readFloat(originalWav, from, (to - from).toInt())
+                // Preserve dev's 200ms centered padding for short lines, no adjacent audio.
+                val audio = if (clip.size >= 3200) clip else FloatArray(3200).also {
+                    clip.copyInto(it, (3200 - clip.size) / 2)
+                }
+                val runtime = predictor ?: factory().also { predictor = it }
+                val scores = EmotionProbabilities.fromModel(runtime.predict(EmotionFrontend.logMel(audio), audio.size / 160 + 1))
+                scores.ordered().forEachIndexed { index, value -> totals[index] += value * (to - from) }
+            }
+            currentCoroutineContext().ensureActive()
+            results += UtteranceEmotionEvidence(target, totals.map { it / duration }, windows)
+            checkpoint(results.toList())
+        }
+        return results
+    }
 
     suspend fun annotate(originalWav: File, turns: List<SpeakerTurn>, artifactFile: File): List<EmotionEvidence> {
         require(!artifactFile.exists()) { "Emotion artifact must be fresh" }

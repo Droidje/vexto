@@ -23,11 +23,13 @@ object TranscriptExport {
         ExportFormat.Srt -> srt(transcript)
     }
 
-    /** Формат проверки заказчика: только поле transcript, имена спикеров не подставляются. */
+    /** Формат проверки заказчика, с необязательными вероятностями эмоций на реплике. */
     @JvmStatic
     fun json(transcript: Transcript): String = JsonFormat.encodeToString(
         JsonTranscript.serializer(),
-        JsonTranscript(transcript.utterances.map { JsonUtterance(it.speakerId, it.startMs, it.endMs, it.text) }),
+        JsonTranscript(transcript.utterances.map {
+            JsonUtterance(it.speakerId, it.startMs, it.endMs, it.text, it.emotionProbabilities?.ordered())
+        }),
     )
 
     @JvmStatic
@@ -81,4 +83,5 @@ data class JsonUtterance(
     @SerialName("start_ms") val startMs: Long,
     @SerialName("end_ms") val endMs: Long,
     val text: String,
+    @SerialName("emotion_probabilities") val emotionProbabilities: List<Double>? = null,
 )
