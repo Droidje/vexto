@@ -48,6 +48,7 @@ final class ReflectView extends ViewGroup {
     private static final String[] TAB_ICONS = {"tab_home", "tab_records", "tab_speakers", "tab_settings"};
     private static final String[] TAB_NAMES = {"Главная", "Записи", "Спикеры", "Настройки"};
     private static final float[] TAB_CENTERS = {56, 121.5f, 188.5f, 255.5f};
+    private static final PathInterpolator TAB_EASING = new PathInterpolator(.22f, .78f, .25f, 1);
     private final Actions actions;
     private final String welcomeTitle;
     private final boolean designPreview;
@@ -66,6 +67,7 @@ final class ReflectView extends ViewGroup {
     private Screen departing = Screen.HOME;
     private Screen tab = Screen.HOME;
     private float scale = 1, offsetX, offsetY, transition = 1, menuProgress;
+    private float capsuleCenter = TAB_CENTERS[0], capsuleHalfWidth = 34;
     private float liveLevel, playProgress;
     private String elapsed = "0:00";
     private String duration = "+ 0:00";
@@ -118,26 +120,41 @@ final class ReflectView extends ViewGroup {
         if (animator != null) animator.cancel();
         if (screen == Screen.RECORDS) records.dismissKeyboard();
         if (screen == Screen.SPEAKERS) speakers.dismissKeyboard();
-        boolean menuOnly = (screen == Screen.MENU && next == tab) || (next == Screen.MENU && screen == tab);
+        boolean withinNavigation = navigation(screen) && navigation(next);
         departing = screen;
         screen = next;
         if (isTab(next)) tab = next;
         float startMenu = menuProgress;
         float endMenu = next == Screen.MENU ? 1 : 0;
+        int targetTab = switch (tab) {
+            case RECORDS -> 1;
+            case SPEAKERS -> 2;
+            case SETTINGS -> 3;
+            default -> 0;
+        };
+        float startCenter = capsuleCenter, endCenter = TAB_CENTERS[targetTab];
+        float startHalfWidth = capsuleHalfWidth, endHalfWidth = targetTab == 0 ? 34 : 35.5f;
+        float stretch = Math.min(7, Math.abs(endCenter - startCenter) * .06f);
+        transition = withinNavigation ? 1 : 0;
         rebuildControls();
         if (preferences.reduceMotion()) {
             transition = 1;
             menuProgress = endMenu;
+            capsuleCenter = endCenter;
+            capsuleHalfWidth = endHalfWidth;
             invalidate();
             return;
         }
         animator = ValueAnimator.ofFloat(0, 1);
-        animator.setDuration(menuOnly ? 300 : 340);
-        animator.setInterpolator(new PathInterpolator(0.22f, 0.85f, 0.27f, 1f));
+        animator.setDuration(withinNavigation ? 300 : 340);
+        animator.setInterpolator(TAB_EASING);
         animator.addUpdateListener(value -> {
             float progress = (float) value.getAnimatedValue();
-            transition = menuOnly ? 1 : progress;
+            transition = withinNavigation ? 1 : progress;
             menuProgress = startMenu + (endMenu - startMenu) * progress;
+            capsuleCenter = startCenter + (endCenter - startCenter) * progress;
+            capsuleHalfWidth = startHalfWidth + (endHalfWidth - startHalfWidth) * progress
+                    + stretch * 4 * progress * (1 - progress);
             invalidate();
         });
         animator.start();
@@ -210,6 +227,12 @@ final class ReflectView extends ViewGroup {
             if (tab == Screen.SETTINGS) place(settings, 0, 83, 393, contentHeight);
             if (tab == Screen.HOME && conversations.hasConversations()) {
                 place(conversations, 0, 83, 393, contentHeight);
+            }
+            if (screen == Screen.MENU) {
+                View outside = new View(getContext());
+                outside.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+                outside.setOnClickListener(view -> actions.toggleMenu());
+                place(outside, 0, 0, WIDTH, HEIGHT);
             }
             control(screen == Screen.MENU ? "Закрыть меню" : "Добавить", 318, 765, 59, 59, actions::toggleMenu);
             control("Главная", 22, 771, 67, 47, () -> show(Screen.HOME)).setSelected(tab == Screen.HOME);
@@ -288,13 +311,7 @@ final class ReflectView extends ViewGroup {
         if (navigation(page)) {
             Screen active = page == Screen.MENU ? tab : page;
             if (active == Screen.HOME && !conversations.hasConversations()) drawHome(canvas);
-            int selected = switch (active) {
-                case RECORDS -> 1;
-                case SPEAKERS -> 2;
-                case SETTINGS -> 3;
-                default -> 0;
-            };
-            drawNavigation(canvas, menu, selected);
+            drawNavigation(canvas, menu);
         }
         else if (page != Screen.TRANSCRIPT) drawRecorder(canvas, page);
     }
@@ -307,12 +324,11 @@ final class ReflectView extends ViewGroup {
         artwork.icon(c, "guide_arrow", 177.24f, 579.25f);
     }
 
-    private void drawNavigation(Canvas c, float menu, int selectedTab) {
+    private void drawNavigation(Canvas c, float menu) {
         rounded(c, 0, 736, 393, 852, 0, (Math.round(3 * (1 - menu)) << 24) | 0xffffff);
         pill(c, 16, 765, 302, 824, 29.5f, 0x1cffffff);
-        float center = TAB_CENTERS[selectedTab];
-        float halfWidth = selectedTab == 0 ? 34 : 35.5f;
-        rounded(c, center - halfWidth, 771, center + halfWidth, 818, 24, 0x1affffff);
+        rounded(c, capsuleCenter - capsuleHalfWidth, 771, capsuleCenter + capsuleHalfWidth,
+                818, 24, 0x1affffff);
         for (int i = 0; i < TAB_NAMES.length; i++) {
             artwork.centeredIcon(c, TAB_ICONS[i], TAB_CENTERS[i], 787);
             text(c, TAB_NAMES[i], TAB_CENTERS[i], 811.3f, 10, WHITE, artwork.regular, true);
