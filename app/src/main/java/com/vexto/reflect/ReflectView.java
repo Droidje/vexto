@@ -49,6 +49,7 @@ final class ReflectView extends ViewGroup {
     private static final String[] TAB_NAMES = {"Главная", "Записи", "Спикеры", "Настройки"};
     private static final float[] TAB_CENTERS = {56, 121.5f, 188.5f, 255.5f};
     private final Actions actions;
+    private final String welcomeTitle;
     private final boolean designPreview;
     private final ReflectArtwork artwork;
     private final ReflectPreferences preferences;
@@ -74,6 +75,7 @@ final class ReflectView extends ViewGroup {
     ReflectView(Context context, Actions actions, boolean designPreview, ReflectPreferences preferences) {
         super(context);
         this.actions = actions;
+        welcomeTitle = context.getString(R.string.welcome_title, context.getString(R.string.app_name));
         this.designPreview = designPreview;
         this.preferences = preferences;
         artwork = new ReflectArtwork(context.getAssets());
@@ -189,7 +191,7 @@ final class ReflectView extends ViewGroup {
         removeAllViews();
         childAreas.clear();
         setAccessibilityPaneTitle(switch (screen) {
-            case HOME -> conversations.hasConversations() ? "Ваши разговоры" : "Начните работу с Reflect";
+            case HOME -> conversations.hasConversations() ? "Ваши разговоры" : welcomeTitle;
             case RECORDS -> "Ваши записи";
             case SPEAKERS -> "Спикеры";
             case SETTINGS -> "Настройки";
@@ -299,7 +301,7 @@ final class ReflectView extends ViewGroup {
 
     private void drawHome(Canvas c) {
         artwork.image(c, "butterfly", 71, 280, 250, 194);
-        text(c, "Начните работу с Reflect", 196, 501, 22, 0xfff5f5f5, artwork.display, true);
+        text(c, welcomeTitle, 196, 501, 22, 0xfff5f5f5, artwork.display, true);
         text(c, "Прикрепите файлы или запишите", 186.5f, 533.3f, 16, 0xff999999, artwork.medium, true);
         text(c, "аудио прямо сейчас", 186.5f, 554, 16, 0xff999999, artwork.medium, true);
         artwork.icon(c, "guide_arrow", 177.24f, 579.25f);

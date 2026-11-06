@@ -278,7 +278,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
                 .setType("audio/*")
                 .putExtra(Intent.EXTRA_STREAM, uri)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        send.setClipData(ClipData.newRawUri("Reflect", uri));
+        send.setClipData(ClipData.newRawUri(getString(R.string.app_name), uri));
         startActivity(Intent.createChooser(send, "Поделиться записью"));
     }
 

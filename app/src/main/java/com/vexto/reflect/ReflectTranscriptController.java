@@ -134,7 +134,7 @@ final class ReflectTranscriptController {
         }
         Intent output = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
                 .setType("application/json")
-                .putExtra(Intent.EXTRA_TITLE, "reflect-transcript.json");
+                .putExtra(Intent.EXTRA_TITLE, activity.getString(R.string.app_name) + "-transcript.json");
         activity.startActivityForResult(output, EXPORT_JSON);
     }
 
@@ -214,7 +214,9 @@ final class ReflectTranscriptController {
         if (file != null) menu.option("Прослушать с метки", () -> playFrom.accept(line.startMs));
         menu.option("Скопировать текст", () -> {
             ClipboardManager clipboard = activity.getSystemService(ClipboardManager.class);
-            if (clipboard != null) clipboard.setPrimaryClip(ClipData.newPlainText("Reflect", line.text));
+            if (clipboard != null) {
+                clipboard.setPrimaryClip(ClipData.newPlainText(activity.getString(R.string.app_name), line.text));
+            }
         });
         menu.option("Поделиться репликой", () -> activity.startActivity(Intent.createChooser(
                 new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, line.text),

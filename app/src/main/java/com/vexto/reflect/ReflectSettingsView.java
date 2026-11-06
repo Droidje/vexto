@@ -69,7 +69,9 @@ final class ReflectSettingsView extends ScrollView {
         microphone.setBackground(style.pressable(ReflectPageStyle.CARD, 12));
         microphone.setOnClickListener(v -> openMicrophoneSettings.run());
         style.append(application, microphone, 0, 4);
-        style.append(application, style.text("Reflect  " + BuildConfig.VERSION_NAME, 14,
+        String version = getContext().getString(R.string.app_version_label,
+                getContext().getString(R.string.app_name), BuildConfig.VERSION_NAME);
+        style.append(application, style.text(version, 14,
                 ReflectPageStyle.MUTED, artwork.regular), 8, 4);
         style.append(root, application, 0, 0);
         addView(root);
