@@ -105,7 +105,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
-      contents: write
+      contents: read
       packages: write
     concurrency:
       group: vexto-android-publish
@@ -135,12 +135,17 @@ jobs:
           "$build_tools/zipalign" -c -P 16 4 dist/vexto.apk
           rm -f dist/vexto.apk.idsig
           (cd dist && sha256sum vexto.apk > SHA256SUMS)
-      - name: Publish to GitHub Packages and Releases
+      - uses: actions/upload-artifact@v7
+        with:
+          name: signed-apk
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Publish to GitHub Packages
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           package="ghcr.io/${GITHUB_REPOSITORY,,}-android"
-          tag="android-$GITHUB_SHA"
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker build -t "$package:$GITHUB_SHA" \
             --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
@@ -155,17 +160,8 @@ jobs:
           docker cp "$container:/vexto.apk" "$RUNNER_TEMP/package.apk"
           cmp dist/vexto.apk "$RUNNER_TEMP/package.apk"
 
-          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$tag" dist/vexto.apk dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
-          else
-            gh release create "$tag" dist/vexto.apk dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" \
-              --target "$GITHUB_SHA" --title "Vexto Android · ${GITHUB_SHA:0:7}" --latest=false \
-              --notes "Android 9+, ARM64/x86_64. [Install the offline models]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/docs/base-version.md)."
-          fi
           if [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$GITHUB_SHA" ]]; then
-            docker tag "$package:$GITHUB_SHA" "$package:latest"
-            docker push "$package:latest"
-            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --latest
+            docker tag "$package:$GITHUB_SHA" "$package:nightly"
+            docker push "$package:nightly"
           fi
-          printf '[Download APK](%s/%s/releases/download/%s/vexto.apk) · %s:%s\n' \
-            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$tag" "$package" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Published %s:%s\n' "$package" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

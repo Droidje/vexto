@@ -1,0 +1,81 @@
+name: Prepare offline model APKs
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing versioned draft release containing the signed base APK
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    concurrency:
+      group: prepare-model-release-${{ inputs.tag }}
+    env:
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate draft and get the tested base APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          release=$(gh release view "$TAG" --json isDraft,targetCommitish)
+          jq -e '.isDraft' <<<"$release"
+          target=$(jq -er '.targetCommitish' <<<"$release")
+          [[ "$target" =~ ^[a-f0-9]{40}$ ]]
+          git merge-base --is-ancestor "$target" "$GITHUB_SHA"
+          mkdir dist
+          gh release download "$TAG" --pattern vexto.apk --pattern SHA256SUMS --dir dist
+          (cd dist && grep -E '^[a-f0-9]{64}  vexto\.apk$' SHA256SUMS | sha256sum --strict -c -)
+          python3 scripts/verify_android_apk.py dist/vexto.apk
+          unzip -p dist/vexto.apk assets/quality/manifest.json \
+            | cmp - engine/src/main/quality-assets/quality/manifest.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Prepare the exact model pack and Android toolchain
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+          badging=$("$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging dist/vexto.apk)
+          grep -F "versionName='${TAG#v}'" <<<"$badging"
+          bash scripts/prepare_release_models.sh "$RUNNER_TEMP/vexto-models"
+      - name: Build signed model APKs
+        env:
+          VEXTO_KEYSTORE: ${{ secrets.VEXTO_ANDROID_KEYSTORE }}
+          VEXTO_KEYSTORE_PASSWORD: ${{ secrets.VEXTO_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          : "${VEXTO_KEYSTORE:?Missing VEXTO_ANDROID_KEYSTORE}"
+          : "${VEXTO_KEYSTORE_PASSWORD:?Missing VEXTO_ANDROID_KEYSTORE_PASSWORD}"
+          keystore=$(mktemp)
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$VEXTO_KEYSTORE" | base64 --decode > "$keystore"
+          version=$(jq -er .version engine/src/main/quality-assets/quality/manifest.json)
+          python3 scripts/build_model_splits.py --base-apk dist/vexto.apk \
+            --pack-dir "$RUNNER_TEMP/vexto-models/pack/$version" \
+            --output-dir "$RUNNER_TEMP/vexto-splits" --android-home "$ANDROID_HOME" \
+            --keystore "$keystore" --notices-dir tools/model-notices
+          mv "$RUNNER_TEMP"/vexto-splits/*.apk dist/
+          (cd dist && sha256sum vexto.apk vexto-models-{1,2,3}.apk > SHA256SUMS)
+      - name: Attach verified files to the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" == true ]]
+          gh release upload "$TAG" dist/vexto-models-{1,2,3}.apk dist/SHA256SUMS --clobber
