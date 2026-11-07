@@ -450,7 +450,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     @Override public void openRecording(ReflectCatalog.Recording recording) {
-        openLocalDetail(recording, true);
+        openLocalDetail(recording, !recording.hasTranscript());
     }
 
     private void openLocalDetail(ReflectCatalog.Recording recording, boolean recordingDetails) {

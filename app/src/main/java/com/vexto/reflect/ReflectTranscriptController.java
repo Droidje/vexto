@@ -438,6 +438,9 @@ final class ReflectTranscriptController {
     }
 
     private void render() {
+        // The catalog or restored screen can predate a completed transcription.
+        // Once actual text is available, open the reader instead of hiding it in audio details.
+        if (recordingDetails && transcript != null && !transcript.lines.isEmpty()) recordingDetails = false;
         view.transcriptView().content(title, length, durationMs, transcript, file != null,
                 loading, issue, recordingDetails, metadata, local.progress(file));
         summaries.content(recordingDetails ? null : file, transcript);
@@ -485,7 +488,7 @@ final class ReflectTranscriptController {
     }
 
     private void refreshSpeakerNames(int current, File recording) {
-        if (recordingDetails || transcript == null || transcript.lines.isEmpty()) return;
+        if (transcript == null || transcript.lines.isEmpty()) return;
         int request = ++transcriptRequest;
         profilesUi.speakerNames(recording, transcript, names -> {
             if (current == generation && request == transcriptRequest) view.transcriptView().speakerNames(names);
