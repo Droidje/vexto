@@ -399,6 +399,17 @@ final class ReflectTranscriptController {
         });
     }
 
+    void overlapInfo(ReflectTranscript.Line line) {
+        if (!Boolean.TRUE.equals(line.overlapDetected)) return;
+        ReflectActionSheet info = sheet("Обнаружено перебивание");
+        TextView explanation = info.style.text(
+                "На этой реплике система обнаружила одновременную речь. Из-за наложения голосов текст расшифровки может быть менее точным.",
+                16, ReflectPageStyle.MUTED, info.style.art.regular);
+        info.style.append(info.root, explanation, 0, 12);
+        info.option("Понятно", () -> {});
+        info.show();
+    }
+
     void lineOptions(ReflectTranscript.Line line) {
         ReflectActionSheet menu = sheet("Реплика");
         String shown = view.transcriptView().shownText(line);

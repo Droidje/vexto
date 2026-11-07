@@ -16,6 +16,7 @@ enum class Stage(val title: String) {
     Assembly("Собираю расшифровку"),
     Punctuation("Расставляю знаки"),
     Emotion("Определяю эмоции реплик"),
+    Overlap("Проверка перебиваний"),
 }
 
 sealed interface TranscriptionEvent {

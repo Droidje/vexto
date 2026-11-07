@@ -10,7 +10,7 @@ public class ReflectPipelineProgressTest {
     @Test public void phaseChangesAndRetriesNeverResetTheOverallScale() {
         var progress = ReflectLocalTranscription.WAITING;
         Stage[] actualOrder = {Stage.Decoding, Stage.Preparing, Stage.Denoising, Stage.Diarization,
-                Stage.Voiceprints, Stage.Recognition, Stage.Comparison, Stage.Selection, Stage.Assembly, Stage.Emotion};
+                Stage.Voiceprints, Stage.Recognition, Stage.Comparison, Stage.Selection, Stage.Assembly, Stage.Emotion, Stage.Overlap};
         for (Stage stage : actualOrder) {
             int before = progress.overallPercent();
             progress = progress.advance(stage, 0);
@@ -39,5 +39,12 @@ public class ReflectPipelineProgressTest {
         }
         assertEquals(4, lastStep);
         assertEquals(100, progress.advance(null, 100).withSpeakers(3).overallPercent());
+    }
+
+    @Test public void backgroundOverlapReportsItsOwnStageWithoutHidingTheTranscript() {
+        var progress = ReflectLocalTranscription.WAITING.asBackgroundEmotions().advance(Stage.Overlap, 50);
+        assertEquals(Stage.Overlap.getTitle(), progress.title());
+        assertTrue(progress.backgroundEmotions());
+        assertEquals(100, progress.overallPercent());
     }
 }

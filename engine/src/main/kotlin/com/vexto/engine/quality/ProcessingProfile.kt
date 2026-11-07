@@ -21,7 +21,7 @@ data class ProcessingProfile(
     val voiceprints: Boolean get() = true
     val backgroundEmotions: Boolean get() = fast
 
-    fun expectedStages(slavic: Boolean): Set<WorkerStage> = WorkerStage.entries.toSet() - setOf(WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE) -
+    fun expectedStages(slavic: Boolean): Set<WorkerStage> = WorkerStage.entries.toSet() - setOf(WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE, WorkerStage.OVERLAP) -
         (if (denoise) emptySet() else setOf(WorkerStage.DENOISE)) -
         (if (slavic) emptySet() else setOf(WorkerStage.GIGAAM))
 

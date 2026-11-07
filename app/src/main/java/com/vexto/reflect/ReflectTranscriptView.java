@@ -10,6 +10,7 @@ import android.graphics.Path;
 import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.RippleDrawable;
 import android.text.SpannableStringBuilder;
@@ -18,6 +19,7 @@ import android.text.format.Formatter;
 import android.text.style.StyleSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.TouchDelegate;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
@@ -26,6 +28,7 @@ import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
 import android.widget.HeaderViewListAdapter;
+import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -63,6 +66,7 @@ final class ReflectTranscriptView extends FrameLayout {
         void seekPlaybackMillis(int millis);
         void openTranscriptLine(ReflectTranscript.Line line);
         void recheckTranscriptLine(ReflectTranscript.Line line);
+        void openOverlapInfo(ReflectTranscript.Line line);
     }
 
     private final ReflectArtwork artwork;
@@ -372,8 +376,11 @@ final class ReflectTranscriptView extends FrameLayout {
     }
 
     private void updateEmotionStatus() {
-        if (emotionStatus != null) emotionStatus.setVisibility(hasTranscriptLines && transcription != null
-                && transcription.backgroundEmotions() ? VISIBLE : GONE);
+        if (emotionStatus != null) {
+            emotionStatus.setVisibility(hasTranscriptLines && transcription != null
+                    && transcription.backgroundEmotions() ? VISIBLE : GONE);
+            if (transcription != null) emotionStatus.setText(transcription.title());
+        }
     }
 
     private TextView titleView() {
@@ -643,6 +650,8 @@ final class ReflectTranscriptView extends FrameLayout {
 
     private final class TranscriptRow extends LinearLayout {
         private final AvatarView avatar = new AvatarView();
+        private final FrameLayout avatarButton;
+        private final ImageView overlapBadge;
         private final TextView metadata;
         private final TextView body;
         private ReflectTranscript.Line shown;
@@ -651,7 +660,24 @@ final class ReflectTranscriptView extends FrameLayout {
         TranscriptRow() {
             super(ReflectTranscriptView.this.getContext());
             setPadding(style.px(16), 0, style.px(16), style.px(17));
-            addView(avatar, new LinearLayout.LayoutParams(style.px(40), style.px(40)));
+            setClipChildren(false);
+            avatarButton = new FrameLayout(getContext()) {
+                @Override public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
+                    super.onInitializeAccessibilityNodeInfo(info);
+                    if (isClickable()) info.setClassName("android.widget.Button");
+                }
+            };
+            avatarButton.setClipChildren(false);
+            avatarButton.addView(avatar, new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
+            overlapBadge = new ImageView(getContext());
+            overlapBadge.setImageDrawable(artwork.iconDrawable(getResources(), "alert-circle", style.px(24)));
+            overlapBadge.setImageTintList(ColorStateList.valueOf(ReflectPageStyle.DANGER));
+            overlapBadge.setBackground(style.rounded(0xff040402, 12));
+            overlapBadge.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            FrameLayout.LayoutParams badgeLayout = new FrameLayout.LayoutParams(style.px(24), style.px(24));
+            badgeLayout.leftMargin = style.px(20);
+            avatarButton.addView(overlapBadge, badgeLayout);
+            addView(avatarButton, new LinearLayout.LayoutParams(style.px(40), style.px(40)));
             LinearLayout words = style.column();
             LinearLayout.LayoutParams width = new LinearLayout.LayoutParams(0, WRAP_CONTENT, 1);
             width.leftMargin = style.px(12);
@@ -669,6 +695,16 @@ final class ReflectTranscriptView extends FrameLayout {
         void bind(ReflectTranscript.Line line, int position) {
             shown = line;
             avatar.show(line.emotionProbabilities == null ? null : line.emotionProbabilities.strongest());
+            boolean overlap = Boolean.TRUE.equals(line.overlapDetected);
+            overlapBadge.setVisibility(overlap ? VISIBLE : GONE);
+            avatar.setImportantForAccessibility(overlap ? IMPORTANT_FOR_ACCESSIBILITY_NO : IMPORTANT_FOR_ACCESSIBILITY_YES);
+            avatarButton.setContentDescription(overlap
+                    ? avatar.getContentDescription() + ". Обнаружено перебивание. Подробнее" : null);
+            avatarButton.setImportantForAccessibility(overlap ? IMPORTANT_FOR_ACCESSIBILITY_YES : IMPORTANT_FOR_ACCESSIBILITY_NO);
+            avatarButton.setOnClickListener(overlap ? v -> actions.openOverlapInfo(shown) : null);
+            avatarButton.setClickable(overlap);
+            avatarButton.setFocusable(overlap);
+            if (!overlap) setTouchDelegate(null);
             SpannableStringBuilder label = new SpannableStringBuilder(
                     speakerNames.getOrDefault(line.speakerId, line.speakerId));
             if (preferences.timestamps()) {
@@ -690,6 +726,21 @@ final class ReflectTranscriptView extends FrameLayout {
                 recheckOffer.show(TranscriptRow.this, line);
                 return true;
             });
+        }
+
+        @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+            super.onLayout(changed, left, top, right, bottom);
+            // Preserve the 40px avatar layout while making its alert action easier to tap.
+            if (avatarButton.isClickable()) {
+                Rect target = new Rect();
+                avatarButton.getHitRect(target);
+                target.left -= style.px(4);
+                target.right += style.px(4);
+                target.bottom += style.px(8);
+                setTouchDelegate(new TouchDelegate(target, avatarButton));
+            } else {
+                setTouchDelegate(null);
+            }
         }
 
         void highlight(int position, boolean animate) {

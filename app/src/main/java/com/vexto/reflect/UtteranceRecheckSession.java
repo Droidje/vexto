@@ -177,7 +177,7 @@ final class UtteranceRecheckSession {
                 pieces.add(new UtteranceRecheck.Piece(
                         Math.toIntExact(Math.addExact(utterance.getStartMs(), offsetMs)),
                         Math.toIntExact(Math.addExact(utterance.getEndMs(), offsetMs)),
-                        utterance.getText(), utterance.getEmotionProbabilities(), words));
+                        utterance.getText(), utterance.getEmotionProbabilities(), words, utterance.getOverlapDetected()));
             } catch (ArithmeticException overflow) {
                 return List.of();
             }

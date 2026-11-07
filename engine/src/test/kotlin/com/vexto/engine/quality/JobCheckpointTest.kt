@@ -37,6 +37,14 @@ class JobCheckpointTest {
         JobFiles.save(reportFile, report)
         job.saveFinished(transcript, stats)
         assertNotNull(job.finished()) // fullProfileCompleted is not required.
+        assertNull(job.finished("new-overlap-model"))
+        job.saveFinished(transcript, stats, "new-overlap-model")
+        assertNotNull(job.finished("new-overlap-model"))
+        assertNull(job.finished()) // Removing the optional model also invalidates prior flags.
+        job.saveFinished(transcript, stats)
+        JobFiles.save(reportFile, report.copy(warnings = listOf("OVERLAP_UNAVAILABLE:model_pack:IllegalArgumentException")))
+        assertNull(job.finished()) // Explicit retry must revisit optional failures, without invalidating ASR.
+        JobFiles.save(reportFile, report)
         job.saveFinished(transcript, stats.copy(selectionResolved = false))
         assertNull(job.finished())
         job.saveFinished(transcript, stats)

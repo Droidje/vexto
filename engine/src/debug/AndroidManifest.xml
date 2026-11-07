@@ -10,5 +10,6 @@
             android:exported="true"
             android:theme="@android:style/Theme.Material.NoActionBar" />
         <activity android:name="com.vexto.engine.eval.QualityEvalActivity" android:exported="true" />
+        <activity android:name="com.vexto.engine.eval.OverlapEvalActivity" android:exported="true" />
     </application>
 </manifest>

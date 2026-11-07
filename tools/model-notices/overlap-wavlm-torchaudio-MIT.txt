@@ -1,0 +1,41 @@
+Vexto natural-overlap detector: WavLM Base+ encoder and trained overlap head.
+
+WavLM pretrained weights: MIT, copyright Microsoft Corporation.
+Distributed through TorchAudio WAVLM_BASE_PLUS with the same model license.
+Model source: https://download.pytorch.org/torchaudio/models/wavlm_base_plus.pth
+Model license declaration: https://docs.pytorch.org/audio/2.5.0/generated/torchaudio.pipelines.WAVLM_BASE_PLUS.html
+License source: https://github.com/microsoft/unilm/blob/65f15af2a307ebb64cfb25adf54375b002e6fe8d/LICENSE
+
+Training data attribution: AMI Meeting Corpus, AMI project consortium.
+Source: https://groups.inf.ed.ac.uk/ami/ and https://groups.inf.ed.ac.uk/ami/corpus/
+Data and annotations license: Creative Commons Attribution 4.0 International.
+License: https://creativecommons.org/licenses/by/4.0/
+Modification/use: public audio windows and overlap/backchannel labels derived from
+AMI annotations were used to train the Vexto linear classification head and select
+its operating point. The frozen WavLM encoder was not fine-tuned. No corpus audio
+or transcripts are included in the application or this model package.
+The corpus providers do not endorse this detector.
+
+WavLM model license follows:
+
+The MIT License (MIT)
+
+Copyright (c) Microsoft Corporation
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

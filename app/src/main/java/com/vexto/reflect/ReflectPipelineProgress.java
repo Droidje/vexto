@@ -13,7 +13,7 @@ final class ReflectPipelineProgress {
             case Diarization, Language, Voiceprints -> 1;
             case Recognition, Comparison -> 2;
             case Selection -> 3;
-            case Assembly, Punctuation, Emotion -> 4;
+            case Assembly, Punctuation, Emotion, Overlap -> 4;
         };
     }
 
@@ -33,6 +33,7 @@ final class ReflectPipelineProgress {
             case Assembly -> part(93, 95, percent);
             case Punctuation -> part(95, 96, percent);
             case Emotion -> part(96, 99, percent);
+            case Overlap -> 99;
         };
     }
 

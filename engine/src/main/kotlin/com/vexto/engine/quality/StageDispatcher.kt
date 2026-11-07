@@ -2,6 +2,8 @@ package com.vexto.engine.quality
 
 import android.content.Context
 import com.vexto.engine.models.QualityModelStore
+import com.vexto.engine.models.OverlapManifest
+import com.vexto.engine.models.OverlapModelStore
 import com.vexto.engine.pipeline.*
 import com.vexto.engine.review.*
 import com.vexto.engine.runtime.NativeProcessRunner
@@ -133,6 +135,30 @@ internal object StageDispatcher {
                 onProgress(1f)
                 WorkerResult(request.stage, choices = choices, warnings = warnings,
                     peakCombinedRssBytes = nativePeak, speakerNames = names)
+            }
+            WorkerStage.OVERLAP -> {
+                val manifest = JobFiles.load<OverlapManifest>(File(job, "overlap-model.json")).also { it.validate() }
+                require(OverlapModelStore.manifest(context) == manifest) { "Overlap model changed during job" }
+                val targets = JobFiles.load<List<UtteranceOverlapTarget>>(File(job, "overlap-targets.json"))
+                require(targets.map { it.index }.distinct().size == targets.size)
+                val targetMap = targets.associateBy { it.index }
+                val evidence = saved?.overlaps.orEmpty().distinctBy { it.target.index }.filter {
+                    targetMap[it.target.index] == it.target && it.modelRevision == manifest.revision
+                }
+                val known = evidence.mapTo(mutableSetOf()) { it.target.index }
+                val pending = targets.filter { it.index !in known }
+                val model = OverlapModelStore.prepare(context, manifest)
+                val cadence = CheckpointCadence()
+                fun save(values: List<UtteranceOverlapEvidence>, force: Boolean = false): WorkerResult {
+                    val result = WorkerResult(request.stage, overlaps = values, backends = listOf("cpu"))
+                    if (force || cadence.due(values.size, targets.size)) checkpoint(result)
+                    if (targets.isNotEmpty()) onProgress(values.size.toFloat() / targets.size)
+                    return result
+                }
+                OverlapProvider(model).use { provider ->
+                    val added = provider.annotate(input, pending, manifest.revision) { save(evidence + it) }
+                    save((evidence + added).sortedBy { it.target.index }, force = true)
+                }
             }
             WorkerStage.EMOTION -> {
                 val targets = JobFiles.load<List<UtteranceEmotionTarget>>(File(job, "emotion-targets.json"))

@@ -36,3 +36,6 @@ local.properties
 
 # Generated, SHA256-verified RUPunct weights
 /engine/src/main/punctuation-assets/models/
+
+# Reproducible WavLM export (scripts/export_overlap_model.py).
+/engine/src/main/overlap-assets/

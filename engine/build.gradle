@@ -32,7 +32,7 @@ android {
     }
     sourceSets { main {
         // Explicit source roots keep the legacy multi-GB embedded pack out of quality APKs.
-        assets.srcDirs = ['src/main/quality-assets', 'src/main/punctuation-assets', "$rootDir/tools/native/licenses"]
+        assets.srcDirs = ['src/main/quality-assets', 'src/main/punctuation-assets', 'src/main/overlap-assets', "$rootDir/tools/native/licenses"]
     } }
 
     packaging { jniLibs { useLegacyPackaging = true } }
@@ -80,3 +80,11 @@ tasks.register('verifyPunctuationModels') {
     }
 }
 tasks.named('preBuild').configure { dependsOn 'verifyPunctuationModels' }
+
+tasks.register('verifyOverlapModels') {
+    onlyIf { !providers.gradleProperty('vextoSkipNative').isPresent() }
+    doLast {
+        exec { commandLine 'python3', "$rootDir/scripts/verify_overlap_model.py" }
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'verifyOverlapModels' }
