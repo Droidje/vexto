@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import com.vexto.engine.ReflectEngine;
+import com.vexto.engine.audio.AudioInputTooLongException;
 import com.vexto.engine.model.ProcessingStats;
 import com.vexto.engine.model.Stage;
 import com.vexto.engine.model.Transcript;
@@ -110,7 +111,9 @@ final class ReflectLocalTranscription {
 
             @Override public void onError(Throwable error) {
                 String message = "Не удалось расшифровать запись. Можно повторить попытку.";
-                if (error instanceof BundledModelPackException) {
+                if (error instanceof AudioInputTooLongException) {
+                    message = "Запись длиннее 4 часов. Разделите её на несколько частей.";
+                } else if (error instanceof BundledModelPackException) {
                     message = error.getMessage();
                 } else if (error instanceof OfflineModelPackException) {
                     message = "Установите проверенный офлайн-пакет моделей и повторите расшифровку.";

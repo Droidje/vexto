@@ -258,7 +258,9 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         try (InputStream source = getContentResolver().openInputStream(uri)) {
             if (source == null) throw new IOException("Could not open audio");
             imported = File.createTempFile("reflect-", extension == null ? ".audio" : "." + extension, getCacheDir());
-            Files.copy(source, imported.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            try (var output = Files.newOutputStream(imported.toPath())) {
+                AudioImport.copy(source, output, AudioImport.MAX_BYTES);
+            }
             int length = RecordingSession.duration(imported);
             File ready = imported;
             runOnUiThread(() -> {
@@ -270,7 +272,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             if (imported != null) imported.delete();
             runOnUiThread(() -> {
                 importing = false;
-                if (!isDestroyed()) notice("Не удалось открыть аудиофайл");
+                if (!isDestroyed()) notice(error instanceof AudioImport.TooLarge
+                        ? "Аудиофайл превышает 1 ГиБ" : "Не удалось открыть аудиофайл");
             });
         }
     }

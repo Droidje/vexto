@@ -13,6 +13,8 @@ import java.io.File
 import java.io.IOException
 import java.nio.ByteOrder
 
+class AudioInputTooLongException : IOException("Decoded audio exceeds the sample limit")
+
 /**
  * Декодирует любой поддержанный Android аудиоформат (wav, m4a/aac, mp3, ogg/opus, flac, amr)
  * в моно PCM16 16 кГц во временном файле. Память не зависит от длины записи.
@@ -21,9 +23,10 @@ internal object AudioDecoder {
 
     private const val TimeoutUs = 10_000L
     const val PreviewLimitMs = 120_000
+    private const val MaxAudioSeconds = 4L * 60 * 60
 
     suspend fun decode(context: Context, uri: Uri, cacheDir: File, onProgress: (Float) -> Unit): PcmAudio =
-        decode(context, uri, cacheDir, Long.MAX_VALUE, onProgress)
+        decode(context, uri, cacheDir, MaxAudioSeconds * SampleRate, onProgress)
 
     suspend fun previewWaveform(context: Context, uri: Uri): IntArray =
         decode(context, uri, context.cacheDir, PreviewLimitMs.toLong() * SampleRate / 1000) {}
@@ -34,8 +37,8 @@ internal object AudioDecoder {
         val extractor = MediaExtractor()
         val file = File.createTempFile("decoded", ".pcm", cacheDir)
         val writer = PcmWriter(file)
-        val write: (FloatArray, Int) -> Unit = if (maxSamples == Long.MAX_VALUE) writer::write else { samples, count ->
-            if (count > maxSamples - writer.sampleCount) throw IOException("Audio preview exceeds its sample limit")
+        val write: (FloatArray, Int) -> Unit = { samples, count ->
+            if (count > maxSamples - writer.sampleCount) throw AudioInputTooLongException()
             writer.write(samples, count)
         }
         var codec: MediaCodec? = null
