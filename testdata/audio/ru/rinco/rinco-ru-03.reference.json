@@ -1,0 +1,16 @@
+{
+  "transcript": [
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 100,
+      "end_ms": 1898,
+      "text": "Ты в июле или в августе едешь?"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 3096,
+      "end_ms": 5046,
+      "text": "Продолжать будем? Или нет?"
+    }
+  ]
+}

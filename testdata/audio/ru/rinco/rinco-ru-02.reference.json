@@ -1,0 +1,16 @@
+{
+  "transcript": [
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 100,
+      "end_ms": 1538,
+      "text": "Манную кашу  – будешь есть?"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 2684,
+      "end_ms": 4236,
+      "text": "Ты на гитаре играть – умеешь?"
+    }
+  ]
+}
