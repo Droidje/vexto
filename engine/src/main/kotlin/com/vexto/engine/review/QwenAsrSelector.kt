@@ -42,7 +42,7 @@ class QwenAsrSelector(
                 "-m", modelFile.absolutePath, "--jinja", "--chat-template-file", template.absolutePath,
                 "--reasoning", "off", "-cnv", "--single-turn", "--simple-io", "--no-display-prompt",
                 "--no-context-shift", "-c", "1024", "-t", "2", "--threads-batch", "2",
-                "-b", "128", "-ub", "64", "-ngl", "0", "--no-repack",
+                "-b", "128", "-ub", "64", "-ngl", "0", "--no-repack", "--no-warmup",
                 "--cache-type-k", "f16", "--cache-type-v", "f16", "--seed", "42",
                 "--temp", "0", "--repeat-penalty", "1.0", "-n", "32",
                 "--json-schema-file", schema.absolutePath, "-f", prompt.absolutePath,

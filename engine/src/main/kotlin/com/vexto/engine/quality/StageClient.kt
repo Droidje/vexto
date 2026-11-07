@@ -10,7 +10,7 @@ import kotlin.coroutines.resumeWithException
 
 /** A stage completes only after its exact worker Binder dies, releasing its model heap. */
 internal class StageClient(private val context: Context) {
-    suspend fun run(request: WorkerRequest): WorkerResult {
+    suspend fun run(request: WorkerRequest, onProgress: (Float) -> Unit = {}): WorkerResult {
         withContext(Dispatchers.Main) {
             blockedLease?.let {
                 if (!it.dead.isCompleted) throw IOException("PREVIOUS_WORKER_TERMINATION_UNCONFIRMED")
@@ -26,7 +26,7 @@ internal class StageClient(private val context: Context) {
         val speakers = runCatching { JobFiles.load<List<PipelineTurn>>(File(job, "turns.json")).map { it.speaker }.distinct().size }.getOrDefault(1)
         val timeout = StageTimeoutPolicy.milliseconds(request.stage, audioMs, plan?.chunks?.size ?: 1, speakers)
         val started = SystemClock.elapsedRealtime()
-        val lease = Lease(context, request, path)
+        val lease = Lease(context, request, path, onProgress)
         var failure: Throwable? = null
         val result = try {
             // Only this deadline becomes null. Cancellation of the caller, including an outer
@@ -51,7 +51,7 @@ internal class StageClient(private val context: Context) {
     }
 
     /** State is confined to the main thread; death callbacks remain installed during cancellation. */
-    private class Lease(val context: Context, val request: WorkerRequest, val path: File) {
+    private class Lease(val context: Context, val request: WorkerRequest, val path: File, val onProgress: (Float) -> Unit) {
         val dead = CompletableDeferred<Unit>()
         private val main = Handler(Looper.getMainLooper())
         private var bound = false
@@ -110,7 +110,13 @@ internal class StageClient(private val context: Context) {
             continuation = waiting
             val reply = Messenger(object : Handler(Looper.getMainLooper()) {
                 override fun handleMessage(message: Message) {
-                    if (message.what != InferenceStageService.Done || dead.isCompleted) return
+                    if (dead.isCompleted) return
+                    if (message.what == InferenceStageService.Progress) {
+                        val fraction = message.data.getFloat("fraction")
+                        if (fraction.isFinite()) onProgress(fraction.coerceIn(0f, 1f))
+                        return
+                    }
+                    if (message.what != InferenceStageService.Done) return
                     try { worker?.send(Message.obtain(null, InferenceStageService.Shutdown)) }
                     catch (error: RemoteException) { transportFailure(error) }
                 }

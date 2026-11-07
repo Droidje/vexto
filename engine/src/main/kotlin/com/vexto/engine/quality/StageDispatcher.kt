@@ -13,7 +13,7 @@ import java.io.File
 
 /** Model adapters know nothing about the UI, backend or recording storage. */
 internal object StageDispatcher {
-    suspend fun run(context: Context, request: WorkerRequest): WorkerResult {
+    suspend fun run(context: Context, request: WorkerRequest, onProgress: (Float) -> Unit = {}): WorkerResult {
         val job = File(request.jobDir).canonicalFile
         val models = com.vexto.engine.models.QualityModels(QualityModelStore.root(context, QualityModelStore.manifest(context)),
             QualityModelStore.manifest(context))
@@ -37,7 +37,7 @@ internal object StageDispatcher {
         return when (request.stage) {
             WorkerStage.DENOISE -> {
                 GtcrnDenoiserProvider(models.file("gtcrn")).use {
-                    it.denoise(input, File(job, "denoised.wav"), File(job, "denoising.json"))
+                    it.denoise(input, File(job, "denoised.wav"), File(job, "denoising.json"), onProgress)
                 }
                 WorkerResult(request.stage)
             }
@@ -64,12 +64,14 @@ internal object StageDispatcher {
                 val warnings = mutableListOf<String>()
                 GigaAmCandidateProvider(GigaAmCandidateProvider.Models(models.file("giga_encoder"),
                     models.file("giga_decoder"), models.file("giga_joiner"), models.file("giga_tokens"))).use { provider ->
-                    for (chunk in chunks()) {
+                    val tasks = chunks()
+                for ((index, chunk) in tasks.withIndex()) {
                         currentCoroutineContext().ensureActive()
                         try { refs += reference(provider.generate(chunk, File(job, "raw/gigaam/${chunk.id}.json"))) }
                         catch (cancel: CancellationException) { throw cancel }
                         catch (failure: Exception) { warnings += "GIGAAM_FAILED:${chunk.id}:${failure.javaClass.simpleName}" }
                         checkpoint(WorkerResult(request.stage, candidates = refs.toList(), warnings = warnings.toList()))
+                        onProgress((index + 1f) / tasks.size)
                     }
                 }
                 WorkerResult(request.stage, candidates = refs, warnings = warnings)
@@ -78,12 +80,14 @@ internal object StageDispatcher {
                 val refs = mutableListOf<CandidateRef>()
                 val warnings = mutableListOf<String>()
                 val provider = WhisperComparisonProvider(executor, models.file("whisper"))
-                for (chunk in chunks()) {
+                val tasks = chunks()
+                for ((index, chunk) in tasks.withIndex()) {
                     currentCoroutineContext().ensureActive()
                     try { refs += reference(provider.generate(chunk, File(job, "raw/whisper/${chunk.id}/whisper.json"))) }
                     catch (cancel: CancellationException) { throw cancel }
                     catch (failure: Exception) { warnings += "WHISPER_FAILED:${chunk.id}:${failure.javaClass.simpleName}" }
                     checkpoint(WorkerResult(request.stage, candidates = refs.toList(), warnings = warnings.toList(), peakCombinedRssBytes = nativePeak))
+                    onProgress((index + 1f) / tasks.size)
                 }
                 WorkerResult(request.stage, candidates = refs, warnings = warnings, peakCombinedRssBytes = nativePeak)
             }
@@ -94,7 +98,8 @@ internal object StageDispatcher {
                 val choices = mutableListOf<ChoiceRef>()
                 val warnings = mutableListOf<String>()
                 val selector = QwenAsrSelector(executor, models.file("qwen"))
-                for (chunk in chunks()) {
+                val tasks = chunks()
+                for ((index, chunk) in tasks.withIndex()) {
                     currentCoroutineContext().ensureActive()
                     val originals = refs.filter { it.chunkId == chunk.id }.mapNotNull { ref ->
                         runCatching {
@@ -103,7 +108,7 @@ internal object StageDispatcher {
                             }
                         }.getOrElse { warnings += "INVALID_ORIGINAL:${chunk.id}:${ref.source}"; null }
                     }
-                    if (originals.isEmpty()) { warnings += "ASR_MISSING:${chunk.id}"; continue }
+                    if (originals.isEmpty()) { warnings += "ASR_MISSING:${chunk.id}"; onProgress((index + 1f) / tasks.size); continue }
                     val pair = AsrCandidatePair(chunk.id, chunk.inputSha256, originals.firstOrNull { it.source == AsrSource.GIGAAM },
                         originals.firstOrNull { it.source == AsrSource.WHISPER })
                     val selected = selector.selectAll(listOf(pair), File(job, "selection")).single()
@@ -112,6 +117,7 @@ internal object StageDispatcher {
                     choices += ChoiceRef(chunk.id, ref, selected.status.name, selected.audit.reason)
                     JobFiles.save(File(job, "selection/${chunk.id}/audit.json"), selected.audit)
                     checkpoint(WorkerResult(request.stage, choices = choices.toList(), warnings = warnings.toList(), peakCombinedRssBytes = nativePeak))
+                    onProgress((index + 1f) / tasks.size)
                 }
                 WorkerResult(request.stage, choices = choices, warnings = warnings, peakCombinedRssBytes = nativePeak)
             }
@@ -120,6 +126,7 @@ internal object StageDispatcher {
                 fun save(emotions: List<UtteranceEmotionEvidence>) {
                     JobFiles.save(File(job, "emotion.json"), UtteranceEmotionArtifact(emotions))
                     checkpoint(WorkerResult(request.stage, emotions = emotions))
+                    if (targets.isNotEmpty()) onProgress(emotions.size.toFloat() / targets.size)
                 }
                 save(emptyList())
                 EmotionProvider(models.file("emotion")).use { provider ->

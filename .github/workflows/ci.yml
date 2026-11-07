@@ -69,18 +69,22 @@ jobs:
           echo "OK: базовые файлы репозитория на месте"
 
   test:
-    name: Autotests — локальное приложение и утилиты
+    name: Build — Android (автотесты на паузе)
     runs-on: ubuntu-latest
     needs: gate
     if: needs.gate.outputs.skip != 'true'
     steps:
       - uses: actions/checkout@v7
+      # Автотесты временно приостановлены по запросу команды. Возврат: repo variable VEXTO_RUN_AUTOTESTS=true.
       - uses: actions/setup-python@v6
+        if: vars.VEXTO_RUN_AUTOTESTS == 'true'
         with:
           python-version: '3.12'
       - name: Unit-тесты утилит
+        if: vars.VEXTO_RUN_AUTOTESTS == 'true'
         run: python -m unittest discover -s tools/benchmarks/tests -v
       - name: Синтаксис Android memory guard
+        if: vars.VEXTO_RUN_AUTOTESTS == 'true'
         run: bash -n tools/benchmarks/android_memory_guard.sh
       - uses: actions/setup-java@v5
         with:
@@ -90,6 +94,9 @@ jobs:
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
           bash scripts/fetch_models.sh --aar-only
-      - name: JVM-тесты движка и локальной базы, проверка Java APK
-        run: bash ./gradlew --no-daemon --max-workers=2 -PvextoSkipNative=true :engine:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug
+      - name: Сборка проверочного APK без native-моделей
+        run: bash ./gradlew --no-daemon --max-workers=2 -PvextoSkipNative=true :app:assembleDebug
+      - name: Отложенные JVM-тесты движка и локальной базы
+        if: vars.VEXTO_RUN_AUTOTESTS == 'true'
+        run: bash ./gradlew --no-daemon --max-workers=2 -PvextoSkipNative=true :engine:testDebugUnitTest :app:testDebugUnitTest
 

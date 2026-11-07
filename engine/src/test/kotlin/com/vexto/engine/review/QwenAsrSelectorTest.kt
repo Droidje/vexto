@@ -29,6 +29,7 @@ class QwenAsrSelectorTest {
             assertEquals("libvexto_llama_exec.so", executable)
             assertEquals("1024", args[args.indexOf("-c") + 1])
             assertTrue(args.contains("--no-repack"))
+            assertTrue(args.contains("--no-warmup"))
             assertTrue(args.contains("--no-context-shift"))
             calls += dir.name
             if (dir.name == "two") throw IOException("simulated native failure")

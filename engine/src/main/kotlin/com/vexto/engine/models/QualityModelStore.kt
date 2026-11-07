@@ -23,31 +23,55 @@ data class QualityManifest(val version: String, val artifacts: Map<String, Quali
     }
 }
 
-class QualityModels(val dir: File, val manifest: QualityManifest) {
+class QualityModels(val dir: File, val manifest: QualityManifest, val verificationReused: Boolean = false) {
     fun file(id: String): File = JobFiles.inside(dir, manifest.artifacts.getValue(id).path)
 }
 
-class OfflineModelPackException(message: String) : IOException(message)
+class OfflineModelPackException(message: String, cause: IOException? = null) : IOException(message, cause)
 
 /** Offline packs live in app-scoped storage. No multi-GB duplicate copy inside APK/filesDir. */
 object QualityModelStore {
-    fun manifest(context: Context): QualityManifest = context.assets.open("quality/manifest.json").bufferedReader().use {
-        JobFiles.json.decodeFromString<QualityManifest>(it.readText()).also(QualityManifest::validate)
+    private val verificationCache = ModelVerificationCache()
+
+    private fun readManifest(context: Context): Pair<QualityManifest, String> {
+        val bytes = context.assets.open("quality/manifest.json").use { it.readBytes() }
+        val manifest = JobFiles.json.decodeFromString<QualityManifest>(bytes.toString(Charsets.UTF_8))
+            .also(QualityManifest::validate)
+        val digest = ModelVerificationCache.manifestDigest(bytes)
+        return manifest to digest
     }
+    fun manifest(context: Context): QualityManifest = readManifest(context).first
     fun root(context: Context, manifest: QualityManifest): File = File(
         context.getExternalFilesDir(null) ?: context.filesDir, "quality-models/${manifest.version}")
 
     suspend fun prepare(context: Context, progress: (Float) -> Unit): QualityModels {
-        val manifest = manifest(context)
+        val (manifest, manifestDigest) = readManifest(context)
         val root = root(context, manifest)
-        manifest.artifacts.entries.forEachIndexed { i, (id, artifact) ->
-            currentCoroutineContext().ensureActive()
-            val file = JobFiles.inside(root, artifact.path)
-            if (!file.isFile || file.length() != artifact.bytes || JobFiles.sha256(file) != artifact.sha256) {
-                throw OfflineModelPackException("Не установлен полный набор моделей: $id. Загрузите проверенный офлайн-пакет ${manifest.version} в ${root.name}.")
-            }
-            progress((i + 1f) / manifest.artifacts.size)
+        val entries = manifest.artifacts.entries.toList()
+        val files = entries.map { (_, artifact) ->
+            JobFiles.inside(root, artifact.path) // Validate containment, retaining the path for NOFOLLOW below.
+            File(root, artifact.path)
         }
-        return QualityModels(root, manifest)
+        val coroutine = currentCoroutineContext()
+        coroutine.ensureActive()
+        val hit = try {
+            verificationCache.verify(manifestDigest, files) {
+                entries.forEachIndexed { i, (id, artifact) ->
+                    coroutine.ensureActive()
+                    val file = files[i]
+                    if (!file.isFile || file.length() != artifact.bytes || JobFiles.sha256(file) != artifact.sha256) {
+                        throw OfflineModelPackException("Не установлен полный набор моделей: $id. Загрузите проверенный офлайн-пакет ${manifest.version} в ${root.name}.")
+                    }
+                    progress((i + 1f) / entries.size)
+                }
+            }
+        } catch (error: OfflineModelPackException) {
+            throw error
+        } catch (error: IOException) {
+            throw OfflineModelPackException("Не удалось проверить локальный комплект моделей.", error)
+        }
+        coroutine.ensureActive()
+        if (hit) progress(1f)
+        return QualityModels(root, manifest, verificationReused = hit)
     }
 }
