@@ -51,10 +51,22 @@ final class SpeakerProfilesUi {
             List<ReflectCatalog.Speaker> rows = new ArrayList<>();
             for (var entry : entries) {
                 var profile = entry.profile();
-                rows.add(new ReflectCatalog.Speaker(profile.id(), profile.name(), profile.self() ? "Я" : "", null));
+                String name = profile.self() ? profile.name() + " · Я" : profile.name();
+                rows.add(new ReflectCatalog.Speaker(profile.id(), name, speechMinutes(entry.speechMs()), null));
             }
             view.setSpeakers(rows);
         });
+    }
+
+    private static String speechMinutes(long speechMs) {
+        long minutes = speechMs / 60_000;
+        long lastTwo = minutes % 100;
+        String unit = lastTwo >= 11 && lastTwo <= 14 ? "минут" : switch ((int) (minutes % 10)) {
+            case 1 -> "минута";
+            case 2, 3, 4 -> "минуты";
+            default -> "минут";
+        };
+        return minutes + " " + unit;
     }
 
     void addSpeaker() {

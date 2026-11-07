@@ -99,7 +99,7 @@ final class ReflectLibraryRow extends View {
                 if (open != null) chevron(canvas, paint, 373, 33);
                 return;
             }
-            style(paint, 14, 0xffae86e8, art.medium, -.42f);
+            style(paint, 14, 0xffae86e8, art.durationBadge, -.42f);
             float badgeWidth = paint.measureText(item.duration) + 16;
             style(paint, 18, Color.WHITE, nameFont, -.306f);
             float nameWidth = (open == null ? 377 : 354) - 104 - badgeWidth;
@@ -108,7 +108,7 @@ final class ReflectLibraryRow extends View {
             text(canvas, paint, name, 92, 38.5f, 18, Color.WHITE, nameFont, -.306f);
             paint.setColor(0xff220053);
             canvas.drawRoundRect(badgeX, 19, badgeX + badgeWidth, 45, 10, 10, paint);
-            text(canvas, paint, item.duration, badgeX + 8, 37, 14, 0xffae86e8, art.medium, -.42f);
+            text(canvas, paint, item.duration, badgeX + 8, 37, 14, 0xffae86e8, art.durationBadge, -.42f);
             if (open != null) chevron(canvas, paint, 373, 33);
         });
     }
