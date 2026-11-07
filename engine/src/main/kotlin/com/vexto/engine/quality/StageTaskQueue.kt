@@ -7,6 +7,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
 
 /** Bounded task/result queues. Each worker owns one model; only the collector writes checkpoints. */
 internal object StageTaskQueue {
@@ -19,14 +21,26 @@ internal object StageTaskQueue {
         open: suspend (Int) -> W,
         process: suspend (W, AudioChunk) -> R,
         collect: suspend (AudioChunk, Result<R>) -> Unit,
-    ) = coroutineScope {
+    ) {
         require(workers in 1..2 && tasks.map { it.id }.distinct().size == tasks.size)
-        if (tasks.isEmpty()) return@coroutineScope
-        val count = minOf(workers, tasks.size)
+        if (tasks.isEmpty()) return
+        runStream(tasks.asFlow(), minOf(workers, tasks.size), stopOnFailure, open, process, collect)
+    }
+
+    suspend fun <W : Closeable, R> runStream(
+        tasks: Flow<AudioChunk>, workers: Int, stopOnFailure: Boolean = false,
+        open: suspend (Int) -> W, process: suspend (W, AudioChunk) -> R,
+        collect: suspend (AudioChunk, Result<R>) -> Unit,
+    ) = coroutineScope {
+        require(workers in 1..2)
+        val count = workers
         val pending = Channel<AudioChunk>(count)
         val completed = Channel<Completion<R>>(count)
         launch {
-            try { tasks.forEach { pending.send(it) } }
+            try {
+                val seen = mutableSetOf<String>()
+                tasks.collect { require(seen.add(it.id)); pending.send(it) }
+            }
             finally { pending.close() }
         }
         val pool = List(count) { index ->

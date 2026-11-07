@@ -54,7 +54,7 @@ final class ReflectView extends ViewGroup {
 
     private static final float WIDTH = 393, HEIGHT = 852;
     static final int NAV_BOTTOM_CLEARANCE = 99;
-    private static final float LIBRARY_TOP = 83;
+    private static final float LIBRARY_TOP = 24;
     private static final float FINISH_LEFT = 172, FINISH_CENTER_X = 201.5f;
     private static final int BACKGROUND = 0xff040402, WHITE = Color.WHITE;
     private static final Screen[] TABS = {Screen.HOME, Screen.RECORDS, Screen.SPEAKERS, Screen.SETTINGS};
@@ -758,7 +758,7 @@ final class ReflectView extends ViewGroup {
         outline(c, 175, 617, 377, 749, 26, MENU_EDGE);
         artwork.icon(c, "attach", 191, 631);
         artwork.icon(c, "mic_menu", 191, 675);
-        artwork.icon(c, "headset", 191, 719);
+        artwork.icon(c, "headset", 191, 715);
         text(c, "Прикрепить файл", 219.5f, 646, 16, WHITE, artwork.medium, false);
         text(c, "Записать сейчас", 219, 690, 16, WHITE, artwork.medium, false);
         text(c, "Звонок", 219, 734, 16, WHITE, artwork.medium, false);
@@ -766,7 +766,7 @@ final class ReflectView extends ViewGroup {
 
     private void drawRecorder(Canvas c, Screen page) {
         if (callMode && page != Screen.REVIEW) {
-            artwork.icon(c, "headset", 184.5f, 70);
+            artwork.icon(c, "headset", 184.5f, 66);
             text(c, "Звонок", 196.5f, 123, 18, WHITE, artwork.medium, true);
         }
         if (orbEdgeShade == null) orbEdgeShade = orbEdgeShade();

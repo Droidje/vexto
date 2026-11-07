@@ -58,6 +58,9 @@ object QualityModelStore {
     suspend fun prepare(context: Context, fast: Boolean, progress: (Float) -> Unit): QualityModels =
         prepare(context, if (fast) QualityManifest.FastRequired else QualityManifest.Required, progress = progress)
 
+    suspend fun prepareRefinement(context: Context, progress: (Float) -> Unit): QualityModels =
+        prepare(context, setOf("giga_encoder", "giga_decoder", "giga_joiner", "giga_tokens", "whisper"), progress = progress)
+
     internal suspend fun prepareSummary(context: Context): QualityModels =
         prepare(context, setOf("qwen"), summaryVerificationCache) {}
 

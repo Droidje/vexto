@@ -40,7 +40,14 @@ internal object StageDispatcher {
             }
             WorkerStage.DIARIZE -> {
                 val work = prepareOutput(File(job, "diarization"))
-                val diarized = LongRecordingDiarization.run(models.file("nemotron"), input, work, runner)
+                val stable: ((Long, List<com.vexto.engine.runtime.NativeSpeakerTurn>) -> Unit)? = if (!request.streaming) null else { frontier, rows ->
+                    val ids = rows.sortedBy { it.startMs }.map { it.speakerId }.distinct().withIndex().associate { it.value to it.index }
+                    val partial = rows.map { row -> PipelineTurn(
+                        ids.getValue(row.speakerId), row.startMs, row.endMs) }
+                    JobFiles.save(File(job, "diarization-progress.json"), DiarizationProgress(frontier, partial))
+                }
+                val diarized = LongRecordingDiarization.run(models.file("nemotron"), input, work, runner,
+                    threads = if (request.streaming) 2 else 4, onStable = stable)
                 val result = diarized.result
                 val ids = result.turns.sortedBy { it.startMs }.map { it.speakerId }.distinct().withIndex().associate { it.value to it.index }
                 val durationMs = com.vexto.engine.audio.PcmWave.inspect(input).sampleCount / 16
@@ -58,18 +65,17 @@ internal object StageDispatcher {
                 JobFiles.save(File(job, "voiceprints.json"), voices)
                 WorkerResult(request.stage, voices = voices)
             }
-            WorkerStage.GIGAAM, WorkerStage.WHISPER ->
+            WorkerStage.GIGAAM, WorkerStage.WHISPER, WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE ->
                 QueuedAsrStages.run(request, job, input, models, runner, onProgress)
             WorkerStage.SELECT -> {
                 val slavic = JobFiles.load<RecordingLanguage>(File(job, "language.json")).route == RecordingLanguage.SLAVIC
-                val refs = listOfNotNull(WorkerStage.GIGAAM.takeIf { slavic }, WorkerStage.WHISPER).flatMap { stage ->
-                    runCatching { JobFiles.load<WorkerResult>(stage.resultFile(job)).candidates }.getOrDefault(emptyList())
-                }
+                val refs = CandidateSources.read(job, slavic)
                 val choices = saved?.choices.orEmpty().toMutableList()
                 val known = choices.mapTo(mutableSetOf()) { it.chunkId }
                 val warnings = mutableListOf<String>()
                 val tasks = chunkPlan().chunks
                 var names = saved?.speakerNames
+                val cadence = CheckpointCadence()
                 var processed = known.size
                 if (processed > 0) onProgress(0.95f * processed / tasks.size.coerceAtLeast(1))
                 runner.persistentExecutor(File(job, "workers/qwen")).use { session ->
@@ -98,7 +104,8 @@ internal object StageDispatcher {
                             selected.selectedArtifact.relativeTo(job).invariantSeparatorsPath, selected.audit.selectedSha256)
                         choices += ChoiceRef(chunk.id, ref, selected.status.name, selected.audit.reason)
                         JobFiles.save(File(job, "selection/${chunk.id}/audit.json"), selected.audit)
-                        checkpoint(WorkerResult(request.stage, choices = choices.toList(), warnings = warnings.toList(), peakCombinedRssBytes = nativePeak))
+                        if (cadence.due(choices.size, tasks.size)) checkpoint(WorkerResult(request.stage,
+                            choices = choices.toList(), warnings = warnings.toList(), peakCombinedRssBytes = nativePeak))
                         onProgress(0.95f * (++processed) / tasks.size)
                     }
                     // Keep the same Qwen model/context alive for one bounded naming request.
@@ -130,10 +137,13 @@ internal object StageDispatcher {
                 val accelerator = if (request.allowNpu && pending.isNotEmpty()) EmotionNative.npuDriver() else null
                 if (accelerator != null) JobFiles.save(emotionNpuAttemptFile(job), request.requestId)
 
-                fun save(emotions: List<UtteranceEmotionEvidence>): WorkerResult {
-                    JobFiles.save(File(job, "emotion.json"), UtteranceEmotionArtifact(emotions))
+                val cadence = CheckpointCadence()
+                fun save(emotions: List<UtteranceEmotionEvidence>, force: Boolean = false): WorkerResult {
                     val result = WorkerResult(request.stage, emotions = emotions, backends = backends.toList())
-                    checkpoint(result)
+                    if (force || cadence.due(emotions.size, targets.size)) {
+                        JobFiles.save(File(job, "emotion.json"), UtteranceEmotionArtifact(emotions))
+                        checkpoint(result)
+                    }
                     if (targets.isNotEmpty()) onProgress(emotions.size.toFloat() / targets.size)
                     return result
                 }
@@ -153,7 +163,7 @@ internal object StageDispatcher {
                         save(evidence + it)
                     }
                     recordBackend()
-                    save((evidence + added).sortedBy { it.target.index })
+                    save((evidence + added).sortedBy { it.target.index }, force = true)
                 }
             }
         }

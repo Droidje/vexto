@@ -59,6 +59,17 @@ download 'https://huggingface.co/nvidia/Nemotron-3-Diarization/resolve/f667ed73a
 "$python" scripts/convert_nemotron_fullprecision.py --checkpoint "$checkpoint" \
     --nemo-source "${nemotron[0]}" --output "$work/converted/nemotron/Nemotron-3-Diarization.f32.gguf"
 
+# Optional short CI research path; does not change the application manifest/default precision.
+if [[ "${VEXTO_NEMOTRON_ONLY:-0}" == 1 ]]; then
+    "$python" scripts/convert_nemotron_fullprecision.py --checkpoint "$checkpoint" \
+        --nemo-source "${nemotron[0]}" --precision f16 \
+        --output "$work/converted/nemotron/Nemotron-3-Diarization.f16.gguf"
+    q8="$work/converted/nemotron/Nemotron-3-Diarization.q8_0.gguf"
+    download 'https://huggingface.co/nvidia/Nemotron-3-Diarization/resolve/f667ed73aee57d40cc39428eb768b4fd87a0a29e/Nemotron-3-Diarization.q8_0.gguf' "$q8"
+    printf '%s  %s\n' '08456d9e22cd9a323c0364d98375f3746d6e68507ebb705cd46438c534c7a3a1' "$q8" | sha256sum -c -
+    exit 0
+fi
+
 # These two required assets intentionally have no manifest download URL: reproduce
 # the exact 99-language slice from the SHA256-pinned public Tiny checkpoint.
 "$python" scripts/prepare_lid_models.py --work-dir "$work/lid-source" --output-dir "$work/converted/lid"

@@ -49,7 +49,7 @@ class WhisperComparisonProvider(
         return generateWindowed(chunk, artifactFile, capacityMs)
     }
 
-    /** Whisper's encoder context stays at 10s. The exported transcript does not use this text. */
+    /** Whisper's encoder context stays bounded; SDK selection can export this entire candidate. */
     private suspend fun generateWindowed(chunk: ComparisonChunk, artifactFile: File, capacityMs: Long): ImmutableAsrCandidate {
         val info = PcmWave.inspect(chunk.wav)
         require(info.sampleRate == 16000 && info.sampleCount > 0)
@@ -72,6 +72,8 @@ class WhisperComparisonProvider(
             texts += piece.text
             tokens += piece.tokens.map { it.copy(startMs = it.startMs?.plus(offset), endMs = it.endMs?.plus(offset)) }
             words += piece.words.map { it.copy(startMs = it.startMs + offset, endMs = it.endMs + offset) }
+            // Native JSON and immutable text remain; PCM is reproducible from the source chunk.
+            check(wav.delete()) { "Cannot release completed Whisper window" }
             from = to
             index++
         }

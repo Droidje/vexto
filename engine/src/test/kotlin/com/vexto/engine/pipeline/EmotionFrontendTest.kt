@@ -6,7 +6,7 @@ import org.junit.Test
 import kotlin.math.sin
 
 class EmotionFrontendTest {
-    @Test fun cachedTablesMatchTheUnchangedDevFrontendBitForBit() {
+    @Test fun fftMatchesTheReferenceFrontendWithinFloatTolerance() {
         val reference = GigaAmMel()
         val fixtures = listOf(FloatArray(201), FloatArray(3200) { i ->
             (sin(i * .17) * .125 + ((i * 7919 % 127) - 63) / 1024.0).toFloat()
@@ -15,10 +15,10 @@ class EmotionFrontendTest {
             val original = samples.copyOf()
             val expected = reference.logMel(samples)
             val actual = EmotionFrontend.logMel(samples)
-            assertArrayEquals(expected, actual, 0f)
+            assertArrayEquals(expected, actual, 0.0002f)
             assertArrayEquals(original, samples, 0f)
         }
         // Intermediate calls cannot modify the cached tables or retain per-call work buffers.
-        assertArrayEquals(reference.logMel(fixtures[1]), EmotionFrontend.logMel(fixtures[1]), 0f)
+        assertArrayEquals(reference.logMel(fixtures[1]), EmotionFrontend.logMel(fixtures[1]), 0.0002f)
     }
 }

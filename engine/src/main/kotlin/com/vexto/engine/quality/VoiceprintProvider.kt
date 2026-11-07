@@ -96,7 +96,12 @@ object VoiceprintProvider {
                 windows += Window(turn.speaker, to - SampleRate, to)
             }
         }
-        return windows
+        // Spread clean samples over each person's entire appearance, not only their introduction.
+        return windows.groupBy { it.speaker }.values.flatMap { all ->
+            if (all.size <= 32) all else (0 until 32).map { index ->
+                all[(index.toLong() * (all.size - 1) / 31).toInt()]
+            }
+        }
     }
 
     /** Scan only 10ms energies, then borrow the original PCM bytes through PcmAudio's unchanged AGC. */

@@ -29,7 +29,7 @@ enum class AsrSource(val wireName: String) {
 /** Original chunk-relative token offsets; null means the ASR supplied no offset. */
 data class AsrToken(val text: String, val startMs: Long? = null, val endMs: Long? = null, val id: Int? = null)
 @Serializable
-enum class AsrSelectionStatus { SELECTED_BY_LLM, ONE_AVAILABLE, UNRESOLVED }
+enum class AsrSelectionStatus { SELECTED_BY_LLM, EQUIVALENT, ONE_AVAILABLE, UNRESOLVED }
 
 /** A defensive snapshot. Its on-disk artifact must still match the recorded hash. */
 class ImmutableAsrCandidate private constructor(
