@@ -40,7 +40,9 @@ class QualityEvalActivity : Activity() {
                         val duration = media.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
                         require(duration != null && duration <= 400_000) { "Use an audio fixture of at most 6 minutes 40 seconds" }
                     } finally { media.release() }
-                    TranscriptionEngine(this@QualityEvalActivity).transcribe(Uri.fromFile(audio)).collect { event ->
+                    val processingMode = ProcessingMode.valueOf(intent.getStringExtra("processing_mode") ?: "QUALITY")
+                    TranscriptionEngine(this@QualityEvalActivity).transcribe(Uri.fromFile(audio),
+                        TranscriptionOptions(processingMode = processingMode)).collect { event ->
                         when (event) {
                             is TranscriptionEvent.Progress -> JobFiles.save(File(out, "progress.json"),
                                 mapOf("stage" to event.stage.name, "fraction" to event.fraction.toString()))

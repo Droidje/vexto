@@ -25,6 +25,8 @@ internal class QwenSpeakerNames(private val executor: LocalNativeExecutor, priva
             plan.resolve(text).copy(elapsedMs = (System.nanoTime() - started) / 1_000_000)
         } catch (_: TimeoutCancellationException) {
             result("timeout")
+        } catch (_: NativeRequestRejectedException) {
+            result("prompt_exceeds_context_budget")
         } catch (cancel: CancellationException) {
             throw cancel
         } catch (failure: NativeProcessException) {

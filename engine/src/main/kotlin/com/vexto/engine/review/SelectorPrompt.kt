@@ -7,8 +7,8 @@ import kotlinx.serialization.json.put
 data class SelectorRequest(val prompt: String, val schema: String)
 class SelectorPromptTooLarge : IllegalArgumentException("prompt_exceeds_context_budget")
 
-/** Entire candidates only. A byte upper bound leaves space for template/output; never truncate ASR. */
-class SelectorPrompt(private val maxPromptUtf8Bytes: Int = 864) {
+/** Entire candidates only. Transport has a byte cap; actual context is checked by the native tokenizer. */
+class SelectorPrompt(private val maxPromptUtf8Bytes: Int = BoundedQwenRequest.MaxPromptBytes) {
     /** Legacy complete tool-object request remains available to existing SDK callers. */
     fun render(pair: AsrCandidatePair): SelectorRequest = render(pair, scoped = false)
 

@@ -31,6 +31,8 @@ android {
     testOptions {
         unitTests.includeAndroidResources = true
         unitTests.all {
+            // Same Maven Central artifacts; repo1 returned HTTP429 in hosted CI.
+            systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
             jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED',
                     '--add-opens=java.base/java.util=ALL-UNNAMED',
                     '--add-opens=java.base/java.io=ALL-UNNAMED',
