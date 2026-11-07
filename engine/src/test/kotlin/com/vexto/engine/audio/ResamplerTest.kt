@@ -34,6 +34,24 @@ class ResamplerTest {
         assertEquals(16_000, resample(FloatArray(44_100), 44_100, 16_000).size)
         assertEquals(16_000, resample(FloatArray(48_000), 48_000, 16_000).size)
         assertEquals(16_000, resample(FloatArray(8_000), 8_000, 16_000).size)
+        assertEquals(364, resample(FloatArray(1001), 44_100, 16_000).size)
+        assertEquals(0, resample(FloatArray(0), 48_000, 16_000).size)
+    }
+
+    @Test
+    fun `equal rates pass samples through immediately without filtering or tail`() {
+        val input = floatArrayOf(0.25f, -0.75f, 1f, 0f)
+        val r = Resampler(16_000, 16_000)
+        var emitted = 0
+        r.process(input, 3) { buffer, count ->
+            assertTrue(buffer === input)
+            assertEquals(3, count)
+            for (i in 0 until count) assertEquals(input[i], buffer[i], 0f)
+            emitted += count
+        }
+        r.process(input, 0) { _, _ -> throw AssertionError("Empty input must not emit") }
+        r.flush { _, _ -> throw AssertionError("Passthrough must not append a tail") }
+        assertEquals(3, emitted)
     }
 
     @Test
@@ -54,7 +72,7 @@ class ResamplerTest {
     fun `chunking does not change output`() {
         val input = sine(440.0, 22_050, 0.5)
         val a = resample(input, 22_050, 16_000, chunk = 37)
-        val b = resample(input, 22_050, 16_000, chunk = 4096)
+        val b = resample(input, 22_050, 16_000, chunk = input.size)
         assertEquals(a.size, b.size)
         for (i in a.indices) assertEquals(a[i], b[i], 1e-6f)
     }

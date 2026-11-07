@@ -3,6 +3,11 @@ project(vexto_emotion LANGUAGES C CXX)
 add_library(vexto_cpu SHARED cpu_features.cpp)
 target_compile_features(vexto_cpu PRIVATE cxx_std_17)
 
+add_library(vexto_resampler SHARED resampler_jni.cpp)
+target_compile_features(vexto_resampler PRIVATE cxx_std_17)
+# Keep the existing float coefficients; SIMD changes only accumulation order, not the filter.
+target_compile_options(vexto_resampler PRIVATE -O3 -ffp-contract=off -Wall -Wextra -Werror)
+
 # Both adapters dlopen sherpa's sole ORT runtime; prepare pinned 1.28.2 headers offline.
 set(ORT_HEADERS "${CMAKE_CURRENT_LIST_DIR}/include")
 if(NOT EXISTS "${ORT_HEADERS}/onnxruntime_c_api.h")
