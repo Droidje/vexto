@@ -70,6 +70,22 @@ public class SpeakerMatchingLifecycleTest {
         assertEquals(known, profiles.assign(newRecording, finalText).get("speaker_1"));
     }
 
+    @Test public void textOnlyRecheckKeepsTheKnownVoiceInTheActiveGallery() throws Exception {
+        String known = enroll();
+        profiles.rename(known, "Анна");
+        profiles.markSelf(known);
+        var corrected = transcript("Исправленная расшифровка без повторного извлечения голоса");
+        profiles.retainAcrossRefinement(oldRecording, text, corrected);
+        assertEquals(known, profiles.assign(oldRecording, corrected).get("speaker_1"));
+        // Reopening the app must not depend on an obsolete revision remaining in memory.
+        profiles.close(); profiles = new SpeakerProfiles(context);
+        saveVoice(newRecording, text);
+        assertEquals(known, profiles.assign(newRecording, text).get("speaker_1"));
+        assertEquals("Анна", profiles.get(known).name());
+        assertTrue(profiles.get(known).self());
+        assertFalse(profiles.get(known).automatic());
+    }
+
     @Test public void explicitSplitCannotBeUndoneByLateVoice() throws Exception {
         String known = enroll();
         profiles.assign(newRecording, text);

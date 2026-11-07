@@ -318,6 +318,13 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
                                 + "SELECT recording, ?, local_id, profile_id, origin FROM links "
                                 + "WHERE recording=? AND revision=? AND local_id=?",
                         new Object[]{after, key, before, localId});
+                // Text refinement does not extract new voices. Keep the acoustic signature
+                // available when this new text revision becomes the active gallery entry.
+                db.execSQL("INSERT OR IGNORE INTO embeddings(recording, revision, local_id, model_id, dimension, "
+                                + "vector, speech_ms, windows, created_at) "
+                                + "SELECT recording, ?, local_id, model_id, dimension, vector, speech_ms, windows, created_at "
+                                + "FROM embeddings WHERE recording=? AND revision=? AND local_id=?",
+                        new Object[]{after, key, before, localId});
             }
             db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
