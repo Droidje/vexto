@@ -1,5 +1,6 @@
 package com.vexto.reflect;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -11,18 +12,23 @@ import android.view.accessibility.AccessibilityNodeInfo;
 /** Audio controls that stay visible while the transcript scrolls. */
 final class ReflectConversationPlayer extends View {
     private final ReflectArtwork artwork;
+    private final ReflectPreferences preferences;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final Path playGlyph = new Path();
     private final String length;
     private int[] bars;
     private float progress;
     private boolean playing;
+    private ValueAnimator glyphAnimation;
+    private float pauseGlyph;
     private String time;
     private int displayedSeconds = -1;
 
-    ReflectConversationPlayer(Context context, ReflectArtwork artwork, String length, Runnable toggle) {
+    ReflectConversationPlayer(Context context, ReflectArtwork artwork, ReflectPreferences preferences,
+                              String length, Runnable toggle) {
         super(context);
         this.artwork = artwork;
+        this.preferences = preferences;
         this.length = length;
         time = "+ " + length;
         playGlyph.moveTo(18, 17);
@@ -37,6 +43,7 @@ final class ReflectConversationPlayer extends View {
     void update(boolean playing, int position, int duration) {
         if (this.playing != playing) {
             setContentDescription((playing ? "Приостановить разговор, " : "Воспроизвести разговор, ") + length);
+            animateGlyph(playing ? 1f : 0f);
         }
         this.playing = playing;
         progress = Math.min(1f, Math.max(0, position) / (float) Math.max(1, duration));
@@ -54,6 +61,31 @@ final class ReflectConversationPlayer extends View {
         invalidate();
     }
 
+    private void animateGlyph(float target) {
+        if (glyphAnimation != null) glyphAnimation.cancel();
+        if (!isAttachedToWindow() || !preferences.motionEnabled()) {
+            pauseGlyph = target;
+            return;
+        }
+        glyphAnimation = ValueAnimator.ofFloat(pauseGlyph, target);
+        glyphAnimation.setDuration(145);
+        glyphAnimation.setInterpolator(ReflectMotion.EASE);
+        glyphAnimation.addUpdateListener(animation -> {
+            pauseGlyph = (float) animation.getAnimatedValue();
+            invalidate();
+        });
+        glyphAnimation.start();
+    }
+
+    @Override protected void onDetachedFromWindow() {
+        if (glyphAnimation != null) {
+            glyphAnimation.cancel();
+            glyphAnimation = null;
+        }
+        pauseGlyph = playing ? 1f : 0f;
+        super.onDetachedFromWindow();
+    }
+
     @Override protected void onDraw(Canvas canvas) {
         canvas.save();
         canvas.scale(getWidth() / 361f, getHeight() / 44f);
@@ -64,12 +96,14 @@ final class ReflectConversationPlayer extends View {
         canvas.drawRoundRect(.5f, .5f, 360.5f, 43.5f, 22, 22, paint);
         paint.setStyle(Paint.Style.FILL);
         pill(canvas, 7, 7, 37, 37, 15, 0xff181818);
-        if (playing) {
-            pill(canvas, 18, 17, 20.5f, 27, 1, Color.WHITE);
-            pill(canvas, 23.5f, 17, 26, 27, 1, Color.WHITE);
-        } else {
-            paint.setColor(Color.WHITE);
+        if (pauseGlyph < 1f) {
+            paint.setColor(white(1f - pauseGlyph));
             canvas.drawPath(playGlyph, paint);
+        }
+        if (pauseGlyph > 0f) {
+            int color = white(pauseGlyph);
+            pill(canvas, 18, 17, 20.5f, 27, 1, color);
+            pill(canvas, 23.5f, 17, 26, 27, 1, color);
         }
 
         if (bars != null && bars.length > 1) {
@@ -92,6 +126,10 @@ final class ReflectConversationPlayer extends View {
         paint.setTextAlign(Paint.Align.CENTER);
         canvas.drawText(time, 327, 26.6f, paint);
         canvas.restore();
+    }
+
+    private static int white(float opacity) {
+        return Color.argb(Math.round(opacity * 255), 255, 255, 255);
     }
 
     private void pill(Canvas canvas, float left, float top, float right, float bottom, float radius, int color) {

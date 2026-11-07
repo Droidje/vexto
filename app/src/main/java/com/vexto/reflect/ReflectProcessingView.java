@@ -1,5 +1,6 @@
 package com.vexto.reflect;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -28,6 +29,7 @@ final class ReflectProcessingView extends ViewGroup {
     };
 
     private final ReflectArtwork artwork;
+    private final ReflectPreferences preferences;
     private final TextView backgroundAction;
     private final TextView percentage;
     private final TextView[] subtitles = new TextView[STEPS.length];
@@ -35,11 +37,16 @@ final class ReflectProcessingView extends ViewGroup {
     private final List<TextSlot> slots = new ArrayList<>();
     private Stage stage = Stage.Preparing;
     private int progress;
+    private float displayedProgress;
+    private float stageArrival = 1;
+    private ValueAnimator progressAnimator;
     private float scale;
 
-    ReflectProcessingView(Context context, ReflectArtwork artwork, Runnable goToBackground) {
+    ReflectProcessingView(Context context, ReflectArtwork artwork, ReflectPreferences preferences,
+                          Runnable goToBackground) {
         super(context);
         this.artwork = artwork;
+        this.preferences = preferences;
         setWillNotDraw(false);
         backgroundAction = new TextView(context) {
             @Override public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
@@ -72,11 +79,11 @@ final class ReflectProcessingView extends ViewGroup {
     }
 
     void content(String duration, ReflectLocalTranscription.Progress value) {
+        Stage previousStage = stage;
         stage = value == null ? Stage.Preparing : value.stage();
         int stagePercent = value == null ? 0 : value.percent();
         int speakers = value == null ? 0 : value.speakers();
-        progress = totalProgress(stage, stagePercent);
-        update(percentage, progress + "%");
+        animateProgress(totalProgress(stage, stagePercent), stage != previousStage);
         update(subtitles[0], "нормализация громкости");
         update(subtitles[1], switch (state(STEPS[1])) {
             case WAITING -> "Ожидает распознавания";
@@ -90,6 +97,40 @@ final class ReflectProcessingView extends ViewGroup {
         });
         update(subtitles[3], stage == null ? "Сохраняю расшифровку" : "Структура текста и эмоции");
         invalidate();
+    }
+
+    private void animateProgress(int target, boolean stageChanged) {
+        if (progress == target && !stageChanged) {
+            update(percentage, target + "%");
+            return;
+        }
+        progress = target;
+        if (progressAnimator != null) progressAnimator.cancel();
+        if (!isAttachedToWindow() || !preferences.motionEnabled() || displayedProgress > target) {
+            displayedProgress = target;
+            stageArrival = 1;
+        } else {
+            float start = displayedProgress;
+            float startArrival = stageChanged ? 0 : stageArrival;
+            progressAnimator = ValueAnimator.ofFloat(0, 1);
+            progressAnimator.setDuration(stageChanged ? 380 : 220);
+            progressAnimator.setInterpolator(ReflectMotion.EASE);
+            progressAnimator.addUpdateListener(animation -> {
+                float fraction = (float) animation.getAnimatedValue();
+                displayedProgress = start + (target - start) * fraction;
+                stageArrival = startArrival + (1 - startArrival) * fraction;
+                invalidate();
+            });
+            progressAnimator.start();
+        }
+        update(percentage, target + "%");
+    }
+
+    @Override protected void onDetachedFromWindow() {
+        if (progressAnimator != null) progressAnimator.cancel();
+        displayedProgress = progress;
+        stageArrival = 1;
+        super.onDetachedFromWindow();
     }
 
     private static void update(TextView view, String value) {
@@ -147,8 +188,19 @@ final class ReflectProcessingView extends ViewGroup {
             StepState state = state(STEPS[i]);
             if (state == StepState.ACTIVE) {
                 // The source's visible disk starts at (24, 7) within the transparent 263 × 252 PNG.
+                canvas.save();
+                float orbSize = .86f + .14f * stageArrival;
+                canvas.scale(orbSize, orbSize, 86, y + 20);
+                if (stageArrival < 1) {
+                    paint.setColor(Color.argb(Math.round(85 * (1 - stageArrival)), 115, 153, 255));
+                    paint.setStyle(Paint.Style.STROKE);
+                    paint.setStrokeWidth(1);
+                    canvas.drawCircle(86, y + 20, 21 + 7 * stageArrival, paint);
+                    paint.setStyle(Paint.Style.FILL);
+                }
                 artwork.image(canvas, "processing_orb", 66 - 24 * ORB_SCALE, y - 7 * ORB_SCALE,
                         263 * ORB_SCALE, 252 * ORB_SCALE);
+                canvas.restore();
             } else {
                 paint.setColor(state == StepState.COMPLETE ? GREEN : TRACK);
                 canvas.drawCircle(86, y + 20, 20, paint);
@@ -157,9 +209,9 @@ final class ReflectProcessingView extends ViewGroup {
         }
         paint.setColor(TRACK);
         canvas.drawRoundRect(45, 784, 348, 804, 10, 10, paint);
-        if (progress > 0) {
+        if (displayedProgress > 0) {
             paint.setColor(GREEN);
-            canvas.drawRoundRect(45, 784, 45 + 303 * progress / 100f, 804, 10, 10, paint);
+            canvas.drawRoundRect(45, 784, 45 + 303 * displayedProgress / 100f, 804, 10, 10, paint);
         }
         canvas.restore();
     }

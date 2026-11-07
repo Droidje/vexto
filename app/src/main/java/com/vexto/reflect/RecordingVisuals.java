@@ -85,6 +85,8 @@ final class RecordingVisuals {
         return 0;
     }
 
+    float reveal(long now) { return orbiting ? settleProgress(now) : 1; }
+
     boolean needsFrame(long now) { return orbiting || (settling && now - orbitAt < SETTLE_MS); }
 
     private float settleProgress(long now) {

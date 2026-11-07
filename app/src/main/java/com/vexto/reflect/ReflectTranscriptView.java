@@ -9,6 +9,7 @@ import android.graphics.Canvas;
 import android.graphics.Path;
 import android.graphics.Color;
 import android.graphics.Outline;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.RippleDrawable;
 import android.text.SpannableStringBuilder;
@@ -75,6 +76,7 @@ final class ReflectTranscriptView extends FrameLayout {
     private ProgressBar progressBar;
     private ReflectLocalTranscription.Progress transcription;
     private ListView list;
+    private View scrollContent, toolsGlass;
 
     ReflectTranscriptView(Context context, ReflectArtwork artwork, ReflectPreferences preferences, Actions actions) {
         super(context);
@@ -145,6 +147,8 @@ final class ReflectTranscriptView extends FrameLayout {
         metadata = null;
         removeAllViews();
         list = null;
+        scrollContent = null;
+        toolsGlass = null;
         play = null;
         progressText = null;
         progressBar = null;
@@ -169,13 +173,15 @@ final class ReflectTranscriptView extends FrameLayout {
         if (list == null) return;
         int firstLine = list.getFirstVisiblePosition() - list.getHeaderViewsCount();
         for (int index = 0; index < list.getChildCount(); index++) {
-            if (list.getChildAt(index) instanceof TranscriptRow row) row.highlight(firstLine + index);
+            if (list.getChildAt(index) instanceof TranscriptRow row) row.highlight(firstLine + index, true);
         }
         if (current >= 0) followLine(current);
     }
 
     private void followLine(int index) {
-        list.smoothScrollToPositionFromTop(index + list.getHeaderViewsCount(), style.px(8), 260);
+        int position = index + list.getHeaderViewsCount();
+        if (preferences.motionEnabled()) list.smoothScrollToPositionFromTop(position, style.px(8), 250);
+        else list.setSelectionFromTop(position, style.px(8));
     }
 
     boolean isPlaying() { return playing; }
@@ -213,7 +219,7 @@ final class ReflectTranscriptView extends FrameLayout {
         } else {
             style.append(content, titleView(), 0, hasAudio ? 12 : 16);
             if (hasAudio) {
-                conversationPlayer = new ReflectConversationPlayer(getContext(), artwork, length,
+                conversationPlayer = new ReflectConversationPlayer(getContext(), artwork, preferences, length,
                         actions::playTranscriptAudio);
                 conversationPlayer.waveform(audioWaveform);
                 conversationPlayer.update(playing, playbackPosition, durationMs);
@@ -230,6 +236,8 @@ final class ReflectTranscriptView extends FrameLayout {
         list.setAdapter(new LineAdapter());
         content.addView(list, new LinearLayout.LayoutParams(MATCH_PARENT, 0, 1));
         addView(content, scroll);
+        scrollContent = content;
+        toolsGlass = null;
         list.setSelectionFromTop(first, offset);
         if (playing && activeLine < 0) {
             ListView current = list;
@@ -362,9 +370,31 @@ final class ReflectTranscriptView extends FrameLayout {
     }
 
     private void pill(int left, int y, int width, int height, boolean bottom) {
-        View pill = new View(getContext());
-        pill.setBackground(style.rounded(recordingDetails ? 0xff212121 : 0x1cffffff, 24));
+        View pill = new View(getContext()) {
+            private final ReflectGlassBackdrop backdrop = new ReflectGlassBackdrop();
+            private final Paint tint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+            @Override protected void onDraw(Canvas canvas) {
+                float corner = getHeight() / 2f;
+                float radius = style.px(10);
+                if (scrollContent != null && scrollContent.getTop() < getBottom() + 3 * radius) {
+                    backdrop.draw(canvas, 0, 0, getWidth(), getHeight(), corner, radius, sample -> {
+                        sample.translate(-getLeft(), -getTop());
+                        ReflectTranscriptView.this.drawChild(sample, scrollContent, getDrawingTime());
+                    });
+                }
+                tint.setColor(bottom ? 0xa62a2a2a : 0x1dffffff);
+                canvas.drawRoundRect(0, 0, getWidth(), getHeight(), corner, corner, tint);
+            }
+        };
+        pill.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         place(pill, left, y, width, height, bottom);
+        if (bottom) toolsGlass = pill;
+    }
+
+    @Override public void onDescendantInvalidated(View child, View target) {
+        super.onDescendantInvalidated(child, target);
+        if (toolsGlass != null && child == scrollContent) toolsGlass.invalidate();
     }
 
     private void icon(String asset, String label, int left, int y, int width, int height, boolean bottom,
@@ -479,6 +509,7 @@ final class ReflectTranscriptView extends FrameLayout {
         private final AvatarView avatar = new AvatarView();
         private final TextView metadata;
         private final TextView body;
+        private float emphasis = 1f;
 
         TranscriptRow() {
             super(ReflectTranscriptView.this.getContext());
@@ -511,14 +542,22 @@ final class ReflectTranscriptView extends FrameLayout {
             metadata.setText(label);
             body.setLineHeight(style.px(preferences.textSize() * (position == 0 ? 1.3125f : 1.5f)));
             body.setText(line.text);
-            highlight(position);
+            highlight(position, false);
             setOnLongClickListener(v -> { actions.openTranscriptLine(line); return true; });
         }
 
-        void highlight(int position) {
+        void highlight(int position, boolean animate) {
             boolean active = playing && position == activeLine;
-            setAlpha(playing && !active ? .52f : 1f);
+            float opacity = playing && !active ? .52f : 1f;
             body.setTextColor(active ? Color.WHITE : 0xffcccccc);
+            if (animate && emphasis == opacity) return;
+            emphasis = opacity;
+            animate().cancel();
+            if (animate && preferences.motionEnabled()) {
+                animate().alpha(opacity).setDuration(150).setInterpolator(ReflectMotion.EASE).start();
+            } else {
+                setAlpha(opacity);
+            }
         }
     }
 

@@ -1,5 +1,6 @@
 package com.vexto.reflect;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.SharedPreferences;
 
@@ -15,5 +16,6 @@ final class ReflectPreferences {
     boolean timestamps() { return store.getBoolean("transcript_timestamps", true); }
     void setTimestamps(boolean enabled) { store.edit().putBoolean("transcript_timestamps", enabled).apply(); }
     boolean reduceMotion() { return store.getBoolean("reduce_motion", false); }
+    boolean motionEnabled() { return !reduceMotion() && ValueAnimator.areAnimatorsEnabled(); }
     void setReduceMotion(boolean enabled) { store.edit().putBoolean("reduce_motion", enabled).apply(); }
 }

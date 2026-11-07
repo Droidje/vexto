@@ -19,7 +19,7 @@ import android.graphics.drawable.RippleDrawable;
 import android.os.SystemClock;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.PathInterpolator;
+import android.view.animation.LinearInterpolator;
 import android.view.accessibility.AccessibilityNodeInfo;
 import java.io.File;
 import java.util.ArrayList;
@@ -54,8 +54,10 @@ final class ReflectView extends ViewGroup {
     private static final int BACKGROUND = 0xff040402, WHITE = Color.WHITE;
     private static final String[] TAB_ICONS = {"tab_home", "tab_records", "tab_speakers", "tab_settings"};
     private static final String[] TAB_NAMES = {"Главная", "Записи", "Спикеры", "Настройки"};
-    private static final float[] TAB_CENTERS = {56, 121.5f, 188.5f, 255.5f};
-    private static final PathInterpolator TAB_EASING = new PathInterpolator(.22f, .78f, .25f, 1);
+    private static final float TAB_LEFT = 22, TAB_WIDTH = 68.5f;
+    private static final float TAB_RIGHT = TAB_LEFT + TAB_WIDTH * TAB_NAMES.length;
+    private static final LinearInterpolator LINEAR = new LinearInterpolator();
+    private static final float CAPSULE_HALF_WIDTH = TAB_WIDTH / 2;
     private static final Shader PILL_FILL = edge(0, 765, 0, 824, 0x19ffffff, 0x1cffffff);
     private static final Shader NAV_FILL = edge(0, 765, 0, 824, 0xb32a2a2a, 0xb3303030);
     private static final Shader NAV_EDGE = edge(16, 765, 302, 824, 0x25ffffff, 0x0cffffff);
@@ -81,6 +83,10 @@ final class ReflectView extends ViewGroup {
     private final ReflectExportView export;
     private final ReflectLibraryView records, speakers, conversations;
     private final View navigationGlass;
+    private final ReflectGlassBackdrop navigationBackdrop = new ReflectGlassBackdrop();
+    private final ReflectGlassBackdrop plusBackdrop = new ReflectGlassBackdrop();
+    private final ReflectGlassBackdrop menuBackdrop = new ReflectGlassBackdrop();
+    private final ReflectGlassBackdrop.Source navigationSource = this::drawNavigationContent;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final List<RectF> childAreas = new ArrayList<>();
     private final Path stage = new Path();
@@ -90,10 +96,11 @@ final class ReflectView extends ViewGroup {
     private RecordingOrb recordingOrb;
     private Bitmap orbEdgeShade;
     private Screen screen = Screen.HOME;
-    private Screen departing = Screen.HOME;
     private Screen tab = Screen.HOME;
     private float scale = 1, offsetX, offsetY, transition = 1, menuProgress;
-    private float capsuleCenter = TAB_CENTERS[0], capsuleHalfWidth = 34;
+    private float capsuleLeft = TAB_LEFT, capsuleRight = TAB_LEFT + TAB_WIDTH;
+    private int entranceDirection = 1;
+    private View pageContent;
     private float playProgress;
     private int[] reviewWave;
     private long elapsedSeconds;
@@ -110,19 +117,18 @@ final class ReflectView extends ViewGroup {
         artwork = new ReflectArtwork(context.getAssets());
         settings = new ReflectSettingsView(context, artwork, preferences, actions::openMicrophoneSettings);
         transcript = new ReflectTranscriptView(context, artwork, preferences, actions);
-        speakerProfile = new SpeakerProfileView(context, artwork, actions::closeSpeakerProfile,
+        speakerProfile = new SpeakerProfileView(context, artwork, preferences, actions::closeSpeakerProfile,
                 actions::openSpeakerMenu, actions::openSpeakerUtterance);
         speakerProfile.setBackgroundColor(BACKGROUND);
-        processing = new ReflectProcessingView(context, artwork, actions::closeTranscript);
-        export = new ReflectExportView(context, artwork, actions);
-        records = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.RECORDS, actions);
-        speakers = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.SPEAKERS, actions);
-        conversations = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.CONVERSATIONS, actions);
+        processing = new ReflectProcessingView(context, artwork, preferences, actions::closeTranscript);
+        export = new ReflectExportView(context, artwork, preferences, actions);
+        records = new ReflectLibraryView(context, artwork, preferences, ReflectLibraryView.Page.RECORDS, actions);
+        speakers = new ReflectLibraryView(context, artwork, preferences, ReflectLibraryView.Page.SPEAKERS, actions);
+        conversations = new ReflectLibraryView(context, artwork, preferences, ReflectLibraryView.Page.CONVERSATIONS, actions);
         navigationGlass = new View(context) {
             @Override protected void onDraw(Canvas canvas) {
                 canvas.save();
                 canvas.scale(scale, scale);
-                if (transition < 1) canvas.translate(0, 8 * (1 - transition));
                 drawNavigation(canvas, menuProgress);
                 canvas.restore();
             }
@@ -174,52 +180,69 @@ final class ReflectView extends ViewGroup {
         if (screen == Screen.SPEAKERS) speakers.dismissKeyboard();
         boolean withinNavigation = navigation(screen) && navigation(next);
         boolean withinRecorder = recordingScreen(screen) && recordingScreen(next);
+        Screen previousTab = tab;
+        if (isTab(next)) tab = next;
+        boolean pageChanged = !withinNavigation || previousTab != tab;
+        boolean motion = preferences.motionEnabled();
         long now = SystemClock.uptimeMillis();
-        if (next == Screen.RECORDING) recordingVisuals.start(now, !preferences.reduceMotion());
+        if (next == Screen.RECORDING) recordingVisuals.start(now, motion);
         else if (next == Screen.PAUSED) recordingVisuals.pause(now);
         else if (screen == Screen.RECORDING || screen == Screen.PAUSED) recordingVisuals.reset();
-        departing = screen;
         screen = next;
-        if (isTab(next)) tab = next;
         float startMenu = menuProgress;
         float endMenu = next == Screen.MENU ? 1 : 0;
-        int targetTab = switch (tab) {
+        float startLeft = capsuleLeft, startRight = capsuleRight;
+        float targetLeft = TAB_LEFT + TAB_WIDTH * tabIndex(tab);
+        float targetRight = targetLeft + TAB_WIDTH;
+        boolean movingRight = targetLeft > startLeft;
+        entranceDirection = withinNavigation && tabIndex(tab) < tabIndex(previousTab) ? -1 : 1;
+        rebuildControls();
+
+        if (!motion || withinRecorder || !isLaidOut()) {
+            menuProgress = endMenu;
+            capsuleLeft = targetLeft;
+            capsuleRight = targetRight;
+            applyEntrance(1, withinNavigation);
+            return;
+        }
+        applyEntrance(pageChanged ? 0 : 1, withinNavigation);
+        animator = ValueAnimator.ofFloat(0, 1);
+        animator.setDuration(withinNavigation ? 350 : 320);
+        animator.addUpdateListener(value -> {
+            float time = (float) value.getAnimatedValue();
+            float eased = ReflectMotion.EASE.getInterpolation(time);
+            float leading = ReflectMotion.EASE.getInterpolation(Math.min(1, time * 1.18f));
+            menuProgress = lerp(startMenu, endMenu, eased);
+            capsuleLeft = lerp(startLeft, targetLeft, movingRight ? eased : leading);
+            capsuleRight = lerp(startRight, targetRight, movingRight ? leading : eased);
+            applyEntrance(pageChanged ? eased : 1, withinNavigation);
+        });
+        animator.setInterpolator(LINEAR);
+        animator.start();
+    }
+
+    private void applyEntrance(float progress, boolean withinNavigation) {
+        transition = progress;
+        if (pageContent != null) {
+            pageContent.setAlpha(.55f + .45f * progress);
+            pageContent.setTranslationX(withinNavigation ? 10 * scale * entranceDirection * (1 - progress) : 0);
+            pageContent.setTranslationY(withinNavigation ? 0 : 12 * scale * (1 - progress));
+        }
+        navigationGlass.invalidate();
+        invalidate();
+    }
+
+    private static int tabIndex(Screen tab) {
+        return switch (tab) {
             case RECORDS -> 1;
             case SPEAKERS -> 2;
             case SETTINGS -> 3;
             default -> 0;
         };
-        float startCenter = capsuleCenter, endCenter = TAB_CENTERS[targetTab];
-        float startHalfWidth = capsuleHalfWidth, endHalfWidth = targetTab == 0 ? 34 : 35.5f;
-        float stretch = Math.min(7, Math.abs(endCenter - startCenter) * .06f);
-        transition = withinNavigation ? 1 : 0;
-        navigationGlass.setAlpha(transition);
-        rebuildControls();
-        if (preferences.reduceMotion() || withinRecorder) {
-            transition = 1;
-            menuProgress = endMenu;
-            capsuleCenter = endCenter;
-            capsuleHalfWidth = endHalfWidth;
-            navigationGlass.setAlpha(1);
-            navigationGlass.invalidate();
-            invalidate();
-            return;
-        }
-        animator = ValueAnimator.ofFloat(0, 1);
-        animator.setDuration(withinNavigation ? 300 : 340);
-        animator.setInterpolator(TAB_EASING);
-        animator.addUpdateListener(value -> {
-            float progress = (float) value.getAnimatedValue();
-            transition = withinNavigation ? 1 : progress;
-            menuProgress = startMenu + (endMenu - startMenu) * progress;
-            capsuleCenter = startCenter + (endCenter - startCenter) * progress;
-            capsuleHalfWidth = startHalfWidth + (endHalfWidth - startHalfWidth) * progress
-                    + stretch * 4 * progress * (1 - progress);
-            navigationGlass.setAlpha(transition);
-            navigationGlass.invalidate();
-            invalidate();
-        });
-        animator.start();
+    }
+
+    private static float lerp(float from, float to, float progress) {
+        return from + (to - from) * progress;
     }
 
     void updateRecording(long elapsedMillis, int peak) {
@@ -283,6 +306,12 @@ final class ReflectView extends ViewGroup {
     private void rebuildControls() {
         removeAllViews();
         childAreas.clear();
+        if (pageContent != null) {
+            pageContent.setAlpha(1);
+            pageContent.setTranslationX(0);
+            pageContent.setTranslationY(0);
+            pageContent = null;
+        }
         setAccessibilityPaneTitle(switch (screen) {
             case HOME -> conversations.hasConversations() ? "Ваши разговоры" : welcomeTitle;
             case RECORDS -> "Ваши записи";
@@ -299,20 +328,20 @@ final class ReflectView extends ViewGroup {
             case EXPORT -> "Экспорт расшифровки";
         });
         if (screen == Screen.TRANSCRIPT) {
-            place(transcript, 0, 0, WIDTH, HEIGHT);
+            placePage(transcript, 0, WIDTH, HEIGHT);
         } else if (screen == Screen.SPEAKER_PROFILE) {
-            place(speakerProfile, 0, 0, WIDTH, HEIGHT);
+            placePage(speakerProfile, 0, WIDTH, HEIGHT);
         } else if (screen == Screen.PROCESSING) {
-            place(processing, 0, 0, WIDTH, HEIGHT);
+            placePage(processing, 0, WIDTH, HEIGHT);
         } else if (screen == Screen.EXPORT) {
-            place(export, 0, 0, WIDTH, HEIGHT);
+            placePage(export, 0, WIDTH, HEIGHT);
         } else if (navigation(screen)) {
             float contentHeight = HEIGHT - LIBRARY_TOP;
-            if (tab == Screen.RECORDS) place(records, 0, LIBRARY_TOP, WIDTH, contentHeight);
-            if (tab == Screen.SPEAKERS) place(speakers, 0, LIBRARY_TOP, WIDTH, contentHeight);
-            if (tab == Screen.SETTINGS) place(settings, 0, LIBRARY_TOP, WIDTH, contentHeight);
+            if (tab == Screen.RECORDS) placePage(records, LIBRARY_TOP, WIDTH, contentHeight);
+            if (tab == Screen.SPEAKERS) placePage(speakers, LIBRARY_TOP, WIDTH, contentHeight);
+            if (tab == Screen.SETTINGS) placePage(settings, LIBRARY_TOP, WIDTH, contentHeight);
             if (tab == Screen.HOME && conversations.hasConversations()) {
-                place(conversations, 0, LIBRARY_TOP, WIDTH, contentHeight);
+                placePage(conversations, LIBRARY_TOP, WIDTH, contentHeight);
             }
             place(navigationGlass, 0, 0, WIDTH, HEIGHT);
             if (screen == Screen.MENU) {
@@ -322,13 +351,13 @@ final class ReflectView extends ViewGroup {
                 place(outside, 0, 0, WIDTH, HEIGHT);
             }
             control(screen == Screen.MENU ? "Закрыть меню" : "Добавить", 318, 765, 59, 59, actions::toggleMenu);
-            control("Главная", 22, 771, 67, 47, () -> show(Screen.HOME)).setSelected(tab == Screen.HOME);
-            control("Записи", 89, 771, 65, 47, () -> show(Screen.RECORDS)).setSelected(tab == Screen.RECORDS);
-            control("Спикеры", 154, 771, 69, 47, () -> {
+            tabControl(Screen.HOME, () -> show(Screen.HOME));
+            tabControl(Screen.RECORDS, () -> show(Screen.RECORDS));
+            tabControl(Screen.SPEAKERS, () -> {
                 show(Screen.SPEAKERS);
                 actions.refreshSpeakers();
-            }).setSelected(tab == Screen.SPEAKERS);
-            control("Настройки", 223, 771, 68, 47, () -> show(Screen.SETTINGS)).setSelected(tab == Screen.SETTINGS);
+            });
+            tabControl(Screen.SETTINGS, () -> show(Screen.SETTINGS));
             if (screen == Screen.MENU) {
                 control("Прикрепить файл", 175, 661, 202, 44, actions::attach);
                 control("Записать сейчас", 175, 705, 202, 44, actions::openRecorder);
@@ -350,6 +379,17 @@ final class ReflectView extends ViewGroup {
                 default: break;
             }
         }
+    }
+
+    private void tabControl(Screen target, Runnable action) {
+        int index = tabIndex(target);
+        control(TAB_NAMES[index], TAB_LEFT + index * TAB_WIDTH, 771, TAB_WIDTH, 47, action)
+                .setSelected(tab == target);
+    }
+
+    private void placePage(View child, float y, float width, float height) {
+        pageContent = child;
+        place(child, 0, y, width, height);
     }
 
     private View control(String label, float x, float y, float width, float height, Runnable action) {
@@ -383,11 +423,8 @@ final class ReflectView extends ViewGroup {
         rounded(canvas, 0, 0, WIDTH, HEIGHT, 47, BACKGROUND);
         canvas.clipPath(stage);
         if (transition < 1) {
-            drawScreen(canvas, departing);
-            if (navigation(departing)) drawNavigation(canvas, departing == Screen.MENU ? 1 : 0);
-            canvas.saveLayerAlpha(0, 0, WIDTH, HEIGHT, Math.round(255 * transition));
-            canvas.drawColor(BACKGROUND);
-            canvas.translate(0, 8 * (1 - transition));
+            canvas.saveLayerAlpha(0, 0, WIDTH, HEIGHT, Math.round(255 * (.55f + .45f * transition)));
+            canvas.translate(0, 12 * (1 - transition));
             drawScreen(canvas, screen);
             canvas.restore();
         } else {
@@ -414,6 +451,27 @@ final class ReflectView extends ViewGroup {
         canvas.restore();
     }
 
+    @Override public void onDescendantInvalidated(View child, View target) {
+        super.onDescendantInvalidated(child, target);
+        if (navigationGlass != null && navigation(screen) && child == pageContent) {
+            navigationGlass.invalidate();
+        }
+    }
+
+    private void drawNavigationContent(Canvas canvas) {
+        if (pageContent == null) return;
+        int save = canvas.save();
+        canvas.translate(-offsetX / scale, -offsetY / scale);
+        canvas.scale(1 / scale, 1 / scale);
+        drawChild(canvas, pageContent, getDrawingTime());
+        canvas.restoreToCount(save);
+    }
+
+    @Override protected void onDetachedFromWindow() {
+        if (animator != null) animator.end();
+        super.onDetachedFromWindow();
+    }
+
     private void drawScreen(Canvas canvas, Screen page) {
         if (navigation(page)) {
             Screen active = page == Screen.MENU ? tab : page;
@@ -434,22 +492,52 @@ final class ReflectView extends ViewGroup {
     }
 
     private void drawNavigation(Canvas c, float menu) {
-        pill(c, 16, 765, 302, 824, NAV_FILL, NAV_EDGE);
-        rounded(c, capsuleCenter - capsuleHalfWidth, 771, capsuleCenter + capsuleHalfWidth,
-                818, 24, 0x1affffff);
-        for (int i = 0; i < TAB_NAMES.length; i++) {
-            artwork.centeredIcon(c, TAB_ICONS[i], TAB_CENTERS[i], 787);
-            text(c, TAB_NAMES[i], TAB_CENTERS[i], 811.3f, 10, WHITE, artwork.regular, true);
+        drawNavigationBar(c, menu, true);
+        if (menu > 0) {
+            int save = c.saveLayerAlpha(166, 649, 389, 769, Math.round(menu * 255));
+            float shift = 14 * (1 - menu);
+            float stretchX = .9f + .1f * menu;
+            float stretchY = .86f + .14f * menu;
+            c.translate(0, shift);
+            c.scale(stretchX, stretchY, 359, 744);
+            menuBackdrop.draw(c, 175, 661, 377, 749, 26, 13, sample -> {
+                // Undo the menu transform to sample the scene in stage coordinates.
+                sample.scale(1 / stretchX, 1 / stretchY, 359, 744);
+                sample.translate(0, -shift);
+                drawNavigationContent(sample);
+                drawNavigationBar(sample, menu, false);
+            });
+            drawMenu(c);
+            c.restoreToCount(save);
         }
+    }
+
+    private void drawNavigationBar(Canvas c, float menu, boolean capture) {
+        drawNavigationBackdrop(c, navigationBackdrop, 16, 302, capture);
+        pill(c, 16, 765, 302, 824, NAV_FILL, NAV_EDGE);
+        rounded(c, Math.max(TAB_LEFT, capsuleLeft), 771, Math.min(TAB_RIGHT, capsuleRight),
+                818, 24, 0x24ffffff);
+        float center = (capsuleLeft + capsuleRight) / 2;
+        for (int i = 0; i < TAB_NAMES.length; i++) {
+            float x = TAB_LEFT + i * TAB_WIDTH + CAPSULE_HALF_WIDTH;
+            float emphasis = Math.max(0, 1 - Math.abs(center - x) / TAB_WIDTH);
+            float iconScale = .96f + .06f * emphasis;
+            c.save();
+            c.scale(iconScale, iconScale, x, 787);
+            artwork.centeredIcon(c, TAB_ICONS[i], x, 787 - emphasis * .6f);
+            c.restore();
+            text(c, TAB_NAMES[i], x, 811.3f, 10, WHITE, artwork.regular, true);
+        }
+        drawNavigationBackdrop(c, plusBackdrop, 318, 377, capture);
         pill(c, 318, 765, 377, 824, NAV_FILL, PLUS_EDGE);
         rotatedIcon(c, "plus", 347.5f, 794.5f, -45 * menu);
-        if (menu > 0) {
-            c.saveLayerAlpha(168, 650, 385, 761, Math.round(menu * 255));
-            c.translate(0, 11 * (1 - menu));
-            c.scale(0.94f + 0.06f * menu, 0.94f + 0.06f * menu, 363, 749);
-            drawMenu(c);
-            c.restore();
-        }
+    }
+
+    private void drawNavigationBackdrop(Canvas canvas, ReflectGlassBackdrop backdrop,
+                                        float left, float right, boolean capture) {
+        if (pageContent == null) return;
+        if (capture) backdrop.draw(canvas, left, 765, right, 824, 29.5f, 10, navigationSource);
+        else backdrop.replay(canvas, left, 765, right, 824, 29.5f, 10);
     }
 
     private void drawMenu(Canvas c) {
@@ -487,8 +575,10 @@ final class ReflectView extends ViewGroup {
         c.drawBitmap(orbEdgeShade, 260, 217, null);
         switch (page) {
             case RECORDING -> {
-                text(c, "Распознаю голос...", 196.5f, 412.3f, 18, WHITE, artwork.display, true);
-                liveWaveform(c, now);
+                float reveal = recordingVisuals.reveal(now);
+                int ink = Color.argb(Math.round(reveal * 255), 255, 255, 255);
+                text(c, "Распознаю голос...", 196.5f, 412.3f + 5 * (1 - reveal), 18, ink, artwork.display, true);
+                liveWaveform(c, now, reveal, ink);
                 artworkButton(c, WHITE, "pause", 274.75f, 794.9f, 0);
             }
             case REVIEW -> {
@@ -506,12 +596,12 @@ final class ReflectView extends ViewGroup {
         closeButton(c, "plus_recorder", -45);
     }
 
-    private void liveWaveform(Canvas c, long now) {
-        float progress = preferences.reduceMotion() ? 1 : recordingVisuals.sampleProgress(now);
+    private void liveWaveform(Canvas c, long now, float reveal, int ink) {
+        float progress = !preferences.motionEnabled() ? 1 : recordingVisuals.sampleProgress(now);
         for (int i = 0; i < RecordingVisuals.BARS; i++) {
             float x = 45 + 302 * i / (float) (RecordingVisuals.BARS - 1);
-            float h = recordingVisuals.height(i, progress);
-            rounded(c, x, 627 - h / 2, x + 2, 627 + h / 2, 1, WHITE);
+            float h = recordingVisuals.height(i, progress) * reveal;
+            rounded(c, x, 627 - h / 2, x + 2, 627 + h / 2, 1, ink);
         }
     }
 

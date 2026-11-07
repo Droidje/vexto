@@ -46,6 +46,7 @@ final class ReflectLibraryView extends ViewGroup {
     }
 
     private final ReflectArtwork artwork;
+    private final ReflectPreferences preferences;
     private final Page page;
     private final Actions actions;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
@@ -65,9 +66,11 @@ final class ReflectLibraryView extends ViewGroup {
     private float scale = 1;
     private int measuredWidth = -1;
 
-    ReflectLibraryView(Context context, ReflectArtwork artwork, Page page, Actions actions) {
+    ReflectLibraryView(Context context, ReflectArtwork artwork, ReflectPreferences preferences, Page page,
+                       Actions actions) {
         super(context);
         this.artwork = artwork;
+        this.preferences = preferences;
         this.page = page;
         this.actions = actions;
         setWillNotDraw(false);
@@ -126,7 +129,19 @@ final class ReflectLibraryView extends ViewGroup {
     }
 
     private Button speakerButton(Context context, String label, Runnable action) {
-        Button invite = new Button(context);
+        Button invite = new Button(context) {
+            private final ReflectGlassBackdrop backdrop = new ReflectGlassBackdrop();
+
+            @Override public void draw(Canvas canvas) {
+                if (!emptySpeakers()) {
+                    backdrop.draw(canvas, 0, 0, getWidth(), getHeight(), px(24), px(10), sample -> {
+                        sample.translate(-getLeft(), -getTop());
+                        ReflectLibraryView.this.drawChild(sample, scroller, getDrawingTime());
+                    });
+                }
+                super.draw(canvas);
+            }
+        };
         invite.setAllCaps(false);
         invite.setText(label);
         invite.setTextColor(0xff040402);
@@ -138,6 +153,11 @@ final class ReflectLibraryView extends ViewGroup {
         invite.setStateListAnimator(null);
         invite.setOnClickListener(v -> action.run());
         return invite;
+    }
+
+    @Override public void onDescendantInvalidated(View child, View target) {
+        super.onDescendantInvalidated(child, target);
+        if (addSpeaker != null && child == scroller) addSpeaker.invalidate();
     }
 
     void setRecordings(List<ReflectCatalog.Recording> recordings) {
@@ -232,6 +252,12 @@ final class ReflectLibraryView extends ViewGroup {
             adapter.rows.addAll(results);
             if (results.isEmpty()) adapter.rows.add(new TextRow("Ничего не найдено", false));
             adapter.notifyDataSetChanged();
+            scroller.animate().cancel();
+            scroller.setAlpha(1f);
+            if (isShown() && preferences.motionEnabled()) {
+                scroller.setAlpha(.72f);
+                scroller.animate().alpha(1f).setDuration(150).setInterpolator(ReflectMotion.EASE).start();
+            }
         });
         postDelayed(pendingSearch, 180);
     }
@@ -330,7 +356,7 @@ final class ReflectLibraryView extends ViewGroup {
     private void styleSpeakerButton(Button button) {
         button.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16 * scale);
         GradientDrawable pill = new GradientDrawable();
-        pill.setColor(Color.WHITE);
+        pill.setColor(0xddffffff);
         pill.setCornerRadius(px(24));
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22000000), pill, null));
     }
