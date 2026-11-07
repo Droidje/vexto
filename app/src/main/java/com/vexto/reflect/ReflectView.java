@@ -265,7 +265,13 @@ final class ReflectView extends ViewGroup {
         navigationAnimator.start();
     }
 
-    private int pageDuration() { return 210 + 85 * (pageSteps - 1); }
+    private int pageDuration() {
+        return switch (pageSteps) {
+            case 2 -> 235;
+            case 3 -> 255;
+            default -> 210;
+        };
+    }
 
     private void startPageTransition() {
         pageAnimator = ValueAnimator.ofFloat(0, 1);
