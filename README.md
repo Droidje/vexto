@@ -52,6 +52,7 @@ JSON и Markdown экспортируют **все** реплики, локал�
 
 После обновления `main` Actions подписывает проверенный APK и публикует его в GitHub Packages. Версии для установки с моделями выходят отдельными именованными релизами.
 
+- [Установка одним файлом на телефоне](docs/base-version.md#один-apk-на-телефоне) с уже встроенными моделями.
 - [Релиз v0.5.0](https://github.com/Droidje/vexto/releases/tag/v0.5.0) содержит один подписанный комплект с приложением и всеми моделями. Установка одной командой описана в [инструкции](docs/base-version.md#установка).
 - [GitHub Packages](https://github.com/Droidje/vexto/pkgs/container/vexto-android) хранит проверочный APK из main по SHA и `nightly`, а полный комплект релиза — по тегам `v0.5.0` и `latest`. Для копирования файлов из образа используйте `docker pull`, `docker create <image> /unused` и `docker cp`.
 
