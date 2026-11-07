@@ -156,12 +156,12 @@ public final class ReflectTranscriptionService extends Service {
                 io.execute(() -> publishCore(started, transcript, artifacts));
             }
 
-            @Override public void onDialogueReady(Transcript transcript, String artifacts) {
+            @Override public void onDialogueReady(Transcript transcript, String artifacts, String warning) {
                 if (job != started) return;
                 started.backgroundEmotions = true;
                 started.progress = started.progress.withSpeakers(transcript.getSpeakers().size()).asBackgroundEmotions();
                 changed(started);
-                io.execute(() -> publishDialogueReady(started, transcript, artifacts));
+                io.execute(() -> publishDialogueReady(started, transcript, artifacts, warning));
             }
 
             @Override public void onDone(Transcript transcript, ProcessingStats stats) {
@@ -212,7 +212,7 @@ public final class ReflectTranscriptionService extends Service {
         }
     }
 
-    private void publishDialogueReady(Job started, Transcript output, String artifacts) {
+    private void publishDialogueReady(Job started, Transcript output, String artifacts, String warning) {
         if (started.interrupted) return;
         File recording = started.request.recording();
         try {
@@ -232,7 +232,7 @@ public final class ReflectTranscriptionService extends Service {
             main.post(() -> {
                 if (job != started || started.interrupted) return;
                 changed(started);
-                ReflectLocalTranscription.notifyFinished(new ReflectLocalTranscription.Result(recording, saved.transcript(), null));
+                ReflectLocalTranscription.notifyFinished(new ReflectLocalTranscription.Result(recording, saved.transcript(), warning));
             });
         } catch (IOException | RuntimeException unavailable) {
             Log.w(TAG, "Could not publish main dialogue", unavailable);

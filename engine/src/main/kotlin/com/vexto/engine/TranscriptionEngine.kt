@@ -326,7 +326,12 @@ class TranscriptionEngine(context: Context) {
             JobFiles.write(File(job, "transcript.json"), TranscriptExport.submissionJson(transcript).toByteArray(Charsets.UTF_8))
             JobFiles.write(File(job, "transcript.metadata.json"), TranscriptExport.jsonWithMetadata(transcript).toByteArray(Charsets.UTF_8))
             JobFiles.save(File(job, "dialogue-ready.json"), transcript)
-            send(TranscriptionEvent.CoreReady(transcript, job.absolutePath, finalText = true))
+            val dialogueWarning = when {
+                selected.size != plan.chunks.size -> "Часть аудио не распознана. Доступный текст и оригинальные результаты сохранены."
+                unresolved > 0 -> "Текст сохранён. Для части фрагментов выбор модели не подтверждён."
+                else -> null
+            }
+            send(TranscriptionEvent.CoreReady(transcript, job.absolutePath, finalText = true, warning = dialogueWarning))
         }
         run {
             val emotionTargets = UtteranceEmotionAnnotations.targets(transcript)
