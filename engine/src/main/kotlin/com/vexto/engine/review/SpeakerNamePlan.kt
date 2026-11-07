@@ -16,6 +16,8 @@ data class SpeakerNamesArtifact(
     val names: List<ContextSpeakerName> = emptyList(),
     val elapsedMs: Long = 0,
 ) {
+    val reusable: Boolean get() = status in setOf("resolved", "no_identity_cues")
+
     fun attach(transcript: Transcript): Transcript {
         if (sourceSha256 != SpeakerNamePlan.sourceHash(transcript)) return transcript
         val valid = names.filter { name ->
@@ -112,7 +114,7 @@ internal class SpeakerNamePlan private constructor(
                 if (found.any { it.self && cue.self && it.name.equals(cue.name, true) && it.allowed != cue.allowed }) continue
                 val next = selected + cue
                 val candidate = render(transcript, ids, next)
-                if (candidate.prompt.toByteArray(Charsets.UTF_8).size <= BoundedQwenRequest.MaxPromptBytes) {
+                if (candidate.prompt.toByteArray(Charsets.UTF_8).size <= BoundedQwenRequest.MaxIdentityPromptBytes) {
                     selected += cue; request = candidate
                 }
             }

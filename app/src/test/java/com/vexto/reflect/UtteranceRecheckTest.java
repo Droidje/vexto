@@ -61,22 +61,49 @@ public class UtteranceRecheckTest {
         assertNull(updated.lines.get(2).emotionProbabilities);
     }
 
-    @Test public void shortNeighborInsideTheWindowIsReplacedToo() {
+    @Test public void shortNeighborInsideTheWindowStaysUntouched() {
         ReflectTranscript.Line previous = line("speaker_1", 1_600, 2_100, "угу", CALM);
         ReflectTranscript.Line selected = line("speaker_2", 2_200, 4_000, "основная", CALM);
-        ReflectTranscript original = transcript(previous, selected,
-                line("speaker_1", 8_000, 9_000, "потом", ANGER));
-        ReflectTranscript updated = UtteranceRecheck.apply(original, selected, 1_750, 4_450, List.of(
+        ReflectTranscript.Line following = line("speaker_1", 8_000, 9_000, "потом", ANGER);
+        ReflectTranscript original = transcript(previous, selected, following);
+        ReflectTranscript updated = UtteranceRecheck.apply(original, selected, 700, 5_500, List.of(
                 piece(1_620, 2_050, "ага", JOY),
-                piece(2_250, 3_800, "пересчитано", ANGER)));
+                piece(2_250, 3_800, "пересчитано", ANGER),
+                piece(4_100, 4_700, "следующая", JOY)));
         assertEquals(3, updated.lines.size());
-        assertEquals("speaker_1", updated.lines.get(0).speakerId);
-        assertEquals("ага", updated.lines.get(0).text);
-        assertSame(JOY, updated.lines.get(0).emotionProbabilities);
+        assertEquals("угу", updated.lines.get(0).text);
+        assertSame(CALM, updated.lines.get(0).emotionProbabilities);
         assertEquals("speaker_2", updated.lines.get(1).speakerId);
         assertEquals("пересчитано", updated.lines.get(1).text);
+        assertSame(ANGER, updated.lines.get(1).emotionProbabilities);
         assertEquals("потом", updated.lines.get(2).text);
         assertSame(ANGER, updated.lines.get(2).emotionProbabilities);
+    }
+
+    @Test public void wordsCutTheNeighborTailOutOfTheSelectedLine() {
+        ReflectTranscript.Line previous = line("speaker_1", 4_600, 8_500, "предыдущая", CALM);
+        ReflectTranscript.Line selected = line("speaker_2", 8_700, 28_000, "старая длинная", CALM, "Маша");
+        ReflectTranscript.Line following = line("speaker_3", 28_700, 30_000, "груши. Точно, да?", JOY);
+        ReflectTranscript original = transcript(previous, selected, following);
+        ReflectTranscript updated = UtteranceRecheck.apply(original, selected, 6_500, 29_500, List.of(
+                piece(7_300, 29_900, "Он ехал дальше. Основная фраза. А, точно, да?", ANGER, List.of(
+                        word(7_300, 7_600, "Он"),
+                        word(7_600, 7_900, "ехал"),
+                        word(8_500, 20_000, "Основная"),
+                        word(20_100, 27_800, "фраза."),
+                        word(28_800, 29_200, "А,"),
+                        word(29_300, 29_800, "точно")))));
+        assertEquals(3, updated.lines.size());
+        assertEquals("предыдущая", updated.lines.get(0).text);
+        assertEquals("Основная фраза.", updated.lines.get(1).text);
+        assertEquals("speaker_2", updated.lines.get(1).speakerId);
+        assertEquals("Маша", updated.lines.get(1).speakerName);
+        assertEquals(8_500, updated.lines.get(1).startMs);
+        assertEquals(27_800, updated.lines.get(1).endMs);
+        assertSame(ANGER, updated.lines.get(1).emotionProbabilities);
+        assertEquals("груши. Точно, да?", updated.lines.get(2).text);
+        assertEquals("speaker_3", updated.lines.get(2).speakerId);
+        assertSame(JOY, updated.lines.get(2).emotionProbabilities);
     }
 
     @Test public void longNeighborKeepsItsTextWhenOnlyASliverWasHeard() {
@@ -119,16 +146,44 @@ public class UtteranceRecheckTest {
                 List.of(piece(1_000, 1_800, "опоздание", JOY))));
     }
 
-    @Test public void twoNeighborsMergeIntoTheSpeakerWithMoreOverlap() {
+    @Test public void repeatedBoundaryWordStaysOnlyInTheRecheckedLine() {
+        ReflectTranscript.Line selected = line("speaker_1", 8_000, 28_800, "старая", CALM);
+        ReflectTranscript.Line following = line("speaker_3", 28_700, 30_000, "груши. Точно, да?", JOY);
+        ReflectTranscript updated = UtteranceRecheck.apply(transcript(selected, following), selected, 6_500, 30_000, List.of(
+                piece(8_100, 29_031, "даёт три груши.", ANGER, List.of(
+                        word(8_100, 27_000, "даёт"),
+                        word(27_100, 28_000, "три"),
+                        word(28_100, 29_031, "груши.")))));
+        assertEquals(2, updated.lines.size());
+        assertEquals("даёт три груши.", updated.lines.get(0).text);
+        assertEquals(29_031, updated.lines.get(0).endMs);
+        assertEquals("Точно, да?", updated.lines.get(1).text);
+        assertEquals("speaker_3", updated.lines.get(1).speakerId);
+        assertEquals(29_031, updated.lines.get(1).startMs);
+        assertEquals(30_000, updated.lines.get(1).endMs);
+        assertSame(JOY, updated.lines.get(1).emotionProbabilities);
+    }
+
+    @Test public void repeatedOpeningWordIsNotCopiedFromThePreviousLine() {
+        ReflectTranscript.Line previous = line("speaker_1", 4_000, 8_200, "он ехал дальше.", CALM);
+        ReflectTranscript.Line selected = line("speaker_2", 8_000, 12_000, "старая", CALM);
+        ReflectTranscript updated = UtteranceRecheck.apply(transcript(previous, selected), selected, 6_500, 13_000, List.of(
+                piece(7_900, 11_000, "дальше. Основная фраза", ANGER, List.of(
+                        word(7_900, 8_300, "дальше."),
+                        word(8_400, 11_000, "Основная")))));
+        assertEquals(2, updated.lines.size());
+        assertEquals("он ехал дальше.", updated.lines.get(0).text);
+        assertEquals(4_000, updated.lines.get(0).startMs);
+        assertEquals("Основная", updated.lines.get(1).text);
+        assertEquals("speaker_2", updated.lines.get(1).speakerId);
+    }
+
+    @Test public void onePieceThatSwallowsANeighborIsNotAppliedWithoutWords() {
         ReflectTranscript.Line first = line("speaker_1", 1_000, 1_400, "а", CALM);
         ReflectTranscript.Line selected = line("speaker_2", 1_500, 3_500, "б", CALM);
         ReflectTranscript original = transcript(first, selected);
-        ReflectTranscript updated = UtteranceRecheck.apply(original, selected, 550, 3_950, List.of(
-                piece(1_000, 3_400, "одна фраза", JOY)));
-        assertEquals(1, updated.lines.size());
-        assertEquals("speaker_2", updated.lines.get(0).speakerId);
-        assertEquals("одна фраза", updated.lines.get(0).text);
-        assertSame(JOY, updated.lines.get(0).emotionProbabilities);
+        assertNull(UtteranceRecheck.apply(original, selected, 0, 4_000, List.of(
+                piece(1_000, 3_400, "одна фраза", JOY))));
     }
 
     private static ReflectTranscript transcript(ReflectTranscript.Line... lines) {
@@ -147,5 +202,14 @@ public class UtteranceRecheckTest {
 
     private static UtteranceRecheck.Piece piece(int start, int end, String text, EmotionProbabilities emotion) {
         return new UtteranceRecheck.Piece(start, end, text, emotion);
+    }
+
+    private static UtteranceRecheck.Piece piece(int start, int end, String text, EmotionProbabilities emotion,
+                                                List<UtteranceRecheck.TimedWord> words) {
+        return new UtteranceRecheck.Piece(start, end, text, emotion, words);
+    }
+
+    private static UtteranceRecheck.TimedWord word(int start, int end, String text) {
+        return new UtteranceRecheck.TimedWord(start, end, text);
     }
 }

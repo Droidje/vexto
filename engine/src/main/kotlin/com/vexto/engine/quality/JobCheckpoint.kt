@@ -12,6 +12,7 @@ import com.vexto.engine.review.AsrSelectionStatus
 import com.vexto.engine.review.AsrSource
 import com.vexto.engine.review.ImmutableAsrCandidate
 import com.vexto.engine.review.SelectionAudit
+import com.vexto.engine.review.QwenAsrSelector
 import com.vexto.engine.review.sha256
 import java.io.File
 import java.io.IOException
@@ -42,7 +43,7 @@ internal class JobCheckpoint private constructor(val directory: File) {
         JobFiles.sha256(wav).also { JobFiles.write(File(directory, "decoded.sha256"), it.toByteArray(Charsets.US_ASCII)) }
 
     @Serializable
-    data class Finished(val transcript: Transcript, val stats: ProcessingStats)
+    data class Finished(val transcript: Transcript, val stats: ProcessingStats, val selectorVersion: String = "")
 
     @Serializable
     private data class LanguageCheckpoint(val inputSha256: String, val language: RecordingLanguage)
@@ -66,6 +67,12 @@ internal class JobCheckpoint private constructor(val directory: File) {
     fun finished(): Finished? = runCatching {
         val result = JobFiles.load<Finished>(File(directory, "finished.checkpoint.json"))
         val report = JobFiles.load<PipelineReport>(File(directory, "completion.json"))
+        // An explicit retry must reach failed stages, including jobs made by an older selector.
+        // fullProfileCompleted is deliberately not required (e.g. Whisper-only or EQUIVALENT).
+        require(result.selectorVersion == QwenAsrSelector.Version && result.stats.complete && result.stats.selectionResolved)
+        require(report.stages.all { it.completed && it.error == null })
+        require(report.warnings.none { it.contains("_FAILED:") })
+        require(report.stages.mapNotNull { it.speakerNames }.all { it.reusable })
         require(result.stats.artifactDirectory == directory.absolutePath)
         require(JobFiles.sha256(File(directory, "transcript.json")) == report.transcriptSha256 &&
             JobFiles.sha256(File(directory, "transcript.metadata.json")) == report.metadataSha256)
@@ -75,7 +82,7 @@ internal class JobCheckpoint private constructor(val directory: File) {
     }.getOrNull()
 
     fun saveFinished(transcript: Transcript, stats: ProcessingStats) =
-        JobFiles.save(File(directory, "finished.checkpoint.json"), Finished(transcript, stats))
+        JobFiles.save(File(directory, "finished.checkpoint.json"), Finished(transcript, stats, QwenAsrSelector.Version))
 
     fun worker(
         stage: WorkerStage,
@@ -129,7 +136,8 @@ internal class JobCheckpoint private constructor(val directory: File) {
                     chunk != null && choice.candidate.chunkId == choice.chunkId && verifyChoice(choice, chunk)
                 }
                 result.copy(choices = choices, completed = completed && choices.size == chunks.size &&
-                    choices.size == result.choices.size)
+                    choices.size == result.choices.size && choices.none { it.status == AsrSelectionStatus.UNRESOLVED.name } &&
+                    result.speakerNames?.reusable != false)
             }
             WorkerStage.EMOTION -> {
                 val targets = JobFiles.load<List<UtteranceEmotionTarget>>(File(directory, "emotion-targets.json"))

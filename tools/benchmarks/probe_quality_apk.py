@@ -23,6 +23,7 @@ def main() -> int:
     parser.add_argument('--package',default='com.vexto.reflect')
     parser.add_argument('--input',type=Path,required=True)
     parser.add_argument('--output-dir',type=Path,required=True)
+    parser.add_argument('--processing-mode', choices=('AUTO', 'FAST', 'QUALITY'), default='QUALITY')
     args=parser.parse_args()
     if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+',args.package):
         parser.error('Invalid application ID')
@@ -49,7 +50,7 @@ def main() -> int:
         'input_sha256':source_hash,'input_bytes':args.input.stat().st_size,
         'avd':text('emu','avd','name').splitlines()[0],
         'memory_kib':int(text('shell','cat','/proc/meminfo').splitlines()[0].split()[1]),
-        'runtime':'Android APK; host only transfers and verifies artifacts'})
+        'runtime':'Android APK; host only transfers and verifies artifacts', 'processing_mode': args.processing_mode})
     network={key:text('shell','settings','get','global',key) for key in ('airplane_mode_on','wifi_on','mobile_data')}
     save('network-before.json',network)
     run='probe-'+uuid.uuid4().hex
@@ -69,7 +70,7 @@ def main() -> int:
         text('shell','am','start','-n',args.package+'/com.vexto.reflect.MainActivity')
         time.sleep(2)
         text('shell','am','start','-n',args.package+'/com.vexto.engine.eval.QualityEvalActivity',
-             '--es','run',run,'--es','input',name)
+             '--es','run',run,'--es','input',name,'--es','processing_mode',args.processing_mode)
         started=time.monotonic();previous=None
         while time.monotonic()-started < 600:
             error=text('shell','cat',base+'/error.txt',check=False)

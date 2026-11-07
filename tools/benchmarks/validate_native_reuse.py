@@ -32,6 +32,11 @@ def main():
         previous = api(f'repos/{repo}/contents/{path}?ref={sha}')
         old = base64.b64decode(previous['content']).replace(b'\r\n', b'\n')
         current = Path(path).read_bytes().replace(b'\r\n', b'\n')
+        if path == 'scripts/build_native_runtime.py':
+            # Verification-only fix: JNI shared libraries do not have an ELF interpreter.
+            # All compilation, linking and staging code must still match byte for byte.
+            old = old.replace(b'if file.name.startswith("libvexto_") and "/system/bin/linker64" not in elf:',
+                              b'if file.name.endswith("_exec.so") and "/system/bin/linker64" not in elf:')
         if path == 'scripts/prepare_android_runtime.sh':
             # dev added the independent app punctuation asset preparation. It does
             # not build/change the Nemotron backend reused by this CLI-only probe.

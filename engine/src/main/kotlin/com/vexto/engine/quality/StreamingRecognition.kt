@@ -63,8 +63,10 @@ internal object StreamingRecognition {
         }
         val initial = first ?: return emptyMap()
         return coroutineScope {
-            val stages = listOfNotNull(WorkerStage.GIGAAM.takeIf { slavic }, WorkerStage.WHISPER)
-            val jobs = stages.associateWith { kind -> async { recognize(kind, initial) } }
+            // Admit the slower autoregressive branch first. A parked CTC worker would
+            // otherwise reserve the remaining RAM/CPU while Whisper waits for diarization.
+            val stages = listOfNotNull(WorkerStage.WHISPER, WorkerStage.GIGAAM.takeIf { slavic })
+            val jobs = stages.associateWith { kind -> async(start = CoroutineStart.UNDISPATCHED) { recognize(kind, initial) } }
             try {
                 while (!diarization.isCompleted) {
                     val progress = runCatching { JobFiles.load<DiarizationProgress>(File(job, "diarization-progress.json")) }.getOrNull()

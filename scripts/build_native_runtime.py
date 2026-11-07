@@ -144,7 +144,7 @@ def main() -> int:
             for name in needed:
                 if name not in {"libc.so", "libm.so", "libdl.so", "liblog.so", "libandroid.so"} and not (output / name).exists():
                     raise ValueError(f"unstaged dependency {name} of {file.name}")
-            if file.name.startswith("libvexto_") and "/system/bin/linker64" not in elf:
+            if file.name.endswith("_exec.so") and "/system/bin/linker64" not in elf:
                 raise ValueError("packaged executable must be Android PIE with linker64")
             artifacts.append({"file": file.name, "size_bytes": file.stat().st_size, "sha256": digest(file), "needed": needed})
         manifest = {"status": "cross_compiled_not_executed", "abi": abi, "api": 28, "ndk": "r28c",
