@@ -37,7 +37,7 @@ jobs:
           cache: gradle
       - name: Android SDK and pinned Java dependency
         run: |
-          sdkmanager "platforms;android-35" "build-tools;$ANDROID_BUILD_TOOLS"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;$ANDROID_BUILD_TOOLS"
           bash scripts/fetch_models.sh --aar-only
       - name: JVM tests, lint and Android compile
         run: |
@@ -70,7 +70,8 @@ jobs:
           java-version: '17'
           cache: gradle
       - name: Install Android toolchain
-        run: sdkmanager "platforms;android-35" "build-tools;$ANDROID_BUILD_TOOLS" "ndk;28.2.13676358" "cmake;3.22.1"
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;$ANDROID_BUILD_TOOLS" "ndk;28.2.13676358" "cmake;3.22.1"
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -121,7 +122,7 @@ jobs:
         run: |
           : "${VEXTO_KEYSTORE:?Missing VEXTO_ANDROID_KEYSTORE}"
           : "${VEXTO_KEYSTORE_PASSWORD:?Missing VEXTO_ANDROID_KEYSTORE_PASSWORD}"
-          sdkmanager "build-tools;$ANDROID_BUILD_TOOLS"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;$ANDROID_BUILD_TOOLS"
           build_tools="$ANDROID_HOME/build-tools/$ANDROID_BUILD_TOOLS"
           keystore="$(mktemp)"
           trap 'rm -f "$keystore"' EXIT
@@ -148,6 +149,11 @@ jobs:
           COPY vexto.apk SHA256SUMS /
           DOCKERFILE
           docker push "$package:$GITHUB_SHA"
+          docker pull "$package:$GITHUB_SHA"
+          container="$(docker create "$package:$GITHUB_SHA" /unused)"
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker cp "$container:/vexto.apk" "$RUNNER_TEMP/package.apk"
+          cmp dist/vexto.apk "$RUNNER_TEMP/package.apk"
 
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$tag" dist/vexto.apk dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber

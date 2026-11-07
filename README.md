@@ -53,7 +53,7 @@ JSON и Markdown экспортируют **все** реплики, локал�
 После обновления `main` Actions подписывает APK постоянным ключом, проверяет подпись и публикует один и тот же файл двумя способами.
 
 - [Скачать vexto.apk](https://github.com/Droidje/vexto/releases/latest/download/vexto.apk) из GitHub Releases. Откройте скачанный файл на Android 9+ и при необходимости разрешите установку из этого источника. Нужен доступ к репозиторию GitHub.
-- [GitHub Packages](https://github.com/Droidje/vexto/pkgs/container/vexto-android) хранит APK и SHA-256 как OCI-образ `ghcr.io/droidje/vexto-android:<commit-sha>` и `:latest`. Для скачивания с компьютера используйте `docker pull`, `docker create` и `docker cp <container>:/vexto.apk .`.
+- [GitHub Packages](https://github.com/Droidje/vexto/pkgs/container/vexto-android) хранит APK и SHA-256 как OCI-образ `ghcr.io/droidje/vexto-android:<commit-sha>` и `:latest`. Для скачивания с компьютера используйте `docker pull`, `docker create <image> /unused` и `docker cp <container>:/vexto.apk .`.
 
 Веса (~3,34 ГБ) устанавливаются отдельно по [инструкции офлайн-версии](docs/base-version.md#установка). Публикация использует Actions secrets `VEXTO_ANDROID_KEYSTORE` (PKCS#12 в Base64, алиас `vexto`) и `VEXTO_ANDROID_KEYSTORE_PASSWORD`. Сохраняйте тот же ключ для обновлений поверх предыдущих CD-сборок. Старые debug-сборки подписаны другим ключом, поэтому Android не обновит их поверх существующей установки. Удаление debug-сборки удаляет и её локальные данные.
 
