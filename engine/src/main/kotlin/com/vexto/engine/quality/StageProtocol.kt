@@ -3,6 +3,7 @@ package com.vexto.engine.quality
 import java.io.File
 import kotlinx.serialization.Serializable
 import com.vexto.engine.model.VoiceEmbedding
+import com.vexto.engine.review.SpeakerNamesArtifact
 import com.vexto.engine.pipeline.UtteranceEmotionEvidence
 
 @Serializable enum class WorkerStage { DENOISE, DIARIZE, VOICEPRINT, GIGAAM, WHISPER, SELECT, EMOTION }
@@ -32,6 +33,7 @@ import com.vexto.engine.pipeline.UtteranceEmotionEvidence
     val error: String? = null,
     val outputSha256: String? = null,
     val backends: List<String> = emptyList(),
+    val speakerNames: SpeakerNamesArtifact? = null,
 )
 internal fun WorkerStage.requestFile(job: File) = File(job, "stages/$name.request.json")
 internal fun WorkerStage.resultFile(job: File) = File(job, "stages/$name.result.json")
