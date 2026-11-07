@@ -61,6 +61,7 @@ internal class ChunkWaveMaterializer(
         val lock = File(file.parentFile, ".${chunk.id}.lock")
         // Hold a shared read lease through inference. Creation/eviction needs an exclusive
         // lease, so another process cannot remove an input while a native child reads it.
+        synchronized(localReaders) { localReaders[file.path] = (localReaders[file.path] ?: 0) + 1 }
         try { RandomAccessFile(lock, "rw").use { owner ->
             while (true) {
                 currentCoroutineContext().ensureActive()
@@ -85,7 +86,13 @@ internal class ChunkWaveMaterializer(
                     }
                 }
             }
-        } } finally { if (readers.isEmpty() && created) evict(file) }
+        } } finally {
+            synchronized(localReaders) {
+                val count = requireNotNull(localReaders[file.path]) - 1
+                if (count == 0) localReaders.remove(file.path) else localReaders[file.path] = count
+            }
+            if (readers.isEmpty() && created) evict(file)
+        }
     }
 
     /** A published candidate proves that consumer finished reading and verifying this WAV. */
@@ -114,21 +121,28 @@ internal class ChunkWaveMaterializer(
         catch (_: OverlappingFileLockException) { null }
 
     private fun evict(file: File): Boolean {
-        if (!Files.exists(file.toPath(), NOFOLLOW_LINKS)) return false
-        try {
-            RandomAccessFile(File(file.parentFile, ".${file.nameWithoutExtension}.lock"), "rw").use { owner ->
-                val lease = tryExclusive(owner.channel) ?: return false
-                lease.use {
-                    if (Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
-                        require(Files.isRegularFile(file.toPath(), NOFOLLOW_LINKS) && !Files.isSymbolicLink(file.toPath()))
-                        Files.delete(file.toPath())
-                        return true
+        synchronized(localReaders) {
+            // POSIX process locks can be released by closing another fd for that inode.
+            // Never open an eviction fd while this JVM already owns its read lease.
+            if (file.path in localReaders) return false
+            if (!Files.exists(file.toPath(), NOFOLLOW_LINKS)) return false
+            try {
+                RandomAccessFile(File(file.parentFile, ".${file.nameWithoutExtension}.lock"), "rw").use { owner ->
+                    val lease = tryExclusive(owner.channel) ?: return false
+                    lease.use {
+                        if (Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
+                            require(Files.isRegularFile(file.toPath(), NOFOLLOW_LINKS) && !Files.isSymbolicLink(file.toPath()))
+                            Files.delete(file.toPath())
+                            return true
+                        }
                     }
                 }
-            }
-        } catch (failure: Exception) { warning("CHUNK_CLEANUP_FAILED:${file.name}:${failure.javaClass.simpleName}") }
-        return false
+            } catch (failure: Exception) { warning("CHUNK_CLEANUP_FAILED:${file.name}:${failure.javaClass.simpleName}") }
+            return false
+        }
     }
+
+    private companion object { val localReaders = mutableMapOf<String, Int>() }
 
     private fun checkedPath(chunk: AudioChunk): File {
         require(chunk.id.matches(Regex("chunk_[0-9]{6}")))

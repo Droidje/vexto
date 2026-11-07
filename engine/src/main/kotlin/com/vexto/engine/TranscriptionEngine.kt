@@ -238,11 +238,11 @@ class TranscriptionEngine(context: Context) {
             val first = giga.await()
             gigaCandidates = first?.let { loadCandidates(job, plan, it.candidates, warnings) }.orEmpty()
             if (slavic && gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
-            val core = attachVoices(AcousticTurnTranscript.place(
-                assembler.assemble(plan, gigaCandidates, turns).transcript, turns))
-            // Originals are already durable before this callback. Refinement never destroys this checkpoint.
-            JobFiles.write(File(job, "core.txt"), plan.chunks.joinToString("\n") { gigaCandidates.getValue(it.id).text }.toByteArray())
-            JobFiles.write(File(job, "core.json"), TranscriptExport.json(core).toByteArray(Charsets.UTF_8))
+                val core = attachVoices(AcousticTurnTranscript.place(
+                    assembler.assemble(plan, gigaCandidates, turns).transcript, turns))
+                // Originals are already durable before this callback. Refinement never destroys this checkpoint.
+                JobFiles.write(File(job, "core.txt"), plan.chunks.joinToString("\n") { gigaCandidates.getValue(it.id).text }.toByteArray())
+                JobFiles.write(File(job, "core.json"), TranscriptExport.json(core).toByteArray(Charsets.UTF_8))
                 send(TranscriptionEvent.CoreReady(core, job.absolutePath))
             }
             first to whisper.await()

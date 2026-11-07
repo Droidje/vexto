@@ -70,13 +70,14 @@ class NativeProcessRunner(
                 throw NativeProcessException(NativeProcessException.Reason.IO,
                     "Cannot start packaged native executable: $executableName", cause = error)
             }
+            val registeredPids = mutableSetOf<Pair<Int, String>>()
             try {
                 while (true) {
                     coroutineContext.ensureActive()
                     onTick?.invoke()
                     val observed = snapshot()
                     observed.filter { it.pid !in existingPids && it.parentPid == AndroidProcess.myPid() && it.nativeExecutable }
-                        .forEach { register(it) }
+                        .forEach { if (registeredPids.add(it.pid to it.startTicks)) register(it) }
                     peak = maxOf(peak, observed.sumOf { it.rss })
                     rejectMemory(peak)
                     if (SystemClock.elapsedRealtime() - started > timeoutMs) {

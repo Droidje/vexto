@@ -13,6 +13,24 @@ import java.io.RandomAccessFile
 
 class QualityArtifactsTest {
     @get:Rule val temporary = TemporaryFolder()
+    @Test fun pcmCleanupKeepsActiveReadLeaseAndRemovesCompletedIdleWave() = runBlocking {
+        val root = temporary.newFolder()
+        val source = File(root, "source.wav")
+        PcmWave.Writer(source).use { it.write(FloatArray(16000) { .1f }) }
+        val plan = ChunkPlan.create(source, root)
+        val chunk = plan.chunks.single()
+        val consumers = listOf(WorkerStage.GIGAAM, WorkerStage.WHISPER)
+        consumers.forEach { stage -> JobFiles.save(stage.resultFile(root), WorkerResult(stage,
+            candidates = listOf(CandidateRef(chunk.id, stage.name.lowercase(), "raw.json", "a".repeat(64))))) }
+        val waves = ChunkWaveMaterializer(root, plan, source, consumers) { fail(it) }
+        waves.withChunk(chunk) { current ->
+            waves.releaseCompleted(plan.chunks)
+            assertTrue(current.wav.isFile)
+        }
+        waves.releaseCompleted(plan.chunks)
+        assertFalse(JobFiles.inside(root, chunk.wav).exists())
+    }
+
     @Test fun chunksCoverAllSamplesExactlyOnceAndShareExactPcm() = runBlocking {
         val root = temporary.newFolder()
         val source = File(root, "source.wav")

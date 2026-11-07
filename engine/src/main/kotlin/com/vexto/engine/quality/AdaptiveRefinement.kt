@@ -56,14 +56,15 @@ internal object AdaptiveRefinement {
 
 /** Heavy outputs supersede only the same source/chunk. All light originals remain on disk. */
 internal object CandidateSources {
-    fun read(job: java.io.File, slavic: Boolean): List<CandidateRef> =
-        listOfNotNull(WorkerStage.GIGAAM.takeIf { slavic }, WorkerStage.WHISPER,
+    fun read(job: java.io.File, slavic: Boolean): List<CandidateRef> {
+        val chunks = JobFiles.load<ChunkPlan>(java.io.File(job, "chunks.json")).chunks.associateBy { it.id }
+        return listOfNotNull(WorkerStage.GIGAAM.takeIf { slavic }, WorkerStage.WHISPER,
             WorkerStage.GIGAAM_REFINE.takeIf { slavic }, WorkerStage.WHISPER_REFINE).flatMap { stage ->
             runCatching { JobFiles.load<WorkerResult>(stage.resultFile(job)).candidates }.getOrDefault(emptyList())
         }.filter { ref -> runCatching {
-            val plan = JobFiles.load<ChunkPlan>(java.io.File(job, "chunks.json"))
-            val chunk = plan.chunks.single { it.id == ref.chunkId }
+            val chunk = requireNotNull(chunks[ref.chunkId])
             ImmutableAsrCandidate.load(JobFiles.inside(job, ref.file), ref.sha256).verifyIdentity(
                 chunk.id, chunk.inputSha256, com.vexto.engine.review.AsrSource.entries.single { it.wireName == ref.source })
         }.isSuccess }.associateBy { it.chunkId to it.source }.values.toList()
+    }
 }
