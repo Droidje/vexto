@@ -3,6 +3,7 @@ package com.vexto.engine.review
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import java.io.File
+import java.nio.ByteBuffer
 
 /** Local model + local tool. A valid selection is not an independently validated quality verdict. */
 class QwenAsrSelector(
@@ -23,15 +24,19 @@ class QwenAsrSelector(
     private suspend fun selectOne(pair: AsrCandidatePair, dir: File): AsrSelection {
         dir.mkdirs()
         val selected = File(dir, "display-candidate.json")
+        val boundCall = File(dir, "bound-tool-call.json")
+        fun fallback(reason: String, response: String? = null): AsrSelection = tool.fallback(
+            pair, selected, reason, response, responseKind = ScopedSourceResponseKind,
+            scopedToolCallSha256 = boundCall.takeIf { it.isFile }?.let { sha256(it.readBytes()) })
         if (pair.gigaam == null || pair.whisper == null) {
-            return tool.fallback(pair, selected, "one_available_candidate")
+            return fallback("one_available_candidate")
         }
-        val request = try { promptBuilder.render(pair) } catch (_: SelectorPromptTooLarge) {
-            return tool.fallback(pair, selected, "prompt_exceeds_context_budget")
+        val request = try { promptBuilder.renderScopedSource(pair) } catch (_: SelectorPromptTooLarge) {
+            return fallback("prompt_exceeds_context_budget")
         } catch (_: Exception) {
-            return tool.fallback(pair, selected, "candidate_identity_or_hash_mismatch")
+            return fallback("candidate_identity_or_hash_mismatch")
         }
-        if (!modelFile.isFile) return tool.fallback(pair, selected, "selector_model_unavailable")
+        if (!modelFile.isFile) return fallback("selector_model_unavailable")
         val prompt = File(dir, "prompt.txt").apply { writeText(request.prompt) }
         val schema = File(dir, "tool-schema.json").apply { writeText(request.schema) }
         val template = File(dir, "nonthinking.jinja").apply { writeText(SelectorPrompt.NonThinkingTemplate) }
@@ -44,23 +49,24 @@ class QwenAsrSelector(
                 "--no-context-shift", "-c", "1024", "-t", "2", "--threads-batch", "2",
                 "-b", "128", "-ub", "64", "-ngl", "0", "--no-repack", "--no-warmup",
                 "--cache-type-k", "f16", "--cache-type-v", "f16", "--seed", "42",
-                "--temp", "0", "--repeat-penalty", "1.0", "-n", "32",
+                "--temp", "0", "--repeat-penalty", "1.0", "-n", "16",
                 "--json-schema-file", schema.absolutePath, "-f", prompt.absolutePath,
             ), dir, stdout, stderr, timeoutMs)
             if (!stdout.isFile || stdout.length() > 8192) {
-                return tool.fallback(pair, selected, "selector_response_missing_or_oversized")
+                return fallback("selector_response_missing_or_oversized")
             }
-            stdout.readText()
+            // Strict UTF-8 keeps the audit hash equal to the actual stdout bytes.
+            Charsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(stdout.readBytes())).toString()
         } catch (_: TimeoutCancellationException) {
-            return tool.fallback(pair, selected, "selector_timeout")
+            return fallback("selector_timeout")
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
-            return tool.fallback(pair, selected, "selector_runtime_failed")
+            return fallback("selector_runtime_failed")
         }
-        return when (val result = tool.execute(response, pair, selected)) {
+        return when (val result = tool.executeScopedSource(response, pair, selected, boundCall)) {
             is AsrToolResult.Selected -> result.selection
-            is AsrToolResult.Rejected -> tool.fallback(pair, selected, result.reason, response)
+            is AsrToolResult.Rejected -> fallback(result.reason, response)
         }
     }
 }
