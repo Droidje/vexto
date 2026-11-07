@@ -1,0 +1,7 @@
+test_id,device,profile,audio_seconds,processing_seconds,peak_rss_gb,notes
+refined-poem,AVD Pixel 7 x86_64 4GB,quality,28.3,90.7,1.96,airplane mode
+local-dialogue,AVD Pixel 7 x86_64 4GB,quality,21.0,77.5,1.94,airplane mode
+on-demand-chunks,AVD Pixel 7 x86_64 4GB,quality,28.3,82.8,1.95,airplane mode
+scoped-qwen,AVD Pixel 7 x86_64 4GB,quality,28.3,82.4,1.93,airplane mode
+pears04,AVD Pixel 7 x86_64 4GB,quality,30.0,80.7,1.93,airplane mode; DER 11.15% collar 0; WER GigaAM 26.19%
+fast-interview-305s,AVD arm64 4GB,fast,305,102,1.81,interview with 64 s pause removed
