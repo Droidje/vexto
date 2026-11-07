@@ -99,35 +99,29 @@ object VoiceprintProvider {
         return windows
     }
 
-    /** Exact PCM bytes plus 10ms energies: reuse PcmAudio's existing AGC without re-quantizing WAV. */
+    /** Scan only 10ms energies, then borrow the original PCM bytes through PcmAudio's unchanged AGC. */
     private suspend fun originalPcm(wav: File): PcmAudio {
         val info = PcmWave.inspect(wav)
         val energies = FloatArray(((info.sampleCount + PcmAudio.FrameSize - 1) / PcmAudio.FrameSize).toInt())
-        val pcm = File.createTempFile("voiceprint-", ".pcm", wav.parentFile)
-        try {
-            RandomAccessFile(wav, "r").use { input ->
-                pcm.outputStream().buffered().use { output ->
-                    input.seek(info.dataOffset)
-                    var left = info.sampleCount * 2
-                    val bytes = ByteArray(65536)
-                    var frame = 0; var fill = 0; var sum = 0.0
-                    while (left > 0) {
-                        currentCoroutineContext().ensureActive()
-                        val count = minOf(bytes.size.toLong(), left).toInt()
-                        input.readFully(bytes, 0, count)
-                        output.write(bytes, 0, count)
-                        val shorts = ByteBuffer.wrap(bytes, 0, count).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
-                        while (shorts.hasRemaining()) {
-                            val value = shorts.get() / 32768f
-                            sum += value * value
-                            if (++fill == PcmAudio.FrameSize) { energies[frame++] = (sum / fill).toFloat(); sum = 0.0; fill = 0 }
-                        }
-                        left -= count
-                    }
-                    if (fill > 0) energies[frame] = (sum / fill).toFloat()
+        RandomAccessFile(wav, "r").use { input ->
+            input.seek(info.dataOffset)
+            var left = info.sampleCount * 2
+            val bytes = ByteArray(65536)
+            var frame = 0; var fill = 0; var sum = 0.0
+            while (left > 0) {
+                currentCoroutineContext().ensureActive()
+                val count = minOf(bytes.size.toLong(), left).toInt()
+                input.readFully(bytes, 0, count)
+                val shorts = ByteBuffer.wrap(bytes, 0, count).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
+                while (shorts.hasRemaining()) {
+                    val value = shorts.get() / 32768f
+                    sum += value * value
+                    if (++fill == PcmAudio.FrameSize) { energies[frame++] = (sum / fill).toFloat(); sum = 0.0; fill = 0 }
                 }
+                left -= count
             }
-            return PcmAudio(pcm, info.sampleCount, energies)
-        } catch (failure: Throwable) { pcm.delete(); throw failure }
+            if (fill > 0) energies[frame] = (sum / fill).toFloat()
+        }
+        return PcmAudio.borrowedWav(wav, info.sampleCount, energies, info.dataOffset)
     }
 }
