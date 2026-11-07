@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING" />
@@ -25,6 +27,11 @@
             android:name=".ReflectTranscriptionService"
             android:exported="false"
             android:foregroundServiceType="dataSync|mediaProcessing"
+            android:stopWithTask="false" />
+        <service
+            android:name=".CallRecordingService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|mediaProjection"
             android:stopWithTask="false" />
         <provider
             android:name=".RecordingProvider"
