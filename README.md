@@ -48,15 +48,14 @@ JSON и Markdown экспортируют **все** реплики, локал�
 
 ## CI/CD
 
-Три пайплайна GitHub Actions (`.github/workflows/`):
+[Android CI/CD](.github/workflows/ci.yml) проверяет PR и push в `dev` и `main`. В каждом прогоне запускаются Python-тесты, Android JVM-тесты, lint и проверочная сборка без нативного движка. Отчёты доступны в артефактах Actions. PR в `main` дополнительно собирает полноценный APK с нативным движком для ARM64 и x86_64 и проверяет его состав.
 
-1. **[CI](.github/workflows/ci.yml)** — на PR в `dev` и push в `dev`. `smoke` (целостность репо) + `test` (unit-тесты утилит и Android, синтаксис shell guard и сборка APK). Если коммиты PR уже прошли CI, после слияния в `dev` прогон не повторяется (дедуп-гейт). Python-тесты работают без моделей; Android JVM-тесты и сборка проверяют локальное хранение и отсутствие сетевых разрешений. CI использует `vextoSkipNative=true`; этот проверочный APK не предназначен для инференса. Для них скачивается AAR sherpa-onnx, без весов ML.
-2. **[Release Checks](.github/workflows/release-checks.yml)** — на MR в `main` (обычно из `dev`). Не повторяет тесты: гейт проверяет зелёный CI на head-коммите, затем выполняются только релизные проверки (слот).
-3. **[Publish](.github/workflows/publish.yml)** — только после слияния в `main`: сборка Docker-образа и публикация в GitHub Packages (`ghcr.io/<owner>/vexto`, теги `latest` и SHA). `Dockerfile` — контейнер-заглушка: артефакт Android (APK/AAB) собирается в CI, образ — для будущих серверных компонентов.
+После обновления `main` Actions подписывает APK постоянным ключом, проверяет подпись и публикует один и тот же файл двумя способами.
 
-Все пайплайны можно запускать вручную (`workflow_dispatch`).
+- [Скачать vexto.apk](https://github.com/Droidje/vexto/releases/latest/download/vexto.apk) из GitHub Releases. Откройте скачанный файл на Android 9+ и при необходимости разрешите установку из этого источника. Нужен доступ к репозиторию GitHub.
+- [GitHub Packages](https://github.com/Droidje/vexto/pkgs/container/vexto-android) хранит APK и SHA-256 как OCI-образ `ghcr.io/droidje/vexto-android:<commit-sha>` и `:latest`. Для скачивания с компьютера используйте `docker pull`, `docker create` и `docker cp <container>:/vexto.apk .`.
 
-Автотесты временно приостановлены по запросу команды; CI собирает APK. Для возврата используется repository variable `VEXTO_RUN_AUTOTESTS=true`. Аудиоядро проверяется короткими офлайн-прогонами на AVD4096MB; [инструкция и выходные артефакты](engine/README.md#проверяемые-выходные-данные-и-быстрые-прогоны).
+Веса (~3,34 ГБ) устанавливаются отдельно по [инструкции офлайн-версии](docs/base-version.md#установка). Публикация использует Actions secrets `VEXTO_ANDROID_KEYSTORE` (PKCS#12 в Base64, алиас `vexto`) и `VEXTO_ANDROID_KEYSTORE_PASSWORD`. Сохраняйте тот же ключ для обновлений поверх предыдущих CD-сборок. Старые debug-сборки подписаны другим ключом, поэтому Android не обновит их поверх существующей установки. Удаление debug-сборки удаляет и её локальные данные.
 
 ## Проверки
 
@@ -70,10 +69,10 @@ Android-проверки без ML-инференса и эмулятора:
 
 ```sh
 bash scripts/fetch_models.sh --aar-only
-./gradlew :engine:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug
+bash gradlew -PvextoSkipNative=true :engine:testDebugUnitTest :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 ```
 
-Проверяются SQLite после повторного открытия, версии привязок, совместимость эмбеддингов, подтверждение профилей и отсутствие сетевых разрешений в манифесте. CI также выполняет `bash -n tools/benchmarks/android_memory_guard.sh`. Для настоящей расшифровки в APK предварительно нужны все веса: `bash scripts/fetch_models.sh`.
+Проверяются SQLite после повторного открытия, версии привязок, совместимость эмбеддингов, подтверждение профилей и отсутствие сетевых разрешений в манифесте. CI также выполняет `bash -n tools/benchmarks/android_memory_guard.sh`. Для расшифровки нужны нативный APK и [офлайн-пакет](docs/base-version.md#установка).
 
 ## Настройки агентов и Android-эмулятор
 
