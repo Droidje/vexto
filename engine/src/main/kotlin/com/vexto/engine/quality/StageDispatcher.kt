@@ -83,7 +83,7 @@ internal object StageDispatcher {
             WorkerStage.WHISPER -> {
                 val refs = mutableListOf<CandidateRef>()
                 val warnings = mutableListOf<String>()
-                // Preserve dev's context margin: 512 encoder frames cover 10.24s; chunks are <=10s.
+                // 512 encoder frames cover 10.24s. Longer GigaAM chunks are windowed inside the provider.
                 val provider = WhisperComparisonProvider(executor, models.file("whisper"), audioContext = 512)
                 val plan = chunkPlan()
                 val waves = ChunkWaveMaterializer(job, plan, input) { warnings += it }

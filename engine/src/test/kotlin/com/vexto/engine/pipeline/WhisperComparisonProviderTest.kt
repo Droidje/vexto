@@ -1,5 +1,6 @@
 package com.vexto.engine.pipeline
 
+import com.vexto.engine.audio.PcmWave
 import com.vexto.engine.model.Word
 import com.vexto.engine.review.AsrSource
 import com.vexto.engine.review.ImmutableAsrCandidate
@@ -101,6 +102,24 @@ class WhisperComparisonProviderTest {
         assertEquals("768", profile.getValue("audio_context_frames").jsonPrimitive.content)
         assertEquals("15360", profile.getValue("audio_context_capacity_ms").jsonPrimitive.content)
         assertEquals("1000", profile.getValue("input_duration_ms").jsonPrimitive.content)
+    }
+
+    @Test fun `audio longer than ten seconds is recognized in successive windows`() = runBlocking {
+        val wav = temp.newFile("twenty.wav")
+        PcmWave.Writer(wav).use { it.write(FloatArray(16_000 * 20)) }
+        val chunk = ComparisonChunk("long", wav, sha256(wav.readBytes()), 20_000)
+        var calls = 0
+        val executor = LocalNativeExecutor { _, args, _, _, _, _ ->
+            calls++
+            File(args[args.indexOf("-of") + 1] + ".json").writeText(nativeJson)
+            LocalNativeResult(10, 100)
+        }
+        val candidate = WhisperComparisonProvider(executor, temp.newFile("model.bin"), audioContext = 512)
+            .generate(chunk, temp.root.resolve("out/whisper.json"))
+        assertEquals(2, calls)
+        assertEquals(" Привет,  мир! Привет,  мир!", candidate.text)
+        assertEquals(chunk.inputSha256, candidate.inputSha256)
+        assertEquals(10_000L, candidate.words[2].startMs)
     }
 
     @Test fun `audio exceeding explicit context is rejected instead of silently truncated`() = runBlocking {

@@ -319,7 +319,8 @@ final class ReflectTranscriptController {
 
     void lineOptions(ReflectTranscript.Line line) {
         ReflectActionSheet menu = sheet("Реплика");
-        TextView excerpt = menu.style.text(line.text, 15, ReflectPageStyle.MUTED, menu.style.art.regular);
+        String shown = com.vexto.engine.model.PhoneticSurface.present(line.text);
+        TextView excerpt = menu.style.text(shown, 15, ReflectPageStyle.MUTED, menu.style.art.regular);
         excerpt.setMaxLines(5);
         menu.style.append(menu.root, excerpt, 0, 12);
         if (file != null) menu.option("Прослушать с метки", () -> playFrom.accept(line.startMs));
@@ -334,11 +335,11 @@ final class ReflectTranscriptController {
         menu.option("Скопировать текст", () -> {
             ClipboardManager clipboard = activity.getSystemService(ClipboardManager.class);
             if (clipboard != null) {
-                clipboard.setPrimaryClip(ClipData.newPlainText(activity.getString(R.string.app_name), line.text));
+                clipboard.setPrimaryClip(ClipData.newPlainText(activity.getString(R.string.app_name), shown));
             }
         });
         menu.option("Поделиться репликой", () -> activity.startActivity(Intent.createChooser(
-                new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, line.text),
+                new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, shown),
                 "Поделиться репликой")));
         menu.show();
     }

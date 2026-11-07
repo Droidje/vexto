@@ -215,7 +215,7 @@ final class SpeakerProfileView extends FrameLayout {
 
         void bind(SpeakerDirectory.Utterance utterance) {
             source.setText(time(utterance.startMs()) + "–" + time(utterance.endMs()) + " · " + utterance.title());
-            text.setText(utterance.text());
+            text.setText(com.vexto.engine.model.PhoneticSurface.present(utterance.text()));
         }
     }
 }

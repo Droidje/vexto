@@ -77,7 +77,8 @@ enum RecordingExport {
                         .replace('\n', ' ').replace('\r', ' ');
                 markdown.write("**" + timestamp(line.startMs) + " – " + timestamp(line.endMs)
                         + " · " + speaker + "**\n\n> ");
-                markdown.write(escape(line.text).replace("\r\n", "\n").replace('\r', '\n').replace("\n", "\n> "));
+                markdown.write(escape(com.vexto.engine.model.PhoneticSurface.present(line.text))
+                        .replace("\r\n", "\n").replace('\r', '\n').replace("\n", "\n> "));
                 markdown.write("\n\n");
                 if (line.emotionProbabilities != null) {
                     var emotions = line.emotionProbabilities;
