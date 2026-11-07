@@ -92,6 +92,7 @@ final class SpeakerProfilesUi {
     void closeProfile() {
         view.show(ReflectView.Screen.SPEAKERS);
         selectProfile(null);
+        refreshSpeakers();
     }
 
     private boolean isOpen(String id) {

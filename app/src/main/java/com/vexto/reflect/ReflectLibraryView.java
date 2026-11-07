@@ -173,6 +173,14 @@ final class ReflectLibraryView extends ViewGroup {
     void setSpeakers(List<ReflectCatalog.Speaker> speakers) {
         this.speakers = speakers;
         updateContent();
+        // The directory is retained while a profile is open. Rebind its existing rows now:
+        // a return transition can draw it before ListView performs its next layout.
+        for (int offset = 0; offset < scroller.getChildCount(); offset++) {
+            int position = scroller.getFirstVisiblePosition() + offset;
+            if (position >= adapter.getCount()) break;
+            adapter.getView(position, scroller.getChildAt(offset), scroller);
+        }
+        scroller.invalidateViews();
     }
 
     void setConversations(List<ReflectCatalog.Conversation> conversations) {
