@@ -29,7 +29,7 @@ class NativeProcessRunner(
     private val budgetBytes: Long = 2_000_000_000L,
     private val reserveBytes: Long = 128L * 1024 * 1024,
 ) {
-    private val nativeDir = File(context.applicationInfo.nativeLibraryDir).canonicalFile
+    internal val nativeDir = File(context.applicationInfo.nativeLibraryDir).canonicalFile
     private val uid = context.applicationInfo.uid
     private val registry = File(context.filesDir, "native-child-registry")
 
@@ -98,7 +98,7 @@ class NativeProcessRunner(
         }
     }
 
-    private fun rejectMemory(observed: Long) {
+    internal fun rejectMemory(observed: Long) {
         if (observed > budgetBytes - reserveBytes) throw NativeProcessException(
             NativeProcessException.Reason.MEMORY, "App process RSS plus reserve exceeds stage budget")
     }
@@ -109,6 +109,7 @@ class NativeProcessRunner(
         val live = snapshot().associateBy { it.pid }
         registry.listFiles().orEmpty().forEach { record ->
             val pid = record.name.toIntOrNull() ?: return@forEach
+            if (pid in activeSessionPids) return@forEach
             val saved = runCatching { record.readLines() }.getOrDefault(emptyList())
             val process = live[pid]
             if (process != null && process.nativeExecutable && saved.size == 2 &&
@@ -119,15 +120,16 @@ class NativeProcessRunner(
         }
     }
 
-    private fun register(process: Proc) {
+    internal fun register(process: Proc) {
         registry.mkdirs()
         File(registry, process.pid.toString()).writeText(process.startTicks + "\n" + process.command + "\n")
     }
 
-    private data class Proc(val pid: Int, val parentPid: Int, val rss: Long,
-                            val nativeExecutable: Boolean, val command: String, val startTicks: String)
+    internal data class Proc(val pid: Int, val parentPid: Int, val rss: Long,
+                            val nativeExecutable: Boolean, val command: String, val startTicks: String,
+                            val arguments: String)
 
-    private fun snapshot(): List<Proc> {
+    internal fun snapshot(): List<Proc> {
         val result = ArrayList<Proc>()
         File("/proc").listFiles().orEmpty().forEach { directory ->
             val pid = directory.name.toIntOrNull() ?: return@forEach
@@ -137,19 +139,29 @@ class NativeProcessRunner(
                     ?.trim()?.split(Regex("\\s+"))?.getOrNull(1)?.toLongOrNull()
                 if (number("Uid:") != uid.toLong()) return@forEach
                 val rss = (number("VmRSS:") ?: 0L) * 1024
-                val command = runCatching { File(directory, "cmdline").readBytes()
-                    .toString(Charsets.UTF_8).substringBefore('\u0000') }.getOrDefault("")
+                val arguments = runCatching { File(directory, "cmdline").readBytes()
+                    .toString(Charsets.UTF_8) }.getOrDefault("")
+                val command = arguments.substringBefore('\u0000')
                 val native = command.startsWith(nativeDir.absolutePath + File.separator) &&
                     File(command).name in Executables
                 val stat = File(directory, "stat").readText().substringAfterLast(')').trim().split(Regex("\\s+"))
-                result += Proc(pid, (number("PPid:") ?: 0L).toInt(), rss, native, command, stat[19])
+                result += Proc(pid, (number("PPid:") ?: 0L).toInt(), rss, native, command, stat[19], arguments)
             } catch (_: IOException) { /* Process exited or /proc hides a different UID. */ }
         }
         check(result.any { it.pid == AndroidProcess.myPid() && it.rss > 0 }) { "Cannot observe app RSS" }
         return result
     }
 
-    private companion object {
+    /** Each executor owns exactly one child and one model lifetime. Close it at stage exit. */
+    fun persistentExecutor(workDir: File): PersistentNativeExecutor = PersistentNativeExecutor(this, workDir)
+
+    internal fun forgetSessionPid(pid: Int) {
+        activeSessionPids.remove(pid)
+        File(registry, pid.toString()).delete()
+    }
+
+    internal companion object {
+        val activeSessionPids = java.util.concurrent.ConcurrentHashMap.newKeySet<Int>()
         val lock = Mutex()
         val Executables = setOf("libvexto_nemotron_exec.so", "libvexto_whisper_exec.so", "libvexto_llama_exec.so")
     }

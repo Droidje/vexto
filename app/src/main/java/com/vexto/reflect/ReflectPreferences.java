@@ -3,6 +3,7 @@ package com.vexto.reflect;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.SharedPreferences;
+import com.vexto.engine.model.ProcessingMode;
 
 final class ReflectPreferences {
     private final SharedPreferences store;
@@ -18,4 +19,9 @@ final class ReflectPreferences {
     boolean reduceMotion() { return store.getBoolean("reduce_motion", false); }
     boolean motionEnabled() { return !reduceMotion() && ValueAnimator.areAnimatorsEnabled(); }
     void setReduceMotion(boolean enabled) { store.edit().putBoolean("reduce_motion", enabled).apply(); }
+    ProcessingMode processingMode() {
+        try { return ProcessingMode.valueOf(store.getString("processing_mode", ProcessingMode.AUTO.name())); }
+        catch (IllegalArgumentException | NullPointerException invalid) { return ProcessingMode.AUTO; }
+    }
+    void setProcessingMode(ProcessingMode mode) { store.edit().putString("processing_mode", mode.name()).apply(); }
 }

@@ -28,7 +28,7 @@ data class PipelineCoverage(
 
 @Serializable
 data class PipelineReport(
-    val schemaVersion: Int = 2,
+    val schemaVersion: Int = 3,
     val audioMs: Long,
     val processingMs: Long,
     val modelProfile: String,
@@ -45,4 +45,6 @@ data class PipelineReport(
     val metadataSha256: String,
     val warnings: List<String>,
     val modelVerificationReused: Boolean = false,
+    val processingProfile: ProcessingProfile? = null,
+    val skippedSilenceMs: Long = 0,
 )

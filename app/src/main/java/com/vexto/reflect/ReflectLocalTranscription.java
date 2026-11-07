@@ -7,6 +7,7 @@ import android.os.Looper;
 import com.vexto.engine.ReflectEngine;
 import com.vexto.engine.audio.AudioInputTooLongException;
 import com.vexto.engine.model.ProcessingStats;
+import com.vexto.engine.model.ProcessingMode;
 import com.vexto.engine.model.Stage;
 import com.vexto.engine.model.Transcript;
 import com.vexto.engine.model.TranscriptionOptions;
@@ -57,11 +58,11 @@ final class ReflectLocalTranscription {
 
     void start(File recording) {
         if (closed || busy()) return;
-        Job started = new Job(recording);
+        Job started = new Job(recording, new ReflectPreferences(context).processingMode());
         job = started;
         changed.accept(recording);
         started.task = ReflectEngine.transcribe(context, Uri.fromFile(recording),
-                new TranscriptionOptions(), new ReflectEngine.DetailedListener() {
+                started.options, new ReflectEngine.DetailedListener() {
             @Override public void onProgress(Stage stage, float fraction) {
                 if (job != started) return;
                 started.progress = new Progress(stage, Math.round(fraction * 100), started.progress.speakers());
@@ -206,11 +207,15 @@ final class ReflectLocalTranscription {
 
     private static final class Job {
         final File recording;
+        final TranscriptionOptions options;
         ReflectEngine.Task task;
         volatile boolean finalScheduled;
         ReflectTranscript provisional;
         Progress progress = new Progress(Stage.Preparing, 0, 0);
 
-        Job(File recording) { this.recording = recording; }
+        Job(File recording, ProcessingMode mode) {
+            this.recording = recording;
+            options = new TranscriptionOptions(null, true, mode);
+        }
     }
 }

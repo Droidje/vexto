@@ -13,20 +13,30 @@ import java.io.Closeable
 import java.io.File
 import java.security.MessageDigest
 
-/** Exact native E2E RNNT text. No normalization, punctuation repair or spread timestamps. */
-class GigaAmCandidateProvider(models: Models, threads: Int = 2) : Closeable {
-    data class Models(val encoder: File, val decoder: File, val joiner: File, val tokens: File)
+/** Exact native E2E RNNT/CTC text. One recognizer belongs to one queue consumer. */
+class GigaAmCandidateProvider(private val models: Models, private val threads: Int = 2) : Closeable {
+    data class Models(val encoder: File, val decoder: File?, val joiner: File?, val tokens: File,
+                      val ctc: Boolean = false) {
+        companion object {
+            fun ctc(model: File, tokens: File) = Models(model, null, null, tokens, ctc = true)
+        }
+    }
     private val recognizer: OfflineRecognizer
     init {
         require(threads in 1..4)
-        require(listOf(models.encoder, models.decoder, models.joiner, models.tokens).all { it.isFile })
+        require(listOf(models.encoder, models.tokens).all { it.isFile })
+        require(models.ctc || (models.decoder?.isFile == true && models.joiner?.isFile == true))
+        val modelConfig = if (models.ctc) OfflineModelConfig(
+            nemo = OfflineNemoEncDecCtcModelConfig(model = models.encoder.absolutePath),
+            tokens = models.tokens.absolutePath, numThreads = threads,
+            modelType = "nemo_ctc", provider = "cpu") else OfflineModelConfig(
+            transducer = OfflineTransducerModelConfig(encoder = models.encoder.absolutePath,
+                decoder = requireNotNull(models.decoder).absolutePath, joiner = requireNotNull(models.joiner).absolutePath),
+            tokens = models.tokens.absolutePath, numThreads = threads,
+            modelType = "nemo_transducer", provider = "cpu")
         recognizer = OfflineRecognizer(config = OfflineRecognizerConfig(
             featConfig = FeatureConfig(sampleRate = 16000, featureDim = 64),
-            modelConfig = OfflineModelConfig(
-                transducer = OfflineTransducerModelConfig(encoder = models.encoder.absolutePath,
-                    decoder = models.decoder.absolutePath, joiner = models.joiner.absolutePath),
-                tokens = models.tokens.absolutePath, numThreads = threads,
-                modelType = "nemo_transducer", provider = "cpu"), decodingMethod = "greedy_search"))
+            modelConfig = modelConfig, decodingMethod = "greedy_search"))
     }
 
     suspend fun generate(chunk: ComparisonChunk, artifactFile: File): ImmutableAsrCandidate {
@@ -47,6 +57,9 @@ class GigaAmCandidateProvider(models: Models, threads: Int = 2) : Closeable {
             raw.parentFile?.mkdirs()
             val journal = buildJsonObject {
                 put("chunk_id", chunk.id); put("source", "gigaam"); put("input_sha256", chunk.inputSha256)
+                put("model_type", if (models.ctc) "gigaam_v3_e2e_ctc_int8" else "gigaam_v3_e2e_rnnt_int8")
+                put("model_file", models.encoder.name); put("model_size_bytes", models.encoder.length())
+                put("threads", threads)
                 put("text", result.text)
                 put("tokens", JsonArray(result.tokens.map { JsonPrimitive(it) }))
                 put("timestamps", JsonArray(result.timestamps.map(::rawNumber)))

@@ -55,6 +55,11 @@ def model_groups(pack: Path) -> list[list[tuple[Path, str]]]:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     if json.loads((pack / "manifest.json").read_text(encoding="utf-8")) != manifest:
         raise ValueError("Pack manifest differs from repository pins")
+    # Both FAST and QUALITY assets are mandatory in every distributed pack.
+    required_modes = {"whisper", "giga_encoder", "giga_decoder", "giga_joiner", "giga_tokens",
+                      "whisper_fast", "giga_fast_model", "giga_fast_tokens"}
+    if not required_modes.issubset(manifest["artifacts"]):
+        raise ValueError("The offline pack must contain both processing modes")
     groups: list[list[tuple[Path, str]]] = [[] for _ in range(SPLIT_COUNT)]
     sizes = [0] * SPLIT_COUNT
     for name, artifact in sorted(manifest["artifacts"].items(),

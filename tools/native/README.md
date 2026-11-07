@@ -17,9 +17,9 @@ a full source tree integrity check.
 
 The script stages installer-extracted PIE programs as
 `libvexto_nemotron_exec.so`, `libvexto_whisper_exec.so` and
-`libvexto_llama_exec.so`, alongside the NeMo shared dependencies. The llama
-program is upstream `llama-completion`, the standalone completion/conversation
-CLI at this revision. These three PIE files are executed with ProcessBuilder;
+`libvexto_llama_exec.so`, alongside the NeMo shared dependencies. Whisper and
+Qwen use the small app-owned public-API frontends in this directory, linked to
+the pinned upstream libraries. These three PIE files are executed with ProcessBuilder;
 they must never be loaded with `System.loadLibrary`. APK configuration needs
 legacy JNI packaging/extraction so the files are executable from
 `ApplicationInfo.nativeLibraryDir`. Android execution must be tested in the APK;
@@ -40,6 +40,26 @@ the stage. Orphan recovery only terminates registered children whose UID,
 executable and kernel start-time still match; it does not terminate arbitrary
 same-UID services. Run ML stages sequentially and release the inference service
 between stages.
+
+Whisper and Qwen additionally support `--worker-dir DIR` persistent sessions.
+`NativeProcessRunner.persistentExecutor(workDir)` returns a closeable
+`LocalNativeExecutor`: allocate one per stage worker and close it before leaving
+the stage. Each owns a dedicated spawning thread and child process, loads the
+model/context once, and exchanges bounded JSON mailbox files (64 KiB requests,
+one request in flight). No sockets, network, shell commands or audio through
+Binder are involved. Worker diagnostics stay in `native-session-*/worker.stderr`;
+per-request outputs keep their existing immutable artifact paths. A timeout,
+cancellation or native request failure closes that worker rather than silently
+reloading its model for subsequent chunks. Same-UID memory accounting includes
+all concurrent workers; active peers are protected from orphan cleanup.
+
+Whisper emits the native text/token/offset JSON consumed by the existing parser;
+its context is retained with past-transcript conditioning disabled. Qwen retains
+weights/context, clears KV memory and creates a fresh grammar/sampler for each
+independent selection. Its fixed non-thinking single-user-message formatting is
+the exact expansion of `SelectorPrompt.NonThinkingTemplate`; source selection
+remains schema constrained and neither ASR original is rewritten. The frontends
+also accept the bounded one-shot options used by existing engine adapters.
 
 Build logs and per-ABI `runtime-manifest.json` live in the chosen ignored build
 directory. Binaries, build trees, dependencies and weights are not committed.

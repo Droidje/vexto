@@ -1,6 +1,7 @@
 package com.vexto.reflect;
 
 import android.animation.ValueAnimator;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
@@ -13,6 +14,7 @@ import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import com.vexto.engine.model.ProcessingMode;
 import java.util.function.Consumer;
 
 /** Reflect preferences with actual persisted controls and system microphone access. */
@@ -54,6 +56,9 @@ final class ReflectSettingsView extends ScrollView {
                 style.px(28 + ReflectView.NAV_BOTTOM_CLEARANCE));
         style.append(root, style.title("Настройки"), 0, 20);
 
+        section(root, style, "Обработка записи");
+        style.append(root, processingModes(style), 0, 22);
+
         section(root, style, "Транскрипт");
         LinearLayout transcript = card(style);
         style.append(transcript, style.text("Размер текста", 17, Color.WHITE, artwork.semibold), 2, 12);
@@ -91,6 +96,51 @@ final class ReflectSettingsView extends ScrollView {
 
     private void section(LinearLayout root, ReflectPageStyle style, String title) {
         style.append(root, style.text(title, 15, ReflectPageStyle.MUTED, artwork.semibold), 0, 8);
+    }
+
+    private LinearLayout processingModes(ReflectPageStyle style) {
+        LinearLayout processing = card(style);
+        TextView choice = style.text("", 17, Color.WHITE, artwork.regular);
+        choice.setMinHeight(style.px(48));
+        choice.setBackground(style.pressable(ReflectPageStyle.CARD, 12));
+        choice.setFocusable(true);
+        TextView description = style.text("", 14, ReflectPageStyle.MUTED, artwork.regular);
+        Runnable refresh = () -> {
+            ProcessingMode mode = preferences.processingMode();
+            choice.setText("Режим: " + modeLabel(mode) + "  ›");
+            description.setText(switch (mode) {
+                case AUTO -> "Для записей длиннее 5 минут — быстрый режим, для остальных — качественный. "
+                        + "В быстром режиме шумоподавление выключено.";
+                case FAST -> "Облегчённые модели. Шумоподавление выключено.";
+                case QUALITY -> "Полные модели и шумоподавление.";
+            });
+        };
+        choice.setOnClickListener(view -> {
+            ProcessingMode[] modes = {ProcessingMode.AUTO, ProcessingMode.FAST, ProcessingMode.QUALITY};
+            String[] labels = {"Авто", "Быстрый", "Качественный"};
+            int selected = java.util.Arrays.asList(modes).indexOf(preferences.processingMode());
+            new AlertDialog.Builder(getContext())
+                    .setTitle("Режим обработки")
+                    .setSingleChoiceItems(labels, selected, (dialog, index) -> {
+                        preferences.setProcessingMode(modes[index]);
+                        refresh.run();
+                        dialog.dismiss();
+                    })
+                    .setNegativeButton("Отмена", null)
+                    .show();
+        });
+        refresh.run();
+        style.append(processing, choice, 0, 8);
+        style.append(processing, description, 0, 8);
+        return processing;
+    }
+
+    private static String modeLabel(ProcessingMode mode) {
+        return switch (mode) {
+            case AUTO -> "Авто";
+            case FAST -> "Быстрый";
+            case QUALITY -> "Качественный";
+        };
     }
 
     private LinearLayout card(ReflectPageStyle style) {
