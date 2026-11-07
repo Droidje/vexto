@@ -18,6 +18,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.os.SystemClock;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.LinearInterpolator;
@@ -373,17 +374,24 @@ final class ReflectView extends ViewGroup {
             }
             control("Закрыть", 318, 765, 59, 59, actions::closeRecorder);
             switch (screen) {
-                case READY: control("Начать запись", 245, 765, 59, 59, actions::startRecording); break;
-                case RECORDING: control("Поставить запись на паузу", 245, 765, 59, 59, actions::pauseRecording); break;
-                case PAUSED: control("Продолжить запись", 245, 765, 59, 59, actions::startRecording); break;
-                case REVIEW:
+                case READY -> recordingControls("Начать запись", actions::startRecording);
+                case RECORDING -> recordingControls("Поставить запись на паузу", actions::pauseRecording);
+                case PAUSED -> recordingControls("Продолжить запись", actions::startRecording);
+                case REVIEW -> {
                     control("Воспроизвести или приостановить", 16, 578, 361, 44, actions::play);
                     control("Расшифровать в фоне", 84, 75, 222, 48, actions::save);
                     control("Расшифровать сейчас", 245, 765, 59, 59, actions::transcribeReview);
-                    break;
-                default: break;
+                }
+                default -> { }
             }
         }
+    }
+
+    private void recordingControls(String label, Runnable action) {
+        control(label, 245, 765, 59, 59, action);
+        float radius = RecordingOrb.RADIUS;
+        control(label + " (сфера)", RecordingOrb.CENTER_X - radius, RecordingOrb.CENTER_Y - radius,
+                2 * radius, 2 * radius, action, true);
     }
 
     private void tabControl(Screen target, Runnable action) {
@@ -398,7 +406,21 @@ final class ReflectView extends ViewGroup {
     }
 
     private View control(String label, float x, float y, float width, float height, Runnable action) {
+        return control(label, x, y, width, height, action, false);
+    }
+
+    private View control(String label, float x, float y, float width, float height,
+                         Runnable action, boolean circular) {
         View button = new View(getContext()) {
+            @Override public boolean onTouchEvent(MotionEvent event) {
+                if (circular && event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    float dx = 2 * event.getX() / getWidth() - 1;
+                    float dy = 2 * event.getY() / getHeight() - 1;
+                    if (dx * dx + dy * dy > 1) return false;
+                }
+                return super.onTouchEvent(event);
+            }
+
             @Override public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
                 super.onInitializeAccessibilityNodeInfo(info);
                 info.setClassName("android.widget.Button");
@@ -409,7 +431,8 @@ final class ReflectView extends ViewGroup {
         button.setOnClickListener(view -> action.run());
         GradientDrawable mask = new GradientDrawable();
         mask.setColor(WHITE);
-        mask.setCornerRadius(80);
+        if (circular) mask.setShape(GradientDrawable.OVAL);
+        else mask.setCornerRadius(80);
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x35aaaaaa), null, mask));
         place(button, x, y, width, height);
         return button;
