@@ -163,8 +163,9 @@ class TranscriptionEngine(context: Context) {
         val turnsFile = File(job, "turns.json")
         JobFiles.save(turnsFile, turns)
         // Signature extraction uses original audio and its own model lifetime, never clustering again.
-        val voices = worker(WorkerStage.VOICEPRINT, Stage.Voiceprints, "original.wav",
+        val voices = if (profile.speakerAnnotations) worker(WorkerStage.VOICEPRINT, Stage.Voiceprints, "original.wav",
             dependencies = if (checkpoint != null) listOf(JobFiles.sha256(turnsFile)) else emptyList()).voices
+            else emptyMap()
         fun attachVoices(transcript: Transcript): Transcript = transcript.copy(speakers = transcript.speakers.map { speaker ->
             val acousticId = speaker.id.takeIf { it.startsWith("speaker_") }
                 ?.removePrefix("speaker_")?.toIntOrNull()?.minus(1)
@@ -244,23 +245,23 @@ class TranscriptionEngine(context: Context) {
         JobFiles.save(File(job, "selection.json"), choices.values.sortedBy { it.chunkId })
         JobFiles.write(File(job, "selected.txt"), plan.chunks.mapNotNull { selected[it.id]?.text }.joinToString("\n").toByteArray())
         var transcript = attachVoices(assembled.transcript)
-        val emotionTargets = UtteranceEmotionAnnotations.targets(transcript)
-        val emotionTargetsFile = File(job, "emotion-targets.json")
-        JobFiles.save(emotionTargetsFile, emotionTargets)
-        // The worker receives exact line identity and returns a score only for that line's original audio.
-        val emotions = worker(WorkerStage.EMOTION, Stage.Emotion, "original.wav",
-            dependencies = if (checkpoint != null) listOf(JobFiles.sha256(emotionTargetsFile)) else emptyList())
-        transcript = runCatching { UtteranceEmotionAnnotations.attach(transcript, emotions.emotions) }
-            .getOrElse { warnings += "EMOTION_MAPPING_FAILED:${it.javaClass.simpleName}"; transcript }
-        val unscored = transcript.utterances.count { it.endMs > it.startMs && it.emotionProbabilities == null }
-        if (unscored > 0) warnings += "EMOTION_FAILED:unscored_utterances=$unscored"
+        if (profile.speakerAnnotations) {
+            val emotionTargets = UtteranceEmotionAnnotations.targets(transcript)
+            val emotionTargetsFile = File(job, "emotion-targets.json")
+            JobFiles.save(emotionTargetsFile, emotionTargets)
+            // The worker receives exact line identity and returns a score only for that line's original audio.
+            val emotions = worker(WorkerStage.EMOTION, Stage.Emotion, "original.wav",
+                dependencies = if (checkpoint != null) listOf(JobFiles.sha256(emotionTargetsFile)) else emptyList())
+            transcript = runCatching { UtteranceEmotionAnnotations.attach(transcript, emotions.emotions) }
+                .getOrElse { warnings += "EMOTION_MAPPING_FAILED:${it.javaClass.simpleName}"; transcript }
+            val unscored = transcript.utterances.count { it.endMs > it.startMs && it.emotionProbabilities == null }
+            if (unscored > 0) warnings += "EMOTION_FAILED:unscored_utterances=$unscored"
+        }
         val coverage = PipelineCoverage(plan.chunks.size,
             all.values.count { it.source == AsrSource.GIGAAM }, all.values.count { it.source == AsrSource.WHISPER },
             selected.size, choices.values.count { it.status == AsrSelectionStatus.SELECTED_BY_LLM.name }, unresolved)
         val withinBudget = peak + AppRss.ReserveBytes <= AppRss.BudgetBytes
-        val expectedStages = WorkerStage.entries.toSet() -
-            (if (profile.denoise) emptySet() else setOf(WorkerStage.DENOISE)) -
-            (if (slavic) emptySet() else setOf(WorkerStage.GIGAAM, WorkerStage.SELECT))
+        val expectedStages = profile.expectedStages(slavic)
         val allStagesSucceeded = results.map { it.stage }.toSet() == expectedStages &&
             results.all { it.completed && it.error == null }
         val fullProfile = coverage.fullProfileCompleted(allStagesSucceeded, warnings, withinBudget)

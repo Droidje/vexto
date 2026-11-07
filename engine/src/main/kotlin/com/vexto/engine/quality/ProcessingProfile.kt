@@ -17,6 +17,12 @@ data class ProcessingProfile(
 ) {
     val fast: Boolean get() = mode == ProcessingMode.FAST
     val whisperModelId: String get() = if (fast) "whisper_fast" else "whisper"
+    val speakerAnnotations: Boolean get() = !fast
+
+    fun expectedStages(slavic: Boolean): Set<WorkerStage> = WorkerStage.entries.toSet() -
+        (if (denoise) emptySet() else setOf(WorkerStage.DENOISE)) -
+        (if (speakerAnnotations) emptySet() else setOf(WorkerStage.VOICEPRINT, WorkerStage.EMOTION)) -
+        (if (slavic) emptySet() else setOf(WorkerStage.GIGAAM, WorkerStage.SELECT))
 
     fun validate() {
         require(mode != ProcessingMode.AUTO)

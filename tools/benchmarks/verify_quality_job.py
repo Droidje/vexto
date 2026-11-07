@@ -253,7 +253,8 @@ def verify_job(job_dir, allow_legacy=False):
         check(view_pcm == joined.hexdigest(), "chunk_pcm_not_exact_input_view")
         recorded = language_record(root)
         whisper_only = recorded is not None and recorded["route"] == "whisper_only"
-        excluded = ({"GIGAAM", "SELECT"} if whisper_only else set()) | ({"DENOISE"} if fast else set())
+        excluded = ({"GIGAAM", "SELECT"} if whisper_only else set()) | (
+            {"DENOISE", "VOICEPRINT", "EMOTION"} if fast else set())
         required_stages = tuple(name for name in STAGES if name not in excluded)
         if fast:
             check(not (root / "stages/DENOISE.result.json").exists() and view == "original.wav",
