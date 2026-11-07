@@ -210,7 +210,10 @@ jobs:
           VEXTO_NEMOTRON_ONLY: '1'
         run: bash scripts/prepare_release_models.sh "$RUNNER_TEMP/precision"
       - name: Install pinned frontend compiler
-        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.2.13676358"'
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.2.13676358"
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Compile probe frontend and retire conversion dependencies
         run: |
           python3 tools/benchmarks/probe_nemotron_precision.py --apk unsigned/app-release-unsigned.apk --models "$RUNNER_TEMP/precision/converted/nemotron" --output .agents/work/precision-results --rebuild-frontend --prepare-native-only
