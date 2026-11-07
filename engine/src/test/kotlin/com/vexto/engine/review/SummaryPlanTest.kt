@@ -3,6 +3,7 @@ package com.vexto.engine.review
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -50,5 +51,30 @@ class SummaryPlanTest {
         assertFalse(plan.chunks.any { it.isBlank() })
         assertTrue(plan.chunks.first().startsWith("Start"))
         assertTrue(plan.chunks.last().endsWith("End"))
+    }
+
+    @Test fun `failed merge propagates and a retry regenerates every source chunk`() = runBlocking {
+        val plan = SummaryPlan("Начало обсуждения. " + "а".repeat(1550) + " Важный итог.")
+        val failure = java.io.IOException("Synthetic native failure")
+        val failedPrompts = mutableListOf<String>()
+        try {
+            plan.run { input ->
+                failedPrompts += input
+                if (failedPrompts.size > plan.chunks.size) throw failure
+                "Краткий итог части."
+            }
+            throw AssertionError("A failed model request must not publish a partial summary")
+        } catch (actual: java.io.IOException) {
+            assertSame(failure, actual)
+        }
+        val retriedPrompts = mutableListOf<String>()
+        val result = plan.run { input ->
+            retriedPrompts += input
+            "Итог ${retriedPrompts.size}."
+        }
+        assertEquals(failedPrompts.take(plan.chunks.size), retriedPrompts.take(plan.chunks.size))
+        assertEquals(plan.steps, retriedPrompts.size)
+        assertEquals("Итог ${plan.steps}.", result)
+        assertTrue(retriedPrompts.all { it.toByteArray(Charsets.UTF_8).size <= 1400 })
     }
 }

@@ -1,7 +1,9 @@
 package com.vexto.reflect;
 
 import android.app.Activity;
+import android.util.Log;
 import com.vexto.engine.ReflectEngine;
+import com.vexto.engine.runtime.NativeProcessException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -148,12 +150,40 @@ final class ReflectSummaryController {
                 }
 
                 @Override public void onError(Throwable error) {
+                    logFailure(error);
                     finish(job, failure("Не удалось создать резюме на устройстве. Повторите попытку."));
                 }
             });
         } catch (RuntimeException unavailable) {
+            logFailure(unavailable);
             finish(job, failure("Не удалось запустить локальную модель. Повторите попытку."));
         }
+    }
+
+    /** Never include exception messages: native diagnostics may contain local paths or input. */
+    private static void logFailure(Throwable error) {
+        StringBuilder diagnostic = new StringBuilder("Summary failed");
+        for (int depth = 0; error != null && depth < 5; depth++, error = error.getCause()) {
+            diagnostic.append(" / ").append(error.getClass().getSimpleName());
+            if (error instanceof NativeProcessException nativeError) {
+                diagnostic.append(':').append(nativeError.getReason());
+                if (nativeError.getExitCode() != null) diagnostic.append(':').append(nativeError.getExitCode());
+            }
+            // Only fixed error identifiers are allowed; never log the arbitrary message.
+            String code = switch (Objects.toString(error.getMessage(), "")) {
+                case "Invalid model response size" -> "OUTPUT_SIZE";
+                case "Empty model response" -> "EMPTY_OUTPUT";
+                case "QWEN_CONTEXT_BUDGET_EXCEEDED" -> "CONTEXT_BUDGET";
+                case "Cannot initialize packaged Qwen model" -> "MODEL_INIT";
+                case "Cannot initialize Qwen context" -> "CONTEXT_INIT";
+                case "Cannot initialize constrained Qwen sampler" -> "SAMPLER_INIT";
+                case "Qwen prompt evaluation failed" -> "PROMPT_EVAL";
+                case "Qwen output evaluation failed" -> "OUTPUT_EVAL";
+                default -> null;
+            };
+            if (code != null) diagnostic.append(':').append(code);
+        }
+        Log.w("VextoSummary", diagnostic.toString());
     }
 
     void cancel(File recording) {
