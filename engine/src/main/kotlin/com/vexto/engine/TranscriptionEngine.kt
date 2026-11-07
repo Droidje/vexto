@@ -212,6 +212,9 @@ class TranscriptionEngine(context: Context) {
             } else firstDiarization.also { if (live) recordResult(WorkerStage.DIARIZE, it) }
             Triple(clean, finalDiarization, detected)
         }
+        if (!diarization.completed || diarization.error != null) {
+            throw java.io.IOException("Не удалось разделить голоса. Повторите обработку записи.")
+        }
         val view = if (denoise != null) {
             val cleaned = File(job, "denoised.wav")
             if (denoise.completed && cleaned.isFile &&
@@ -237,15 +240,13 @@ class TranscriptionEngine(context: Context) {
                 ?.removePrefix("speaker_")?.toIntOrNull()?.minus(1)
             speaker.copy(voice = acousticId?.let(voices::get))
         })
-        // The speech mask is a dependency of the plan, including whether diarization completed.
-        val planDependency = sha256((JobFiles.sha256(turnsFile) + ":" + diarization.completed + ":" +
-            (diarization.error == null)).toByteArray(Charsets.UTF_8))
+        // Keep the existing successful-stage binding; failed diarization cannot reach planning.
+        val planDependency = sha256((JobFiles.sha256(turnsFile) + ":true:true").toByteArray(Charsets.UTF_8))
         val planBinding = File(job, "chunk-diarization.sha256")
         val cachedPlan = checkpoint?.chunks(view, viewHash)?.takeIf {
             runCatching { planBinding.readText() == planDependency }.getOrDefault(false)
         }
-        val plan = cachedPlan ?: ChunkPlan.create(File(job, view), job,
-            turns.takeIf { diarization.completed && diarization.error == null }).also {
+        val plan = cachedPlan ?: ChunkPlan.create(File(job, view), job, turns).also {
             JobFiles.write(planBinding, planDependency.toByteArray(Charsets.US_ASCII))
         }
         val planHash = if (checkpoint != null) JobFiles.sha256(File(job, "chunks.json")) else ""
