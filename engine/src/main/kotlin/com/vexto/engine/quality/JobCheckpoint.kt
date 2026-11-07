@@ -8,6 +8,8 @@ import com.vexto.engine.model.export.TranscriptExport
 import com.vexto.engine.models.QualityManifest
 import com.vexto.engine.pipeline.RecordingLanguage
 import com.vexto.engine.pipeline.UtteranceEmotionTarget
+import com.vexto.engine.pipeline.UtteranceOverlapTarget
+import com.vexto.engine.models.OverlapManifest
 import com.vexto.engine.review.AsrSelectionStatus
 import com.vexto.engine.review.AsrSource
 import com.vexto.engine.review.ImmutableAsrCandidate
@@ -43,7 +45,8 @@ internal class JobCheckpoint private constructor(val directory: File) {
         JobFiles.sha256(wav).also { JobFiles.write(File(directory, "decoded.sha256"), it.toByteArray(Charsets.US_ASCII)) }
 
     @Serializable
-    data class Finished(val transcript: Transcript, val stats: ProcessingStats, val selectorVersion: String = "")
+    data class Finished(val transcript: Transcript, val stats: ProcessingStats, val selectorVersion: String = "",
+        val overlapRevision: String? = null)
 
     @Serializable
     private data class LanguageCheckpoint(val inputSha256: String, val language: RecordingLanguage)
@@ -64,14 +67,16 @@ internal class JobCheckpoint private constructor(val directory: File) {
         }
     }.getOrNull()
 
-    fun finished(): Finished? = runCatching {
+    fun finished(overlapRevision: String? = null): Finished? = runCatching {
         val result = JobFiles.load<Finished>(File(directory, "finished.checkpoint.json"))
         val report = JobFiles.load<PipelineReport>(File(directory, "completion.json"))
+        require(result.overlapRevision == overlapRevision)
         // An explicit retry must reach failed stages, including jobs made by an older selector.
         // fullProfileCompleted is deliberately not required (e.g. Whisper-only or EQUIVALENT).
         require(result.selectorVersion == QwenAsrSelector.Version && result.stats.complete && result.stats.selectionResolved)
         require(report.stages.all { it.completed && it.error == null })
         require(report.warnings.none { it.contains("_FAILED:") })
+        require(report.warnings.none { it.startsWith("OVERLAP_UNAVAILABLE:") })
         require(report.stages.mapNotNull { it.speakerNames }.all { it.reusable })
         require(result.stats.artifactDirectory == directory.absolutePath)
         require(JobFiles.sha256(File(directory, "transcript.json")) == report.transcriptSha256 &&
@@ -81,8 +86,8 @@ internal class JobCheckpoint private constructor(val directory: File) {
         result
     }.getOrNull()
 
-    fun saveFinished(transcript: Transcript, stats: ProcessingStats) =
-        JobFiles.save(File(directory, "finished.checkpoint.json"), Finished(transcript, stats, QwenAsrSelector.Version))
+    fun saveFinished(transcript: Transcript, stats: ProcessingStats, overlapRevision: String? = null) =
+        JobFiles.save(File(directory, "finished.checkpoint.json"), Finished(transcript, stats, QwenAsrSelector.Version, overlapRevision))
 
     fun worker(
         stage: WorkerStage,
@@ -138,6 +143,16 @@ internal class JobCheckpoint private constructor(val directory: File) {
                 result.copy(choices = choices, completed = completed && choices.size == chunks.size &&
                     choices.size == result.choices.size && choices.none { it.status == AsrSelectionStatus.UNRESOLVED.name } &&
                     result.speakerNames?.reusable != false)
+            }
+            WorkerStage.OVERLAP -> {
+                val manifest = JobFiles.load<OverlapManifest>(File(directory, "overlap-model.json")).also { it.validate() }
+                val targets = JobFiles.load<List<UtteranceOverlapTarget>>(File(directory, "overlap-targets.json"))
+                    .associateBy { it.index }
+                val overlaps = result.overlaps.distinctBy { it.target.index }.filter {
+                    targets[it.target.index] == it.target && it.modelRevision == manifest.revision
+                }
+                result.copy(overlaps = overlaps, completed = completed && overlaps.size == result.overlaps.size &&
+                    overlaps.size == targets.size)
             }
             WorkerStage.EMOTION -> {
                 val targets = JobFiles.load<List<UtteranceEmotionTarget>>(File(directory, "emotion-targets.json"))

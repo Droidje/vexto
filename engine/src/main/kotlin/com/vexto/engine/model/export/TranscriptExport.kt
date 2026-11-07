@@ -45,7 +45,8 @@ object TranscriptExport {
             JsonUtterance(it.speakerId, it.startMs, it.endMs,
                 if (present) PhoneticSurface.present(it.text) else it.text,
                 if (includeMetadata) it.emotionProbabilities?.ordered() else null,
-                if (includeMetadata) transcript.speaker(it.speakerId).name else null)
+                if (includeMetadata) transcript.speaker(it.speakerId).name else null,
+                if (includeMetadata) it.overlapDetected else null)
         }
         validate(rows)
         return JsonFormat.encodeToString(JsonTranscript.serializer(), JsonTranscript(rows))
@@ -125,4 +126,5 @@ data class JsonUtterance(
     val text: String,
     @SerialName("emotion_probabilities") val emotionProbabilities: List<Double>? = null,
     @SerialName("speaker_name") val speakerName: String? = null,
+    @SerialName("overlap_detected") val overlapDetected: Boolean? = null,
 )

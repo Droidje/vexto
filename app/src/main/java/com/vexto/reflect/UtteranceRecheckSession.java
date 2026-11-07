@@ -165,7 +165,7 @@ final class UtteranceRecheckSession {
         for (ReflectTranscript.Line line : converted.lines) {
             try {
                 pieces.add(new UtteranceRecheck.Piece(Math.addExact(line.startMs, offsetMs),
-                        Math.addExact(line.endMs, offsetMs), line.text, line.emotionProbabilities));
+                        Math.addExact(line.endMs, offsetMs), line.text, line.emotionProbabilities, line.overlapDetected));
             } catch (ArithmeticException overflow) {
                 return List.of();
             }

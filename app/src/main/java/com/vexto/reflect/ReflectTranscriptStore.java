@@ -131,7 +131,8 @@ final class ReflectTranscriptStore {
                 var original = existing.lines.get(index);
                 var scored = incoming.lines.get(index);
                 lines.add(new ReflectTranscript.Line(original.speakerId, original.startMs, original.endMs,
-                        original.text, scored.emotionProbabilities, original.speakerName));
+                        original.text, scored.emotionProbabilities, original.speakerName,
+                        scored.overlapDetected == null ? original.overlapDetected : scored.overlapDetected));
             }
             ReflectTranscript enriched = new ReflectTranscript(lines);
             byte[] data = enriched.encode();

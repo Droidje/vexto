@@ -29,7 +29,7 @@ final class ReflectLocalTranscription {
         Progress withSpeakers(int count) { return new Progress(stage, percent, count, overallPercent, backgroundEmotions); }
         Progress asBackgroundEmotions() { return new Progress(Stage.Emotion, 0, speakers, 100, true); }
         boolean cancellable() { return stage != null; }
-        String title() { return backgroundEmotions ? "эмоции обрабатываются"
+        String title() { return stage == Stage.Overlap ? stage.getTitle() : backgroundEmotions ? "эмоции обрабатываются"
                 : cancellable() ? stage.getTitle() : "Сохраняю расшифровку"; }
     }
     record Result(File recording, ReflectTranscript transcript, String message, boolean metadataOnly) {

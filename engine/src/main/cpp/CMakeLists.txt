@@ -14,6 +14,11 @@ target_compile_features(vexto_emotion_jni PRIVATE cxx_std_17)
 target_include_directories(vexto_emotion_jni SYSTEM PRIVATE "${ORT_HEADERS}")
 target_link_libraries(vexto_emotion_jni PRIVATE dl)
 
+add_library(vexto_overlap_jni SHARED overlap_jni.cpp)
+target_compile_features(vexto_overlap_jni PRIVATE cxx_std_17)
+target_include_directories(vexto_overlap_jni SYSTEM PRIVATE "${ORT_HEADERS}")
+target_link_libraries(vexto_overlap_jni PRIVATE dl)
+
 # Preserve the incoming dev GigaAmOrt API for UtteranceEmotions callers.
 add_library(vexto_emotion SHARED gigaam_emo.c)
 target_include_directories(vexto_emotion SYSTEM PRIVATE "${ORT_HEADERS}")

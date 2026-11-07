@@ -36,6 +36,8 @@ final class ReflectTranscript {
         final String text;
         final String speakerName;
         final EmotionProbabilities emotionProbabilities;
+        /** Null means the audio interval has not been evaluated by the overlap model. */
+        final Boolean overlapDetected;
 
         Line(String speakerId, int startMs, int endMs, String text) {
             this(speakerId, startMs, endMs, text, null);
@@ -47,6 +49,11 @@ final class ReflectTranscript {
 
         Line(String speakerId, int startMs, int endMs, String text, EmotionProbabilities emotionProbabilities,
              String speakerName) {
+            this(speakerId, startMs, endMs, text, emotionProbabilities, speakerName, null);
+        }
+
+        Line(String speakerId, int startMs, int endMs, String text, EmotionProbabilities emotionProbabilities,
+             String speakerName, Boolean overlapDetected) {
             this.speakerId = checkedText(speakerId, MAX_SPEAKER_LENGTH);
             if (startMs < 0 || endMs <= startMs) {
                 throw new IllegalArgumentException("Invalid transcript time range");
@@ -56,6 +63,7 @@ final class ReflectTranscript {
             this.text = checkedText(text, MAX_TEXT_LENGTH);
             this.emotionProbabilities = emotionProbabilities;
             this.speakerName = speakerName == null ? null : checkedText(speakerName, MAX_SPEAKER_LENGTH);
+            this.overlapDetected = overlapDetected;
         }
     }
 
@@ -76,6 +84,7 @@ final class ReflectTranscript {
             if (first.startMs != second.startMs || first.endMs != second.endMs
                     || !first.speakerId.equals(second.speakerId) || !first.text.equals(second.text)
                     || !Objects.equals(first.speakerName, second.speakerName)
+                    || !Objects.equals(first.overlapDetected, second.overlapDetected)
                     || !Objects.equals(first.emotionProbabilities, second.emotionProbabilities)) return false;
         }
         return true;
@@ -109,6 +118,7 @@ final class ReflectTranscript {
         String speaker = null, text = null, speakerName = null;
         int start = -1, end = -1;
         EmotionProbabilities emotions = null;
+        Boolean overlapDetected = null;
         json.beginObject();
         while (json.hasNext()) {
             String field = json.nextName();
@@ -140,6 +150,11 @@ final class ReflectTranscript {
                             readProbability(json), readProbability(json));
                     json.endArray();
                     break;
+                case "overlap_detected":
+                    if (overlapDetected != null) throw new IOException("Duplicate overlap_detected");
+                    if (json.peek() != JsonToken.BOOLEAN) throw new IOException("Expected an overlap boolean");
+                    overlapDetected = json.nextBoolean();
+                    break;
                 default:
                     throw new IOException("Unknown transcript line field");
             }
@@ -148,7 +163,7 @@ final class ReflectTranscript {
         if (speaker == null || text == null || start < 0 || end < 0) {
             throw new IOException("Incomplete transcript line");
         }
-        return new Line(speaker, start, end, text, emotions, speakerName);
+        return new Line(speaker, start, end, text, emotions, speakerName, overlapDetected);
     }
 
     private static String readString(JsonReader json) throws IOException {
@@ -205,6 +220,7 @@ final class ReflectTranscript {
                     .name("text").value(presentSurface
                             ? com.vexto.engine.model.PhoneticSurface.present(line.text) : line.text);
             if (includeDetails && line.speakerName != null) json.name("speaker_name").value(line.speakerName);
+            if (includeDetails && line.overlapDetected != null) json.name("overlap_detected").value(line.overlapDetected);
             if (includeDetails && line.emotionProbabilities != null) {
                 json.name("emotion_probabilities").beginArray();
                 for (Double probability : line.emotionProbabilities.ordered()) json.value(probability);
@@ -268,6 +284,8 @@ final class ReflectTranscript {
         private boolean inString;
         private boolean escaped;
         private int hexDigits;
+        private String literal;
+        private int literalOffset;
 
         TranscriptJsonReader(Reader reader) { super(reader); }
 
@@ -278,6 +296,14 @@ final class ReflectTranscript {
         }
 
         private void validate(char c) throws IOException {
+            if (literal != null) {
+                if (literalOffset < literal.length()) {
+                    if (c != literal.charAt(literalOffset++)) throw new IOException("Invalid JSON boolean");
+                    return;
+                }
+                if (",]} \t\r\n".indexOf(c) < 0) throw new IOException("Invalid JSON boolean delimiter");
+                literal = null;
+            }
             if (hexDigits > 0) {
                 if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
                     throw new IOException("Invalid JSON Unicode escape");
@@ -292,6 +318,9 @@ final class ReflectTranscript {
             } else if (inString) {
                 if (c < 0x20) throw new IOException("Unescaped control character in JSON");
                 if (c == '\\') escaped = true;
+            } else if (c == 't' || c == 'f') {
+                literal = c == 't' ? "true" : "false";
+                literalOffset = 1;
             } else if ("{}[]:,-+.eE0123456789 \t\r\n".indexOf(c) < 0) {
                 throw new IOException("Unexpected character in transcript JSON");
             }

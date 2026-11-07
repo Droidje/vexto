@@ -33,6 +33,7 @@ python3 tools/native/patch_diar_threads.py "${nemotron[0]}"
 bash scripts/fetch_models.sh --aar-only
 python3 scripts/prepare_emotion_runtime.py
 python3 scripts/prepare_punctuation_models.py
+bash scripts/prepare_overlap_models.sh "$work/overlap"
 python3 scripts/build_native_runtime.py --ndk "$ndk" \
     --nemotron-source "${nemotron[0]}" --sentencepiece-source "${sentencepiece[0]}" \
     --whisper-source "${whisper[0]}" --build-dir "$build" \
