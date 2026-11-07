@@ -6,6 +6,11 @@ on:
   push:
     branches: [dev, main]
   workflow_dispatch:
+    inputs:
+      optimization_probe:
+        description: Build native variants and run short public audio on an isolated 4GB AVD
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -57,7 +62,7 @@ jobs:
 
   apk:
     name: Full Android APK (ARM64 and x86_64)
-    if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main' || inputs.optimization_probe
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     steps:
@@ -76,6 +81,8 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install host CMake and build pinned native runtime
+        env:
+          VEXTO_NATIVE_JOBS: 3
         run: |
           python -m pip install cmake==3.31.6
           bash scripts/prepare_android_runtime.sh "$ANDROID_HOME/ndk/28.2.13676358" "$RUNNER_TEMP/vexto-native"
@@ -165,3 +172,47 @@ jobs:
             docker push "$package:nightly"
           fi
           printf 'Published %s:%s\n' "$package" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+  optimization-probe:
+    name: Short Nemotron precision probe (Android 4GB)
+    if: inputs.optimization_probe
+    needs: apk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v8
+        with:
+          name: unsigned-apk
+          path: unsigned
+      - name: Prepare pinned precision variants
+        env:
+          VEXTO_NEMOTRON_ONLY: '1'
+        run: bash scripts/prepare_release_models.sh "$RUNNER_TEMP/precision"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          ram-size: 4096M
+          cores: 4
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 4096
+          script: python3 tools/benchmarks/probe_nemotron_precision.py --apk unsigned/app-release-unsigned.apk --models "${{ runner.temp }}/precision/converted/nemotron" --output .agents/work/precision-results
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: short-precision-results
+          path: .agents/work/precision-results/*.json
+          if-no-files-found: ignore
+          retention-days: 7

@@ -41,6 +41,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--threads", type=int, choices=range(1, 5), default=2)
     parser.add_argument("--check-only", action="store_true", help="validate sources/imports without tensor loading")
+    parser.add_argument("--precision", choices=("f32", "f16"), default="f32")
     args = parser.parse_args()
     source = args.nemo_source.resolve()
     checkpoint = args.checkpoint.resolve()
@@ -72,22 +73,22 @@ def main() -> int:
         raise FileExistsError("refusing existing conversion output or partial")
     output.parent.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
-    diarization.convert(checkpoint, partial, "f32")
+    diarization.convert(checkpoint, partial, args.precision)
     reader = gguf.GGUFReader(str(partial))
     tally: dict[str, int] = {}
     names = []
     for tensor in reader.tensors:
         tally[tensor.tensor_type.name] = tally.get(tensor.tensor_type.name, 0) + 1
         names.append(tensor.name)
-    if len(names) != 360 or len(set(names)) != len(names) or tally != {"F32": 359, "F16": 1}:
+    if len(names) != 360 or len(set(names)) != len(names) or (args.precision == "f32" and tally != {"F32": 359, "F16": 1}) or not set(tally) <= {"F32", "F16"}:
         raise ValueError("unexpected tensor names/types from pinned conversion")
     del tensor, reader
     gc.collect()  # release Windows mmap before atomic publication
     checksum = sha256(partial)
-    if checksum != F32_SHA or partial.stat().st_size != 395298848:
+    if args.precision == "f32" and (checksum != F32_SHA or partial.stat().st_size != 395298848):
         raise ValueError("output differs from the verified F32-linear model; partial retained for inspection")
     partial.rename(output)
-    manifest = {"status": "converted_not_inferred", "precision": "359 F32 tensors + 1 F16 Conv1D",
+    manifest = {"status": "converted_not_inferred", "precision": args.precision, "tensor_types": tally,
                 "filename": output.name, "size_bytes": output.stat().st_size, "sha256": checksum,
                 "source_checkpoint_sha256": CHECKPOINT_SHA, "converter_pins": CONVERTER_PINS,
                 "nemo_revision": "536b17a41bef62d2a67a40ed3df61df26a4389fe",
