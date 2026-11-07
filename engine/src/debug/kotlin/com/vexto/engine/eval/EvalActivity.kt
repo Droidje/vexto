@@ -63,7 +63,7 @@ class EvalActivity : Activity() {
                         is TranscriptionEvent.CoreReady -> Unit
                         is TranscriptionEvent.Partial -> Unit
                         is TranscriptionEvent.Done -> withContext(Dispatchers.IO) {
-                            File(dir, "${input.nameWithoutExtension}.json").writeText(TranscriptExport.json(event.transcript))
+                            File(dir, "${input.nameWithoutExtension}.json").writeText(TranscriptExport.submissionJson(event.transcript))
                             File(dir, "${input.nameWithoutExtension}.stats.json").writeText(statsJson(event.stats))
                             Log.i(Tag, "${input.name}: rtf=${"%.3f".format(event.stats.rtf)} peak=${event.stats.peakMemoryMb} MB ${event.stats.stageMs}")
                         }

@@ -182,17 +182,18 @@ final class ReflectTranscript {
 
     private byte[] encode(boolean includeDetails) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-        writeJson(output, false, output, includeDetails);
+        writeJson(output, false, output, includeDetails, false);
         return output.toByteArray();
     }
 
     /** Export every line, even when presentation whitespace/names exceed the import budget. */
     void writeSubmission(OutputStream output) throws IOException {
-        writeJson(output, true, null, false);
+        writeJson(output, true, null, false, true);
     }
 
     private void writeJson(OutputStream output, boolean pretty,
-                           ByteArrayOutputStream bounded, boolean includeDetails) throws IOException {
+                           ByteArrayOutputStream bounded, boolean includeDetails,
+                           boolean presentSurface) throws IOException {
         JsonWriter json = new JsonWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
         if (pretty) json.setIndent("  ");
         json.beginObject().name("transcript").beginArray();
@@ -201,7 +202,8 @@ final class ReflectTranscript {
                     .name("speaker_id").value(line.speakerId)
                     .name("start_ms").value(line.startMs)
                     .name("end_ms").value(line.endMs)
-                    .name("text").value(line.text);
+                    .name("text").value(presentSurface
+                            ? com.vexto.engine.model.PhoneticSurface.present(line.text) : line.text);
             if (includeDetails && line.speakerName != null) json.name("speaker_name").value(line.speakerName);
             if (includeDetails && line.emotionProbabilities != null) {
                 json.name("emotion_probabilities").beginArray();

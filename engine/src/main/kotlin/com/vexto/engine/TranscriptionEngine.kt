@@ -142,7 +142,7 @@ class TranscriptionEngine(context: Context) {
         val fullProfile = coverage.fullProfileCompleted(allStagesSucceeded, warnings, withinBudget)
         val export = File(job, "transcript.json")
         val metadata = File(job, "transcript.metadata.json")
-        JobFiles.write(export, TranscriptExport.json(transcript).toByteArray(Charsets.UTF_8))
+        JobFiles.write(export, TranscriptExport.submissionJson(transcript).toByteArray(Charsets.UTF_8))
         JobFiles.write(metadata, TranscriptExport.jsonWithMetadata(transcript).toByteArray(Charsets.UTF_8))
         val stats = ProcessingStats(audioMs, SystemClock.elapsedRealtime() - started, times,
             peak / (1024 * 1024), "GigaAM-v3-e2e+Whisper-large-v3-q5_0; selection-only Qwen3-1.7B-Q4_K_M", 4,

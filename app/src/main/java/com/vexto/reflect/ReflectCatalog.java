@@ -174,7 +174,8 @@ final class ReflectCatalog {
                 if (transcript != null) {
                     for (ReflectTranscript.Line line : transcript.lines) {
                         if (Thread.currentThread().isInterrupted()) return results;
-                        remaining.removeIf(normalized(line.text)::contains);
+                        remaining.removeIf(normalized(
+                                com.vexto.engine.model.PhoneticSurface.present(line.text))::contains);
                         if (remaining.isEmpty()) break;
                     }
                 }

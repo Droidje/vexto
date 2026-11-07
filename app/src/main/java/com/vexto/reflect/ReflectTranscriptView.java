@@ -510,7 +510,7 @@ final class ReflectTranscriptView extends FrameLayout {
             }
             metadata.setText(label);
             body.setLineHeight(style.px(preferences.textSize() * (position == 0 ? 1.3125f : 1.5f)));
-            body.setText(line.text);
+            body.setText(com.vexto.engine.model.PhoneticSurface.present(line.text));
             highlight(position);
             setOnLongClickListener(v -> { actions.openTranscriptLine(line); return true; });
         }

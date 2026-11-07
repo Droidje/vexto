@@ -1,5 +1,6 @@
 package com.vexto.engine.model.export
 
+import com.vexto.engine.model.PhoneticSurface
 import com.vexto.engine.model.Transcript
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -21,23 +22,28 @@ object TranscriptExport {
 
     @JvmStatic
     fun render(transcript: Transcript, format: ExportFormat): String = when (format) {
-        ExportFormat.Json -> json(transcript)
+        ExportFormat.Json -> submissionJson(transcript)
         ExportFormat.Text -> text(transcript)
         ExportFormat.Markdown -> markdown(transcript)
         ExportFormat.Srt -> srt(transcript)
     }
 
-    /** JSON по образцу ТЗ: только speaker_id, start_ms, end_ms, text. */
+    /** JSON по образцу ТЗ. Текст реплики остаётся сохранённым, включая фонетические знаки. */
     @JvmStatic
-    fun json(transcript: Transcript): String = encode(transcript, includeMetadata = false)
+    fun json(transcript: Transcript): String = encode(transcript, includeMetadata = false, present = false)
+
+    /** Тот же контракт для файла, который видит пользователь: фонетические знаки заменены базовой записью. */
+    @JvmStatic
+    fun submissionJson(transcript: Transcript): String = encode(transcript, includeMetadata = false, present = true)
 
     /** Внутренний расширенный слой: эмоции сохраняются отдельно от контракта заказчика. */
     @JvmStatic
-    fun jsonWithMetadata(transcript: Transcript): String = encode(transcript, includeMetadata = true)
+    fun jsonWithMetadata(transcript: Transcript): String = encode(transcript, includeMetadata = true, present = false)
 
-    private fun encode(transcript: Transcript, includeMetadata: Boolean): String {
+    private fun encode(transcript: Transcript, includeMetadata: Boolean, present: Boolean): String {
         val rows = transcript.utterances.map {
-            JsonUtterance(it.speakerId, it.startMs, it.endMs, it.text,
+            JsonUtterance(it.speakerId, it.startMs, it.endMs,
+                if (present) PhoneticSurface.present(it.text) else it.text,
                 if (includeMetadata) it.emotionProbabilities?.ordered() else null)
         }
         validate(rows)
@@ -70,7 +76,7 @@ object TranscriptExport {
 
     @JvmStatic
     fun text(transcript: Transcript): String = transcript.utterances.joinToString("\n\n") {
-        "[${clock(it.startMs)}] ${transcript.speaker(it.speakerId).displayName()}: ${it.text}"
+        "[${clock(it.startMs)}] ${transcript.speaker(it.speakerId).displayName()}: ${PhoneticSurface.present(it.text)}"
     }
 
     @JvmStatic
@@ -78,14 +84,14 @@ object TranscriptExport {
         append("| Время | Участник | Реплика |\n|---|---|---|\n")
         transcript.utterances.forEach {
             append("| ${clock(it.startMs)}–${clock(it.endMs)} | ${transcript.speaker(it.speakerId).displayName()} | ")
-            append(it.text.replace("|", "\\|")).append(" |\n")
+            append(PhoneticSurface.present(it.text).replace("|", "\\|")).append(" |\n")
         }
     }
 
     @JvmStatic
     fun srt(transcript: Transcript): String = transcript.utterances.mapIndexed { i, it ->
         "${i + 1}\n${srtTime(it.startMs)} --> ${srtTime(it.endMs)}\n" +
-            "${transcript.speaker(it.speakerId).displayName()}: ${it.text}\n"
+            "${transcript.speaker(it.speakerId).displayName()}: ${PhoneticSurface.present(it.text)}\n"
     }.joinToString("\n")
 
     @JvmStatic
