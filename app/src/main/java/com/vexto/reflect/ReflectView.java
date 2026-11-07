@@ -54,6 +54,7 @@ final class ReflectView extends ViewGroup {
     private static final float LIBRARY_TOP = 83;
     private static final float FINISH_LEFT = 172, FINISH_CENTER_X = 201.5f;
     private static final int BACKGROUND = 0xff040402, WHITE = Color.WHITE;
+    private static final Screen[] TABS = {Screen.HOME, Screen.RECORDS, Screen.SPEAKERS, Screen.SETTINGS};
     private static final String[] TAB_ICONS = {"tab_home", "tab_records", "tab_speakers", "tab_settings"};
     private static final String[] TAB_NAMES = {"Главная", "Записи", "Спикеры", "Настройки"};
     private static final float TAB_LEFT = 22, TAB_WIDTH = 68.5f;
@@ -101,9 +102,10 @@ final class ReflectView extends ViewGroup {
     private Screen tab = Screen.HOME;
     private float scale = 1, offsetX, offsetY, pageProgress = 1, menuProgress;
     private float capsuleLeft = TAB_LEFT, capsuleRight = TAB_LEFT + TAB_WIDTH;
-    private int pageDirection = 1;
+    private int pageDirection = 1, pageSteps = 1;
     private Screen departingScreen;
     private Bitmap departingPage;
+    private Bitmap[] passingTabs;
     private View pageContent;
     private ReflectConversationPlayer reviewPlayer;
     private int reviewPosition, reviewDuration;
@@ -192,6 +194,13 @@ final class ReflectView extends ViewGroup {
             pageDirection = withinNavigation ? Integer.compare(tabIndex(targetTab), tabIndex(tab))
                     : returnTransition(previous, next) ? -1 : 1;
             departingPage = snapshot;
+            pageSteps = snapshot != null && withinNavigation ? Math.abs(tabIndex(targetTab) - tabIndex(tab)) : 1;
+            if (pageSteps > 1) {
+                passingTabs = new Bitmap[pageSteps - 1];
+                for (int i = 0; i < passingTabs.length; i++) {
+                    passingTabs[i] = captureTab(TABS[tabIndex(tab) + pageDirection * (i + 1)]);
+                }
+            }
             departingScreen = snapshot == null ? null : previous;
             pageProgress = snapshot == null ? 1 : 0;
         } else if (!animate) {
@@ -237,14 +246,17 @@ final class ReflectView extends ViewGroup {
             return;
         }
         navigationAnimator = ValueAnimator.ofFloat(0, 1);
-        navigationAnimator.setDuration(300);
+        boolean skippingTabs = pageSteps > 1;
+        navigationAnimator.setDuration(skippingTabs ? pageDuration() : 300);
         navigationAnimator.addUpdateListener(value -> {
             float time = (float) value.getAnimatedValue();
             float eased = ReflectMotion.EASE.getInterpolation(time);
             float leading = ReflectMotion.EASE.getInterpolation(Math.min(1, time * 1.18f));
+            float capsuleProgress = skippingTabs ? ReflectMotion.TAB_STRIP.getInterpolation(time) : eased;
+            if (skippingTabs) leading = capsuleProgress;
             menuProgress = lerp(startMenu, endMenu, eased);
-            capsuleLeft = lerp(startLeft, targetLeft, movingRight ? eased : leading);
-            capsuleRight = lerp(startRight, targetRight, movingRight ? leading : eased);
+            capsuleLeft = lerp(startLeft, targetLeft, movingRight ? capsuleProgress : leading);
+            capsuleRight = lerp(startRight, targetRight, movingRight ? leading : capsuleProgress);
             navigationGlass.invalidate();
             invalidate();
         });
@@ -252,10 +264,12 @@ final class ReflectView extends ViewGroup {
         navigationAnimator.start();
     }
 
+    private int pageDuration() { return 380 + 180 * (pageSteps - 1); }
+
     private void startPageTransition() {
         pageAnimator = ValueAnimator.ofFloat(0, 1);
-        pageAnimator.setDuration(380);
-        pageAnimator.setInterpolator(ReflectMotion.PAGE);
+        pageAnimator.setDuration(pageDuration());
+        pageAnimator.setInterpolator(pageSteps > 1 ? ReflectMotion.TAB_STRIP : ReflectMotion.PAGE);
         pageAnimator.addUpdateListener(value -> {
             pageProgress = (float) value.getAnimatedValue();
             if (pageProgress >= 1) finishPageTransition();
@@ -269,11 +283,15 @@ final class ReflectView extends ViewGroup {
     private void finishPageTransition() {
         if (pageAnimator != null && pageAnimator.isRunning() && pageProgress < 1) pageAnimator.cancel();
         departingPage = null;
+        passingTabs = null;
+        pageSteps = 1;
         departingScreen = null;
         pageProgress = 1;
     }
 
-    private float incomingOffset() { return pageDirection * WIDTH * (1 - pageProgress); }
+    private float incomingOffset() { return pageOffset(pageSteps); }
+
+    private float pageOffset(int index) { return pageDirection * WIDTH * (index - pageSteps * pageProgress); }
 
     private boolean isPageChild(View child) { return !navigation(screen) || child == pageContent; }
 
@@ -392,13 +410,8 @@ final class ReflectView extends ViewGroup {
         } else if (screen == Screen.EXPORT) {
             placePage(export, 0, WIDTH, HEIGHT);
         } else if (navigation(screen)) {
-            float contentHeight = HEIGHT - LIBRARY_TOP;
-            if (tab == Screen.RECORDS) placePage(records, LIBRARY_TOP, WIDTH, contentHeight);
-            if (tab == Screen.SPEAKERS) placePage(speakers, LIBRARY_TOP, WIDTH, contentHeight);
-            if (tab == Screen.SETTINGS) placePage(settings, LIBRARY_TOP, WIDTH, contentHeight);
-            if (tab == Screen.HOME && conversations.hasConversations()) {
-                placePage(conversations, LIBRARY_TOP, WIDTH, contentHeight);
-            }
+            View content = tabContent(tab);
+            if (content != null) placePage(content, LIBRARY_TOP, WIDTH, HEIGHT - LIBRARY_TOP);
             place(navigationGlass, 0, 0, WIDTH, HEIGHT);
             if (screen == Screen.MENU) {
                 View outside = new View(getContext());
@@ -538,29 +551,74 @@ final class ReflectView extends ViewGroup {
         }
     }
 
+    private View tabContent(Screen page) {
+        return switch (page) {
+            case HOME -> conversations.hasConversations() ? conversations : null;
+            case RECORDS -> records;
+            case SPEAKERS -> speakers;
+            case SETTINGS -> settings;
+            default -> throw new IllegalArgumentException("Not a tab: " + page);
+        };
+    }
+
     private Bitmap capturePage() {
-        // One small opaque snapshot is enough. Outgoing views can be detached immediately.
-        float resolution = Math.min(1, scale);
-        int width = Math.max(1, Math.round(WIDTH * resolution));
-        int height = Math.max(1, Math.round(HEIGHT * resolution));
-        Bitmap snapshot = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(snapshot);
-        canvas.drawColor(BACKGROUND);
-        canvas.scale(width / WIDTH, height / HEIGHT);
-        drawPageContents(canvas);
+        Bitmap snapshot = newPageSnapshot();
+        drawPageContents(snapshotCanvas(snapshot));
         return snapshot;
     }
 
+    private Bitmap captureTab(Screen page) {
+        // Intermediate tabs are painted once without attaching them or changing navigation state.
+        Bitmap snapshot = newPageSnapshot();
+        Canvas canvas = snapshotCanvas(snapshot);
+        View content = tabContent(page);
+        if (content == null) {
+            drawHome(canvas);
+        } else {
+            int width = Math.round(WIDTH * scale), height = Math.round((HEIGHT - LIBRARY_TOP) * scale);
+            content.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
+            content.layout(0, 0, width, height);
+            canvas.translate(0, LIBRARY_TOP);
+            canvas.scale(1 / scale, 1 / scale);
+            canvas.clipRect(0, 0, width, height);
+            canvas.translate(-content.getScrollX(), -content.getScrollY());
+            content.draw(canvas);
+        }
+        return snapshot;
+    }
+
+    private Bitmap newPageSnapshot() {
+        float resolution = Math.min(1, scale);
+        int width = Math.max(1, Math.round(WIDTH * resolution));
+        int height = Math.max(1, Math.round(HEIGHT * resolution));
+        return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+    }
+
+    private Canvas snapshotCanvas(Bitmap snapshot) {
+        Canvas canvas = new Canvas(snapshot);
+        canvas.drawColor(BACKGROUND);
+        canvas.scale(snapshot.getWidth() / WIDTH, snapshot.getHeight() / HEIGHT);
+        return canvas;
+    }
+
     private void drawPageCanvas(Canvas canvas) {
-        if (departingPage != null) {
-            int save = canvas.save();
-            canvas.translate(-pageDirection * WIDTH * pageProgress, 0);
-            canvas.drawBitmap(departingPage, null, snapshotBounds, snapshotPaint);
-            canvas.restoreToCount(save);
+        if (departingPage != null) drawPageSnapshot(canvas, departingPage, 0);
+        if (passingTabs != null) {
+            for (int i = 0; i < passingTabs.length; i++) drawPageSnapshot(canvas, passingTabs[i], i + 1);
         }
         int save = canvas.save();
         canvas.translate(incomingOffset(), 0);
         drawScreen(canvas, screen);
+        canvas.restoreToCount(save);
+    }
+
+    private void drawPageSnapshot(Canvas canvas, Bitmap snapshot, int index) {
+        float left = pageOffset(index);
+        if (left <= -WIDTH || left >= WIDTH) return;
+        int save = canvas.save();
+        canvas.translate(left, 0);
+        canvas.drawBitmap(snapshot, null, snapshotBounds, snapshotPaint);
         canvas.restoreToCount(save);
     }
 

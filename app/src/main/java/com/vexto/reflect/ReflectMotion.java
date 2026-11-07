@@ -7,5 +7,7 @@ final class ReflectMotion {
 
     static final PathInterpolator PAGE = new PathInterpolator(.24f, .55f, .24f, 1f);
 
+    static final PathInterpolator TAB_STRIP = new PathInterpolator(.35f, .12f, .65f, .88f);
+
     private ReflectMotion() {}
 }
