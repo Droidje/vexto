@@ -1,102 +1,171 @@
-name: CI
-
-# Пайплайн 1 — обычные проверки на ветке dev.
-# Запускается на PR в dev и на push в dev. Если коммиты уже прошли CI на PR,
-# то после слияния в dev тот же прогон не повторяется (job gate это видит и
-# пропускает smoke/test). Прямые пуши в dev (без PR) проверяются полностью.
-# Примечание: rebase-слияние создаёт новые SHA, поэтому после него прогон
-# повторится корректно; merge- и squash-слияния распознаются по сообщению коммита.
+name: Android CI/CD
 
 on:
   pull_request:
-    branches: [dev]
-    types: [opened, synchronize, reopened]
+    branches: [dev, main]
   push:
-    branches: [dev]
+    branches: [dev, main]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pull-requests: read
-  actions: read
 
-concurrency:
-  group: ci-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+env:
+  ANDROID_BUILD_TOOLS: 35.0.0
 
 jobs:
-  gate:
-    name: Дедуп — не повторять прогон после слияния
-    runs-on: ubuntu-latest
-    outputs:
-      skip: ${{ steps.dedup.outputs.skip }}
-    steps:
-      - name: Проверить, что эти коммиты уже проверялись на PR
-        id: dedup
-        env:
-          GH_TOKEN: ${{ github.token }}
-          MSG: ${{ github.event.head_commit.message }}
-        run: |
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          if [ "$GITHUB_EVENT_NAME" != "push" ]; then exit 0; fi
-          PR=$(printf '%s\n' "$MSG" | grep -oE 'Merge pull request #[0-9]+' | grep -oE '[0-9]+' | head -1)
-          [ -z "$PR" ] && PR=$(printf '%s\n' "$MSG" | grep -oE '\(#[0-9]+\)$' | grep -oE '[0-9]+' | tail -1)
-          if [ -z "$PR" ]; then
-            echo "Прямой пуш в dev (без PR) — проверяем полностью"
-            exit 0
-          fi
-          HEAD_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" --jq .head.sha)
-          echo "Это слияние PR #${PR} (head ${HEAD_SHA}) — ищу успешный прогон CI на этом коммите"
-          OK=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${HEAD_SHA}&event=pull_request&status=completed&per_page=100" \
-            --jq '[.workflow_runs[] | select(.name=="CI" and .conclusion=="success")] | length')
-          if [ "${OK:-0}" -ge 1 ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "CI уже успешно проходил для PR #${PR} — пропускаем повторный прогон"
-          else
-            echo "Зелёного CI-прогона на head PR не нашлось — проверяем"
-          fi
-
-  smoke:
-    name: Smoke — целостность репозитория
-    runs-on: ubuntu-latest
-    needs: gate
-    if: needs.gate.outputs.skip != 'true'
+  checks:
+    name: Python and Android checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - name: Базовые файлы на месте
-        run: |
-          test -f README.md
-          echo "OK: базовые файлы репозитория на месте"
-
-  test:
-    name: Build — Android (автотесты на паузе)
-    runs-on: ubuntu-latest
-    needs: gate
-    if: needs.gate.outputs.skip != 'true'
-    steps:
-      - uses: actions/checkout@v7
-      # Автотесты временно приостановлены по запросу команды. Возврат: repo variable VEXTO_RUN_AUTOTESTS=true.
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v6
-        if: vars.VEXTO_RUN_AUTOTESTS == 'true'
         with:
           python-version: '3.12'
-      - name: Unit-тесты утилит
-        if: vars.VEXTO_RUN_AUTOTESTS == 'true'
-        run: python -m unittest discover -s tools/benchmarks/tests -v
-      - name: Синтаксис Android memory guard
-        if: vars.VEXTO_RUN_AUTOTESTS == 'true'
-        run: bash -n tools/benchmarks/android_memory_guard.sh
+      - name: Benchmark tests and script syntax
+        run: |
+          python -m unittest discover -s tools/benchmarks/tests -v
+          bash -n tools/benchmarks/android_memory_guard.sh
+          bash -n scripts/prepare_android_runtime.sh
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-      - name: SDK и Java API без весов моделей
+          cache: gradle
+      - name: Android SDK and pinned Java dependency
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;$ANDROID_BUILD_TOOLS"
           bash scripts/fetch_models.sh --aar-only
-      - name: Сборка проверочного APK без native-моделей
-        run: bash ./gradlew --no-daemon --max-workers=2 -PvextoSkipNative=true :app:assembleDebug
-      - name: Отложенные JVM-тесты движка и локальной базы
-        if: vars.VEXTO_RUN_AUTOTESTS == 'true'
-        run: bash ./gradlew --no-daemon --max-workers=2 -PvextoSkipNative=true :engine:testDebugUnitTest :app:testDebugUnitTest
+      - name: JVM tests, lint and Android compile
+        run: |
+          bash gradlew --no-daemon --max-workers=2 -PvextoSkipNative=true \
+            :engine:testDebugUnitTest :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+      - name: Save test and lint reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-check-reports
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.*
+            engine/build/reports/tests/
+          if-no-files-found: ignore
+          retention-days: 7
 
+  apk:
+    name: Full Android APK (ARM64 and x86_64)
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Install Android toolchain
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;$ANDROID_BUILD_TOOLS" "ndk;28.2.13676358" "cmake;3.22.1"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install host CMake and build pinned native runtime
+        run: |
+          python -m pip install cmake==3.31.6
+          bash scripts/prepare_android_runtime.sh "$ANDROID_HOME/ndk/28.2.13676358" "$RUNNER_TEMP/vexto-native"
+      - name: Assemble release APK
+        run: |
+          bash gradlew --no-daemon --max-workers=2 -PvextoVersionCode="$((1000 + GITHUB_RUN_NUMBER))" :app:assembleRelease
+          python3 scripts/verify_android_apk.py app/build/outputs/apk/release/app-release-unsigned.apk
+      - uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-apk
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 3
+      - name: Save native build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-build-logs
+          path: ${{ runner.temp }}/vexto-native/build.*/**/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  publish:
+    name: Sign and publish APK
+    needs: [checks, apk]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      packages: write
+    concurrency:
+      group: vexto-android-publish
+      queue: max
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: unsigned-apk
+          path: unsigned
+      - name: Sign and verify installable APK
+        env:
+          VEXTO_KEYSTORE: ${{ secrets.VEXTO_ANDROID_KEYSTORE }}
+          VEXTO_KEYSTORE_PASSWORD: ${{ secrets.VEXTO_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          : "${VEXTO_KEYSTORE:?Missing VEXTO_ANDROID_KEYSTORE}"
+          : "${VEXTO_KEYSTORE_PASSWORD:?Missing VEXTO_ANDROID_KEYSTORE_PASSWORD}"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;$ANDROID_BUILD_TOOLS"
+          build_tools="$ANDROID_HOME/build-tools/$ANDROID_BUILD_TOOLS"
+          keystore="$(mktemp)"
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$VEXTO_KEYSTORE" | base64 --decode > "$keystore"
+          mkdir dist
+          "$build_tools/zipalign" -P 16 -f 4 unsigned/app-release-unsigned.apk "$RUNNER_TEMP/aligned.apk"
+          "$build_tools/apksigner" sign --ks "$keystore" --ks-key-alias vexto \
+            --ks-pass env:VEXTO_KEYSTORE_PASSWORD --out dist/vexto.apk "$RUNNER_TEMP/aligned.apk"
+          "$build_tools/apksigner" verify --verbose --print-certs dist/vexto.apk
+          "$build_tools/zipalign" -c -P 16 4 dist/vexto.apk
+          rm -f dist/vexto.apk.idsig
+          (cd dist && sha256sum vexto.apk > SHA256SUMS)
+      - name: Publish to GitHub Packages and Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          package="ghcr.io/${GITHUB_REPOSITORY,,}-android"
+          tag="android-$GITHUB_SHA"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build -t "$package:$GITHUB_SHA" \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" -f - dist <<'DOCKERFILE'
+          FROM scratch
+          COPY vexto.apk SHA256SUMS /
+          DOCKERFILE
+          docker push "$package:$GITHUB_SHA"
+          docker pull "$package:$GITHUB_SHA"
+          container="$(docker create "$package:$GITHUB_SHA" /unused)"
+          trap 'docker rm "$container" >/dev/null' EXIT
+          docker cp "$container:/vexto.apk" "$RUNNER_TEMP/package.apk"
+          cmp dist/vexto.apk "$RUNNER_TEMP/package.apk"
+
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/vexto.apk dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" dist/vexto.apk dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "Vexto Android · ${GITHUB_SHA:0:7}" --latest=false \
+              --notes "Android 9+, ARM64/x86_64. [Install the offline models]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/docs/base-version.md)."
+          fi
+          if [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$GITHUB_SHA" ]]; then
+            docker tag "$package:$GITHUB_SHA" "$package:latest"
+            docker push "$package:latest"
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --latest
+          fi
+          printf '[Download APK](%s/%s/releases/download/%s/vexto.apk) · %s:%s\n' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$tag" "$package" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
