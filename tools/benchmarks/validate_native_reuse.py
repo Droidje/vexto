@@ -31,7 +31,16 @@ def main():
     for path in paths:
         previous = api(f'repos/{repo}/contents/{path}?ref={sha}')
         old = base64.b64decode(previous['content']).replace(b'\r\n', b'\n')
-        if old != Path(path).read_bytes().replace(b'\r\n', b'\n'):
+        current = Path(path).read_bytes().replace(b'\r\n', b'\n')
+        if path == 'scripts/prepare_android_runtime.sh':
+            # dev added the independent app punctuation asset preparation. It does
+            # not build/change the Nemotron backend reused by this CLI-only probe.
+            def backend_recipe(value):
+                return [line.strip() for line in value.splitlines() if line.strip()
+                        and not line.lstrip().startswith(b'#')
+                        and line.strip() != b'python3 scripts/prepare_punctuation_models.py']
+            old, current = backend_recipe(old), backend_recipe(current)
+        if old != current:
             raise ValueError(f'Native backend recipe changed: {path}; build a fresh APK')
     print(f'Validated native backends from run {run_id}, commit {sha}; frontend rebuilt separately.')
 
