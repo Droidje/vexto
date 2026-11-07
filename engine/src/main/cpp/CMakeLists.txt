@@ -19,3 +19,8 @@ add_library(vexto_emotion SHARED gigaam_emo.c)
 target_include_directories(vexto_emotion SYSTEM PRIVATE "${ORT_HEADERS}")
 target_compile_options(vexto_emotion PRIVATE -Wall -Wextra -Werror)
 target_link_libraries(vexto_emotion PRIVATE dl)
+
+add_library(vexto_punct SHARED rupunct.c)
+target_include_directories(vexto_punct SYSTEM PRIVATE "${ORT_HEADERS}")
+target_compile_options(vexto_punct PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(vexto_punct PRIVATE dl)

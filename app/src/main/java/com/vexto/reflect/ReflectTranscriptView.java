@@ -55,6 +55,7 @@ final class ReflectTranscriptView extends FrameLayout {
         void toggleSummary();
         void retrySummary();
         void playTranscriptAudio();
+        void openRecordingTranscript();
         void seekPlayback(float fraction);
         void seekPlaybackMillis(int millis);
         void openTranscriptLine(ReflectTranscript.Line line);
@@ -67,7 +68,7 @@ final class ReflectTranscriptView extends FrameLayout {
     private int layoutWidth;
     private boolean refresh = true;
     private boolean loading, hasAudio, playing, recordingDetails;
-    private boolean hasTranscript;
+    private boolean hasTranscript, hasTranscriptLines;
     private RecordingMetadata metadata;
     private String title = "", length = "", issue;
     private List<ReflectTranscript.Line> lines = Collections.emptyList();
@@ -79,7 +80,12 @@ final class ReflectTranscriptView extends FrameLayout {
     private ReflectPlaybackTimeline timeline = new ReflectPlaybackTimeline(lines);
     private TextView progressText;
     private ProgressBar progressBar;
+    private boolean failedTranscription;
+
+    void failedTranscription(boolean failed) { failedTranscription = failed; }
+
     private ReflectLocalTranscription.Progress transcription;
+    private Map<Integer, String> corrections = Collections.emptyMap();
     private ListView list;
     private ReflectSummaryState summaryState;
     private LinearLayout summaryHeader;
@@ -114,6 +120,7 @@ final class ReflectTranscriptView extends FrameLayout {
         this.metadata = metadata;
         this.transcription = transcription;
         hasTranscript = transcript != null;
+        hasTranscriptLines = transcript != null && !transcript.lines.isEmpty();
         List<ReflectTranscript.Line> updated = recordingDetails || transcript == null
                 ? Collections.emptyList() : transcript.lines;
         if (lines != updated) {
@@ -147,6 +154,17 @@ final class ReflectTranscriptView extends FrameLayout {
         }
     }
 
+    void corrections(Map<Integer, String> values) {
+        if (corrections.equals(values)) return;
+        corrections = Map.copyOf(values);
+        refreshStyle();
+    }
+
+    String shownText(ReflectTranscript.Line line) {
+        int index = lines.indexOf(line);
+        return com.vexto.engine.model.PhoneticSurface.present(corrections.getOrDefault(index, line.text));
+    }
+
     void refreshStyle() {
         refresh = true;
         requestLayout();
@@ -160,6 +178,7 @@ final class ReflectTranscriptView extends FrameLayout {
 
     void clear() {
         lines = Collections.emptyList();
+        corrections = Collections.emptyMap();
         timeline = new ReflectPlaybackTimeline(lines);
         playing = false;
         playbackPosition = 0;
@@ -331,6 +350,16 @@ final class ReflectTranscriptView extends FrameLayout {
             addPlayer(header, "запись");
         }
         addInset(header, metadataCard(), 8, 12);
+        if (transcription != null) {
+            TextView processing = style.text("Выполняется…", 16, ReflectPageStyle.MUTED, artwork.medium);
+            processing.setGravity(Gravity.CENTER);
+            processing.setMinHeight(style.px(44));
+            processing.setEnabled(false);
+            processing.setBackground(style.rounded(0xff292929, 24));
+            addInset(header, processing, 0, 12);
+        } else if (hasTranscriptLines) {
+            addInset(header, button("Перейти к транскрипту", actions::openRecordingTranscript), 0, 12);
+        }
         return header;
     }
 
@@ -372,7 +401,8 @@ final class ReflectTranscriptView extends FrameLayout {
                     : "Импортируйте JSON с репликами, спикерами и таймкодами.";
             style.append(card, style.text(message, 15, ReflectPageStyle.MUTED, artwork.regular), 0, 12);
             if (hasAudio && !hasTranscript) {
-                style.append(card, button("Расшифровать на устройстве", actions::transcribeRecording), 0, 8);
+                style.append(card, button(failedTranscription ? "Расшифровать ещё раз" : "Расшифровать на устройстве",
+                        actions::transcribeRecording), 0, 8);
             }
             if (hasAudio) style.append(card, button("Импортировать JSON", actions::importTranscript), 0, 0);
         }
@@ -381,8 +411,8 @@ final class ReflectTranscriptView extends FrameLayout {
 
     private void updateProgress() {
         if (progressText == null || progressBar == null) return;
-        progressText.setText(transcription.title() + " · " + transcription.percent() + "%");
-        progressBar.setProgress(transcription.percent());
+        progressText.setText(transcription.title() + " · " + transcription.overallPercent() + "%");
+        progressBar.setProgress(transcription.overallPercent());
     }
 
     private LinearLayout metadataCard() {
@@ -604,7 +634,7 @@ final class ReflectTranscriptView extends FrameLayout {
             }
             metadata.setText(label);
             body.setLineHeight(style.px(preferences.textSize() * (position == 0 ? 1.3125f : 1.5f)));
-            body.setText(com.vexto.engine.model.PhoneticSurface.present(line.text));
+            body.setText(shownText(line));
             setOnClickListener(v -> {
                 if (playing) actions.seekPlaybackMillis(line.startMs);
             });

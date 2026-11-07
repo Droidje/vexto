@@ -121,8 +121,13 @@ public class ReflectConversationsTest {
                 new ReflectTranscript.Line("speaker", 500, 900, "Подтверждённый итог"))));
         try (var store = new ReflectConversationStore(context)) {
             var rows = ReflectCatalog.localConversations(List.of(recording(first, "Совещание")), store);
-            assertEquals(rows, ReflectCatalog.searchConversations(rows, "АННА подтвержденный №1", transcripts));
-            assertTrue(ReflectCatalog.searchConversations(rows, "Анна неизвестное", transcripts).isEmpty());
+            assertTrue(ReflectCatalog.searchConversations(rows, "АННА подтвержденный №1").isEmpty());
+            assertEquals(rows, ReflectCatalog.searchConversations(rows, "Анна №1"));
+            var quotes = ReflectCatalog.searchConversationQuotes(rows, "АННА подтвержденный №1", transcripts);
+            assertEquals(1, quotes.size());
+            assertEquals(500, quotes.get(0).startMs());
+            assertEquals("Подтверждённый итог", quotes.get(0).excerpt());
+            assertTrue(ReflectCatalog.searchConversationQuotes(rows, "Анна неизвестное", transcripts).isEmpty());
         }
     }
 

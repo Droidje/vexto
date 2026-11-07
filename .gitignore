@@ -33,3 +33,6 @@ local.properties
 
 # Android CMake intermediates
 **/.cxx/
+
+# Generated, SHA256-verified RUPunct weights
+/engine/src/main/punctuation-assets/models/

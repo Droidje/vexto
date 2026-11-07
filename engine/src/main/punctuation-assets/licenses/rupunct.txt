@@ -1,0 +1,5 @@
+RUPunct_small восстанавливает пунктуацию и регистр русского текста.
+Исходная модель: https://huggingface.co/RUPunct/RUPunct_small
+INT8 ONNX: https://huggingface.co/ekhodzitsky/rupunct-small-onnx
+Лицензия весов: MIT, как указано в карточках обеих публикаций.
+Файл rupunct_small_int8.onnx: sha256 b105da023474d98aa13ba18953ae67b04b17bd0595034bc06030c17536893933.

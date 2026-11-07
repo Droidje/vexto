@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reproduce the Android runtime without downloading model weights.
+# Reproduce the Android runtime and embedded optional punctuation model.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ndk="$(cd "${1:?Provide the Android NDK directory}" && pwd)"
@@ -32,6 +32,7 @@ python3 tools/native/patch_diar_threads.py "${nemotron[0]}"
 
 bash scripts/fetch_models.sh --aar-only
 python3 scripts/prepare_emotion_runtime.py
+python3 scripts/prepare_punctuation_models.py
 python3 scripts/build_native_runtime.py --ndk "$ndk" \
     --nemotron-source "${nemotron[0]}" --sentencepiece-source "${sentencepiece[0]}" \
     --whisper-source "${whisper[0]}" --build-dir "$build" \

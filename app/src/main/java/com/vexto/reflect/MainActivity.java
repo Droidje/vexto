@@ -6,6 +6,8 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.MediaPlayer;
+import android.media.projection.MediaProjectionManager;
+import android.media.projection.MediaProjectionConfig;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -33,7 +35,7 @@ import java.util.function.Consumer;
 import static com.vexto.reflect.ReflectView.Screen.*;
 
 public final class MainActivity extends Activity implements ReflectView.Actions {
-    private static final int MICROPHONE_PERMISSION = 1, PICK_AUDIO = 2;
+    private static final int MICROPHONE_PERMISSION = 1, PICK_AUDIO = 2, CALL_CAPTURE = 41;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService imports = Executors.newSingleThreadExecutor();
     private final RecordingSession session = new RecordingSession();
@@ -42,7 +44,6 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private ReflectTranscriptStore transcriptStore;
     private ReflectConversationStore conversationStore;
     private ReflectConversationTitles titles;
-    private List<ReflectCatalog.Recording> recordingCatalog = List.of(); // Only accessed on imports.
     private ReflectTranscriptController transcripts;
     private SpeakerProfiles profiles;
     private SpeakerProfilesUi profilesUi;
@@ -53,11 +54,32 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private int inFlightSeek = -1, seekTarget = -1;
     private AlertDialog recordingExit;
     private boolean importing;
+    private boolean callMode, projectionPending;
+    private final CallRecordingService.Observer callObserver = new CallRecordingService.Observer() {
+        @Override public void onState(CallRecordingService.State state) {
+            if (isDestroyed() || !state.active()) return;
+            callMode = true;
+            view.callMode(true);
+            view.updateRecording(state.elapsedMs(), state.peakAmplitude());
+            view.show(state.paused() ? PAUSED : RECORDING);
+            handler.removeCallbacks(heartbeat);
+            if (!state.paused()) handler.post(heartbeat);
+        }
+
+        @Override public void onFinished(File recording, String message) {
+            if (isDestroyed()) return;
+            CallRecordingService.consumeResult();
+            finishCallUi(recording, message);
+        }
+    };
     private boolean transcriptFromSpeaker;
     private final Runnable heartbeat = new Runnable() {
         @Override public void run() {
             if (view.screen() == RECORDING) {
-                view.updateRecording(session.elapsedMillis(), session.peakAmplitude());
+                if (callMode) {
+                    var state = CallRecordingService.state();
+                    view.updateRecording(state.elapsedMs(), state.peakAmplitude());
+                } else view.updateRecording(session.elapsedMillis(), session.peakAmplitude());
                 handler.postDelayed(this, RecordingVisuals.sampleInterval());
             } else if (player != null && player.isPlaying()) {
                 if (inFlightSeek < 0) updatePlayback(true, player.getCurrentPosition());
@@ -74,7 +96,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         conversationStore = new ReflectConversationStore(this);
         titles = new ReflectConversationTitles(this, conversationStore, transcriptStore, imports, recording -> {
             transcripts.titleChanged(recording);
-            imports.execute(() -> publishConversations(ReflectCatalog.localConversations(recordingCatalog, conversationStore)));
+            refreshRecordings();
         });
         profiles = new SpeakerProfiles(this);
         SpeakerDirectory speakerDirectory = new SpeakerDirectory(getFilesDir(), transcriptStore, profiles);
@@ -87,7 +109,16 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
                 this::notice, this::playFrom, this::play, this::refreshRecordings, profiles, profilesUi);
         setContentView(view);
         fullscreen();
-        if (state != null) {
+        imports.execute(() -> {
+            try { CallRecordingService.recover(getApplicationContext()); }
+            catch (IOException | RuntimeException unavailable) {
+                runOnUiThread(() -> { if (!isDestroyed()) notice("Не удалось восстановить прерванную запись звонка"); });
+            }
+            if (!isDestroyed()) refreshRecordings();
+        });
+        if (state != null && !CallRecordingService.active()) {
+            callMode = state.getBoolean("callMode", false);
+            view.callMode(callMode);
             ReflectView.Screen tab = ReflectView.Screen.valueOf(state.getString("tab", HOME.name()));
             if (ReflectView.isTab(tab)) view.show(tab);
             String file = state.getString("transcriptAudio", state.getString("audio"));
@@ -116,6 +147,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         super.onSaveInstanceState(state);
         if (audio != null) state.putString("audio", audio.getAbsolutePath());
         state.putBoolean("ready", view.screen() == READY);
+        state.putBoolean("callMode", callMode);
         state.putString("tab", view.tab().name());
         if (view.screen() == SPEAKER_PROFILE) state.putString("speakerProfile", profilesUi.profileId());
         if (transcriptFromSpeaker && view.screen() == TRANSCRIPT) {
@@ -147,9 +179,48 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override public void toggleMenu() { view.show(view.screen() == MENU ? view.tab() : MENU); }
 
-    @Override public void openRecorder() { view.show(READY); }
+    @Override public void openRecorder() {
+        if (CallRecordingService.active()) {
+            callObserver.onState(CallRecordingService.state());
+            return;
+        }
+        callMode = false;
+        view.callMode(false);
+        view.show(READY);
+    }
+
+    @Override public void openCallRecorder() {
+        if (Build.VERSION.SDK_INT < 29) {
+            notice("Захват звука устройства доступен начиная с Android 10.");
+            return;
+        }
+        if (CallRecordingService.active()) {
+            callObserver.onState(CallRecordingService.state());
+            return;
+        }
+        callMode = true;
+        view.callMode(true);
+        view.show(READY);
+        ReflectActionSheet information = view.actionSheet(this, "Запись звонка");
+        var description = information.style.text(
+                "Запишем микрофон и доступный звук приложений. Android может запретить запись голоса собеседника "
+                + "в телефонном звонке или приложении конференции. Запись продолжится при сворачивании.",
+                15, ReflectPageStyle.MUTED, information.style.art.regular);
+        information.style.append(information.root, description, 0, 12);
+        information.option("Понятно", () -> {});
+        information.show();
+    }
+
+    @Override public void quickRecord() {
+        openRecorder();
+        startRecording();
+    }
 
     @Override public void startRecording() {
+        if (callMode) {
+            startCallCapture();
+            return;
+        }
         if (view.screen() == PAUSED) {
             try {
                 session.resume();
@@ -175,6 +246,44 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         }
     }
 
+    private void startCallCapture() {
+        if (CallRecordingService.active()) {
+            if (CallRecordingService.state().paused()) CallRecordingService.resume();
+            return;
+        }
+        if (projectionPending || view.screen() != READY || Build.VERSION.SDK_INT < 29) return;
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MICROPHONE_PERMISSION);
+            return;
+        }
+        try {
+            MediaProjectionManager manager = getSystemService(MediaProjectionManager.class);
+            Intent consent = Build.VERSION.SDK_INT >= 34
+                    ? manager.createScreenCaptureIntent(MediaProjectionConfig.createConfigForDefaultDisplay())
+                    : manager.createScreenCaptureIntent();
+            projectionPending = true;
+            startActivityForResult(consent, CALL_CAPTURE);
+        } catch (RuntimeException unavailable) {
+            projectionPending = false;
+            notice("Не удалось запросить захват звука устройства");
+        }
+    }
+
+    private void finishCallUi(File recording, String message) {
+        handler.removeCallbacks(heartbeat);
+        callMode = false;
+        view.callMode(false);
+        refreshRecordings();
+        if (recording != null && recording.isFile()) {
+            try { review(recording); }
+            catch (IOException | RuntimeException invalid) {
+                view.show(HOME);
+                notice("Запись сохранена в библиотеке, но её не удалось открыть");
+            }
+        } else if (view.screen() == RECORDING || view.screen() == PAUSED) view.show(READY);
+        if (message != null) notice(message);
+    }
+
     @Override public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(request, permissions, results);
         if (request == MICROPHONE_PERMISSION) {
@@ -185,6 +294,10 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override public void pauseRecording() {
         if (view.screen() != RECORDING) return;
+        if (callMode) {
+            CallRecordingService.pause();
+            return;
+        }
         try {
             session.pause();
             handler.removeCallbacks(heartbeat);
@@ -201,6 +314,10 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override public void finishRecording() {
         if (!hasRecordingDraft()) return;
+        if (callMode) {
+            CallRecordingService.finish();
+            return;
+        }
         if (recordingExit != null) recordingExit.dismiss();
         handler.removeCallbacks(heartbeat);
         File recorded = null;
@@ -215,6 +332,14 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     @Override public void closeRecorder() {
+        if (callMode && CallRecordingService.active()) {
+            ReflectActionSheet confirmation = view.actionSheet(this, "Завершить запись звонка?");
+            confirmation.option("Завершить и сохранить", CallRecordingService::finish);
+            confirmation.option("Продолжить запись", () -> {});
+            confirmation.option("Удалить", ReflectPageStyle.DANGER, CallRecordingService::cancel);
+            confirmation.show();
+            return;
+        }
         if (hasRecordingDraft()) {
             if (recordingExit != null) return;
             pauseRecording();
@@ -235,6 +360,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         cancelReviewWaveform();
         handler.removeCallbacks(heartbeat);
         session.cancel();
+        callMode = false;
+        view.callMode(false);
         stopPlayer();
         discardDraft();
         boolean processing = view.screen() == PROCESSING;
@@ -243,7 +370,10 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         transcriptFromSpeaker = false;
         if (returnProfile != null) profilesUi.openProfile(returnProfile);
         else view.show(processing ? HOME : view.tab());
-        if (processing || transcript) transcripts.close();
+        if (processing || transcript) {
+            transcripts.close();
+            refreshRecordings();
+        }
     }
 
     @Override public void attach() {
@@ -255,6 +385,14 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
+        if (request == CALL_CAPTURE) {
+            projectionPending = false;
+            if (result == RESULT_OK && data != null) {
+                try { CallRecordingService.start(this, result, data); }
+                catch (RuntimeException unavailable) { notice("Не удалось начать запись звонка"); }
+            } else notice("Захват звука устройства не разрешён");
+            return;
+        }
         if (transcripts.onActivityResult(request, result, data)) return;
         if (request != PICK_AUDIO || result != RESULT_OK || data == null || data.getData() == null) return;
         Uri uri = data.getData();
@@ -480,7 +618,6 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         File directory = new File(getFilesDir(), "recordings");
         imports.execute(() -> {
             var recordings = ReflectCatalog.localRecordings(directory, transcriptStore, profiles);
-            recordingCatalog = recordings;
             var conversations = ReflectCatalog.localConversations(recordings, conversationStore);
             runOnUiThread(() -> {
                 if (!isDestroyed()) view.setRecordings(recordings);
@@ -502,13 +639,26 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         catch (IOException | RuntimeException error) { notice("Не удалось открыть разговор"); }
     }
 
-    @Override public Future<?> searchConversations(List<ReflectCatalog.Conversation> conversations, String query,
-                                                  Consumer<List<ReflectCatalog.Conversation>> result) {
+    @Override public Future<?> searchConversationQuotes(List<ReflectCatalog.Conversation> conversations, String query,
+                                                       Consumer<List<ReflectCatalog.Quote>> result) {
         if (isDestroyed() || imports.isShutdown()) return CompletableFuture.completedFuture(null);
         return imports.submit(() -> {
-            var matches = ReflectCatalog.searchConversations(conversations, query, transcriptStore);
+            var matches = ReflectCatalog.searchConversationQuotes(conversations, query, transcriptStore);
             runOnUiThread(() -> { if (!isDestroyed()) result.accept(matches); });
         });
+    }
+
+    @Override public void openConversationQuote(ReflectCatalog.Quote quote) {
+        try {
+            openLocalDetail(quote.conversation().recording.file, quote.conversation().title, false, false);
+            seekPlaybackMillis(quote.startMs());
+        } catch (IOException | RuntimeException failure) {
+            notice("Не удалось открыть реплику");
+        }
+    }
+
+    @Override public void openRecordingTranscript() {
+        transcripts.openRecordingTranscript();
     }
 
     @Override public void closeTranscript() { closeRecorder(); }
@@ -600,13 +750,17 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override protected void onStop() {
         titles.foreground(false);
-        if (hasRecordingDraft()) finishRecording();
+        CallRecordingService.removeObserver(callObserver);
+        if (hasRecordingDraft() && !callMode) finishRecording();
         stopPlayer();
         super.onStop();
     }
 
     @Override protected void onResume() {
         super.onResume();
+        CallRecordingService.observe(callObserver);
+        var callResult = CallRecordingService.consumeResult();
+        if (callResult != null) finishCallUi(callResult.recording(), callResult.message());
         transcripts.resumeProcessing();
         titles.foreground(true);
         refreshRecordings();
@@ -621,6 +775,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override protected void onDestroy() {
         cancelReviewWaveform();
+        CallRecordingService.removeObserver(callObserver);
         session.cancel();
         if (isFinishing()) discardDraft();
         titles.destroy();

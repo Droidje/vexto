@@ -13,13 +13,23 @@ import java.util.function.Consumer;
 
 /** Main-thread observer of the process-wide transcription service. */
 final class ReflectLocalTranscription {
-    record Progress(Stage stage, int percent, int speakers) {
+    record Progress(Stage stage, int percent, int speakers, int overallPercent) {
+        Progress(Stage stage, int percent, int speakers) {
+            this(stage, percent, speakers, ReflectPipelineProgress.overall(stage, percent));
+        }
+
+        Progress advance(Stage next, int nextPercent) {
+            int overall = Math.max(overallPercent, ReflectPipelineProgress.overall(next, nextPercent));
+            return new Progress(next, nextPercent, speakers, overall);
+        }
+
+        Progress withSpeakers(int count) { return new Progress(stage, percent, count, overallPercent); }
         boolean cancellable() { return stage != null; }
         String title() { return cancellable() ? stage.getTitle() : "Сохраняю расшифровку"; }
     }
     record Result(File recording, ReflectTranscript transcript, String message) {}
 
-    static final Progress WAITING = new Progress(Stage.Preparing, 0, 0);
+    static final Progress WAITING = new Progress(Stage.Preparing, 0, 0, 0);
     private static final String TAG = "VextoTranscription";
     private static final String START_FAILED = "Не удалось запустить обработку. Откройте приложение и повторите попытку.";
     private static final Set<ReflectLocalTranscription> observers = new LinkedHashSet<>();
