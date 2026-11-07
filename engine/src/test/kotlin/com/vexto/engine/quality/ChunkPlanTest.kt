@@ -46,13 +46,14 @@ class ChunkPlanTest {
         for (kind in 0..4) {
             val directory = temporary.newFolder()
             val source = File(directory, "source.wav")
-            val samples = FloatArray(16_000 * 24 + 99) { i ->
+            val span = ChunkPlan.MaxSamples.toInt()
+            val samples = FloatArray(span * 2 + 99) { i ->
                 when (kind) {
                     0 -> .125f
                     1 -> 0f
-                    2 -> if (i % 160000 in 82000..85500) 0f else .125f
-                    3 -> if (i % 160000 > 120000) .0099f else .125f
-                    else -> if (i % 160000 > 120000) .0101f else .125f
+                    2 -> if (i % span in span * 82 / 160..span * 855 / 1600) 0f else .125f
+                    3 -> if (i % span > span * 3 / 4) .0099f else .125f
+                    else -> if (i % span > span * 3 / 4) .0101f else .125f
                 }
             }
             PcmWave.Writer(source).use { it.write(samples) }

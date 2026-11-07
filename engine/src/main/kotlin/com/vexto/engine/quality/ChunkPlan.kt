@@ -25,7 +25,8 @@ data class ChunkPlan(val sampleCount: Long, val chunks: List<AudioChunk>) {
         require(cursor == sampleCount)
     }
     companion object {
-        const val MaxSamples = 10 * 16000L
+        /** GigaAM accepts 30s. A 10s cut raised WER on the 30s Russian clips from 32.5% to 36.4%. */
+        const val MaxSamples = 30 * 16000L
         /** Quiet-boundary snapping, not speech removal: every input sample belongs to exactly one chunk. */
         suspend fun create(input: File, jobDir: File): ChunkPlan {
             val count = PcmWave.inspect(input).sampleCount
@@ -40,7 +41,7 @@ data class ChunkPlan(val sampleCount: Long, val chunks: List<AudioChunk>) {
                 currentCoroutineContext().ensureActive()
                 var to = minOf(from + MaxSamples, count)
                 if (to < count) {
-                    // Last quiet 200ms in the second half; bound model prompt and RAM to <=10s.
+                    // Last quiet 200ms in the second half. One chunk stays within 30s.
                     val windowStart = from + MaxSamples / 2
                     val window = PcmWave.readFloat(input, windowStart, (to - windowStart).toInt())
                     var at = to - 3200

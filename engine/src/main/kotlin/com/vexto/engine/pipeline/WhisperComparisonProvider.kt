@@ -1,5 +1,6 @@
 package com.vexto.engine.pipeline
 
+import com.vexto.engine.audio.PcmWave
 import com.vexto.engine.model.Word
 import com.vexto.engine.review.AsrSource
 import com.vexto.engine.review.AsrToken
@@ -41,8 +42,41 @@ class WhisperComparisonProvider(
     private val timeoutMs: Long = 600_000,
     private val audioContext: Int = 768,
 ) {
-    suspend fun generate(chunk: ComparisonChunk, artifactFile: File): ImmutableAsrCandidate =
-        generateMeasured(chunk, artifactFile).first
+    suspend fun generate(chunk: ComparisonChunk, artifactFile: File): ImmutableAsrCandidate {
+        val capacityMs = minOf(10_000L, audioContext * 20L)
+        if (chunk.durationMs <= capacityMs) return generateMeasured(chunk, artifactFile).first
+        return generateWindowed(chunk, artifactFile, capacityMs)
+    }
+
+    /** Whisper's encoder context stays at 10s. The exported transcript does not use this text. */
+    private suspend fun generateWindowed(chunk: ComparisonChunk, artifactFile: File, capacityMs: Long): ImmutableAsrCandidate {
+        val info = PcmWave.inspect(chunk.wav)
+        require(info.sampleRate == 16000 && info.sampleCount > 0)
+        val window = capacityMs * 16
+        val work = File(requireNotNull(artifactFile.parentFile), artifactFile.nameWithoutExtension + "-windows")
+        val texts = mutableListOf<String>()
+        val tokens = mutableListOf<AsrToken>()
+        val words = mutableListOf<Word>()
+        var from = 0L
+        var index = 0
+        while (from < info.sampleCount) {
+            var to = minOf(from + window, info.sampleCount)
+            if (info.sampleCount - to in 1..15) to = info.sampleCount
+            val wav = File(work, "w$index.wav")
+            wav.parentFile?.mkdirs()
+            PcmWave.crop(chunk.wav, wav, from, to)
+            val slice = ComparisonChunk("w$index", wav, sha256(wav.readBytes()), (to - from + 15) / 16)
+            val piece = generateMeasured(slice, File(work, "w$index.json")).first
+            val offset = from * 1000 / 16000
+            texts += piece.text
+            tokens += piece.tokens.map { it.copy(startMs = it.startMs?.plus(offset), endMs = it.endMs?.plus(offset)) }
+            words += piece.words.map { it.copy(startMs = it.startMs + offset, endMs = it.endMs + offset) }
+            from = to
+            index++
+        }
+        return ImmutableAsrCandidate.create(chunk.id, AsrSource.WHISPER, chunk.inputSha256,
+            texts.joinToString(""), tokens, words, artifactFile)
+    }
 
     suspend fun generateAll(chunks: List<ComparisonChunk>, workDir: File): List<WhisperComparisonAttempt> {
         require(chunks.map { it.id }.distinct().size == chunks.size) { "duplicate_chunk_id" }
