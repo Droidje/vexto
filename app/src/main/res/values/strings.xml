@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">vexto</string>
+    <string name="app_name" translatable="false">Vexto</string>
     <string name="welcome_title">Начните работу с %1$s</string>
     <string name="app_version_label">%1$s %2$s</string>
 </resources>
