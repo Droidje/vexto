@@ -29,7 +29,7 @@ class QualityModels(val dir: File, val manifest: QualityManifest, val verificati
 
 class OfflineModelPackException(message: String, cause: IOException? = null) : IOException(message, cause)
 
-/** Offline packs live in app-scoped storage. No multi-GB duplicate copy inside APK/filesDir. */
+/** Offline packs are resolved consistently in the application and each inference worker. */
 object QualityModelStore {
     private val verificationCache = ModelVerificationCache()
 
@@ -41,8 +41,11 @@ object QualityModelStore {
         return manifest to digest
     }
     fun manifest(context: Context): QualityManifest = readManifest(context).first
-    fun root(context: Context, manifest: QualityManifest): File = File(
-        context.getExternalFilesDir(null) ?: context.filesDir, "quality-models/${manifest.version}")
+    fun root(context: Context, manifest: QualityManifest): File {
+        val storage = if (BundledModelPack.installed(context)) context.noBackupFilesDir
+            else context.getExternalFilesDir(null) ?: context.filesDir
+        return File(storage, "quality-models/${manifest.version}")
+    }
 
     suspend fun prepare(context: Context, progress: (Float) -> Unit): QualityModels {
         val (manifest, manifestDigest) = readManifest(context)
@@ -54,6 +57,12 @@ object QualityModelStore {
         }
         val coroutine = currentCoroutineContext()
         coroutine.ensureActive()
+        if (BundledModelPack.installed(context)) {
+            val hit = BundledModelPack.prepare(
+                context, manifestDigest, entries.map { it.value }, files, verificationCache, progress,
+            )
+            return QualityModels(root, manifest, verificationReused = hit)
+        }
         val hit = try {
             verificationCache.verify(manifestDigest, files) {
                 entries.forEachIndexed { i, (id, artifact) ->

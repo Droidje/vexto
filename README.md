@@ -50,12 +50,12 @@ JSON и Markdown экспортируют **все** реплики, локал�
 
 [Android CI/CD](.github/workflows/ci.yml) проверяет PR и push в `dev` и `main`. В каждом прогоне запускаются Python-тесты, Android JVM-тесты, lint и проверочная сборка без нативного движка. Отчёты доступны в артефактах Actions. PR в `main` дополнительно собирает полноценный APK с нативным движком для ARM64 и x86_64 и проверяет его состав.
 
-После обновления `main` Actions подписывает APK постоянным ключом, проверяет подпись и публикует один и тот же файл двумя способами.
+После обновления `main` Actions подписывает проверенный APK и публикует его в GitHub Packages. Версии для установки с моделями выходят отдельными именованными релизами.
 
-- [Скачать vexto.apk](https://github.com/Droidje/vexto/releases/latest/download/vexto.apk) из GitHub Releases. Откройте скачанный файл на Android 9+ и при необходимости разрешите установку из этого источника. Нужен доступ к репозиторию GitHub.
-- [GitHub Packages](https://github.com/Droidje/vexto/pkgs/container/vexto-android) хранит APK и SHA-256 как OCI-образ `ghcr.io/droidje/vexto-android:<commit-sha>` и `:latest`. Для скачивания с компьютера используйте `docker pull`, `docker create <image> /unused` и `docker cp <container>:/vexto.apk .`.
+- [Релиз v0.5.0](https://github.com/Droidje/vexto/releases/tag/v0.5.0) содержит один подписанный комплект с приложением и всеми моделями. Установка одной командой описана в [инструкции](docs/base-version.md#установка).
+- [GitHub Packages](https://github.com/Droidje/vexto/pkgs/container/vexto-android) хранит проверочный APK из main по SHA и `nightly`, а полный комплект релиза — по тегам `v0.5.0` и `latest`. Для копирования файлов из образа используйте `docker pull`, `docker create <image> /unused` и `docker cp`.
 
-Веса (~3,34 ГБ) устанавливаются отдельно по [инструкции офлайн-версии](docs/base-version.md#установка). Публикация использует Actions secrets `VEXTO_ANDROID_KEYSTORE` (PKCS#12 в Base64, алиас `vexto`) и `VEXTO_ANDROID_KEYSTORE_PASSWORD`. Сохраняйте тот же ключ для обновлений поверх предыдущих CD-сборок. Старые debug-сборки подписаны другим ключом, поэтому Android не обновит их поверх существующей установки. Удаление debug-сборки удаляет и её локальные данные.
+Публикация использует Actions secrets `VEXTO_ANDROID_KEYSTORE` (PKCS#12 в Base64, алиас `vexto`) и `VEXTO_ANDROID_KEYSTORE_PASSWORD`. Для обновлений поверх предыдущих релизных сборок нужен тот же ключ. Старые debug-сборки подписаны другим ключом. Удаление debug-сборки удаляет её локальные данные.
 
 ## Проверки
 
