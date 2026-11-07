@@ -3,6 +3,9 @@ package com.vexto.engine
 import android.content.Context
 import android.net.Uri
 import com.vexto.engine.audio.AudioDecoder
+import com.vexto.engine.audio.PcmWave
+import java.io.File
+import kotlin.math.min
 import com.vexto.engine.model.ProcessingStats
 import com.vexto.engine.model.Stage
 import com.vexto.engine.model.Transcript
@@ -165,6 +168,30 @@ object ReflectEngine {
             listener.onError(error)
         }
     })
+
+    /** True while a transcription coroutine holds the single engine lock. */
+    @JvmStatic
+    fun transcriptionBusy(): Boolean = TranscriptionEngine.isTranscriptionPending
+
+    /** Duration of a decoded 16 kHz job WAV, which is the transcript time base. */
+    @JvmStatic
+    fun wavDurationMs(wav: File): Int {
+        val info = PcmWave.inspect(wav)
+        val duration = info.sampleCount * 1000 / info.sampleRate
+        require(duration <= Int.MAX_VALUE) { "Recording is too long" }
+        return duration.toInt()
+    }
+
+    /** Exact PCM crop. [endMs] is exclusive and clamped to the file. */
+    @JvmStatic
+    fun clipWav(source: File, startMs: Int, endMs: Int, dest: File) {
+        require(startMs >= 0 && endMs > startMs)
+        val info = PcmWave.inspect(source)
+        val from = startMs.toLong() * info.sampleRate / 1000
+        val to = min(info.sampleCount, endMs.toLong() * info.sampleRate / 1000)
+        require(to > from) { "Clip is empty" }
+        PcmWave.crop(source, dest, from, to)
+    }
 
     private fun listen(events: Flow<TranscriptionEvent>, listener: Listener): Task = Task(
         scope.launch {

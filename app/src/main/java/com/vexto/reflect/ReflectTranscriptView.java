@@ -22,8 +22,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
+import android.widget.HeaderViewListAdapter;
+import android.widget.ListAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -59,6 +62,7 @@ final class ReflectTranscriptView extends FrameLayout {
         void seekPlayback(float fraction);
         void seekPlaybackMillis(int millis);
         void openTranscriptLine(ReflectTranscript.Line line);
+        void recheckTranscriptLine(ReflectTranscript.Line line);
     }
 
     private final ReflectArtwork artwork;
@@ -93,6 +97,8 @@ final class ReflectTranscriptView extends FrameLayout {
     private ReflectSummaryPanel summaryPanel;
     private ReflectSummaryIcon summaryIcon;
     private View scrollContent, toolsGlass;
+    private final TranscriptRecheckOffer recheckOffer = new TranscriptRecheckOffer();
+    private ReflectTranscript.Line recheckLine;
 
     ReflectTranscriptView(Context context, ReflectArtwork artwork, ReflectPreferences preferences, Actions actions) {
         super(context);
@@ -179,7 +185,19 @@ final class ReflectTranscriptView extends FrameLayout {
         refreshStyle();
     }
 
+    void rechecking(ReflectTranscript.Line line) {
+        recheckLine = line;
+        if (line == null) LineShimmer.stopAll();
+        if (list == null) return;
+        ListAdapter adapter = list.getAdapter();
+        if (adapter instanceof HeaderViewListAdapter header) adapter = header.getWrappedAdapter();
+        if (adapter instanceof BaseAdapter base) base.notifyDataSetChanged();
+    }
+
     void clear() {
+        recheckLine = null;
+        LineShimmer.stopAll();
+        recheckOffer.hide();
         lines = Collections.emptyList();
         corrections = Collections.emptyMap();
         timeline = new ReflectPlaybackTimeline(lines);
@@ -299,6 +317,13 @@ final class ReflectTranscriptView extends FrameLayout {
             }
         }
         list.setAdapter(new LineAdapter());
+        list.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override public void onScrollStateChanged(AbsListView view, int scrollState) {
+                if (scrollState != SCROLL_STATE_IDLE) recheckOffer.hide();
+            }
+
+            @Override public void onScroll(AbsListView view, int first, int visible, int total) {}
+        });
         content.addView(list, new LinearLayout.LayoutParams(MATCH_PARENT, 0, 1));
         addView(content, scroll);
         scrollContent = content;
@@ -341,6 +366,9 @@ final class ReflectTranscriptView extends FrameLayout {
         place(summaryIcon, 16, 28, 48, 48, true);
         icon("transcript_style", "Настройки чтения", 64, 28, 48, 48, true, actions::openTranscriptStyle);
         icon("trash", "Удалить разговор", 112, 28, 48, 48, true, actions::requestDeleteConversation);
+        if (!recordingDetails) {
+            recheckOffer.install(this, style, artwork, actions::recheckTranscriptLine, actions::openTranscriptLine);
+        }
     }
 
     private void updateEmotionStatus() {
@@ -617,6 +645,7 @@ final class ReflectTranscriptView extends FrameLayout {
         private final AvatarView avatar = new AvatarView();
         private final TextView metadata;
         private final TextView body;
+        private ReflectTranscript.Line shown;
         private float emphasis = 1f;
 
         TranscriptRow() {
@@ -638,6 +667,7 @@ final class ReflectTranscriptView extends FrameLayout {
         }
 
         void bind(ReflectTranscript.Line line, int position) {
+            shown = line;
             avatar.show(line.emotionProbabilities == null ? null : line.emotionProbabilities.strongest());
             SpannableStringBuilder label = new SpannableStringBuilder(
                     speakerNames.getOrDefault(line.speakerId, line.speakerId));
@@ -654,14 +684,19 @@ final class ReflectTranscriptView extends FrameLayout {
                 if (playing) actions.seekPlaybackMillis(line.startMs);
             });
             highlight(position, false);
-            setOnLongClickListener(v -> { actions.openTranscriptLine(line); return true; });
+            if (sameLine(recheckLine, line)) LineShimmer.start(body, preferences.motionEnabled());
+            else LineShimmer.stop(body);
+            setOnLongClickListener(v -> {
+                recheckOffer.show(TranscriptRow.this, line);
+                return true;
+            });
         }
 
         void highlight(int position, boolean animate) {
             setClickable(playing);
             boolean active = playing && position == activeLine;
             float opacity = playing && !active ? .52f : 1f;
-            body.setTextColor(active ? Color.WHITE : 0xffcccccc);
+            if (!sameLine(recheckLine, shown)) body.setTextColor(active ? Color.WHITE : 0xffcccccc);
             if (animate && emphasis == opacity) return;
             emphasis = opacity;
             animate().cancel();
@@ -671,6 +706,11 @@ final class ReflectTranscriptView extends FrameLayout {
                 setAlpha(opacity);
             }
         }
+    }
+
+    private static boolean sameLine(ReflectTranscript.Line first, ReflectTranscript.Line second) {
+        return first != null && second != null && first.startMs == second.startMs && first.endMs == second.endMs
+                && first.speakerId.equals(second.speakerId) && first.text.equals(second.text);
     }
 
     private static String clock(int millis) {
