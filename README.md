@@ -106,6 +106,8 @@ bash gradlew -PvextoSkipNative=true :engine:testDebugUnitTest :app:testDebugUnit
 
 ## Исследование локальных моделей
 
+[Пять русских WAV с эталонными текстами](testdata/audio/ru/fleurs/README.md) уже включены в Git: Google FLEURS, 94,8 с, около3МБ, CC BY 4.0. Подходят для ASR; эталонной разметки смены спикеров в этом наборе нет.
+
 [Свежие сквозные прогоны APK](docs/research/audio-pipeline-refinement.md): работа всей связки офлайн на Android4ГБ, сохранность обоих ASR, проверяемый выбор Qwen, ресурсы и строгий JSON по ТЗ. Здесь отдельно приведены фактические замеры APK и ограничения проверки точности.
 
 Текущий выбранный профиль качества: **Nemotron 3 Diarization F32-linear + GigaAM v3 e2e RNNT + независимый Whisper Large v3 Q5_0 + Qwen3 1.7B с выбором дословных кандидатов по ID**. Семь этапов сквозного WAV-прогона выполнены на Android: для записи 21.012 с полное время составило 140.092 с, наблюдаемый пик — 1 830 166 528 байт, с резервом 128 MiB — 1 964 384 256 байт при бюджете 2 000 000 000. Android OS в этот бюджет не входит; sampling не является жёстким memory cap.
