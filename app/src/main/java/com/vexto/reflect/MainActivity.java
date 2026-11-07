@@ -42,7 +42,6 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private ReflectTranscriptStore transcriptStore;
     private ReflectConversationStore conversationStore;
     private ReflectConversationTitles titles;
-    private List<ReflectCatalog.Recording> recordingCatalog = List.of(); // Only accessed on imports.
     private ReflectTranscriptController transcripts;
     private SpeakerProfiles profiles;
     private SpeakerProfilesUi profilesUi;
@@ -74,7 +73,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         conversationStore = new ReflectConversationStore(this);
         titles = new ReflectConversationTitles(this, conversationStore, transcriptStore, imports, recording -> {
             transcripts.titleChanged(recording);
-            imports.execute(() -> publishConversations(ReflectCatalog.localConversations(recordingCatalog, conversationStore)));
+            refreshRecordings();
         });
         profiles = new SpeakerProfiles(this);
         SpeakerDirectory speakerDirectory = new SpeakerDirectory(getFilesDir(), transcriptStore, profiles);
@@ -148,6 +147,11 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override public void toggleMenu() { view.show(view.screen() == MENU ? view.tab() : MENU); }
 
     @Override public void openRecorder() { view.show(READY); }
+
+    @Override public void quickRecord() {
+        openRecorder();
+        startRecording();
+    }
 
     @Override public void startRecording() {
         if (view.screen() == PAUSED) {
@@ -243,7 +247,10 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         transcriptFromSpeaker = false;
         if (returnProfile != null) profilesUi.openProfile(returnProfile);
         else view.show(processing ? HOME : view.tab());
-        if (processing || transcript) transcripts.close();
+        if (processing || transcript) {
+            transcripts.close();
+            refreshRecordings();
+        }
     }
 
     @Override public void attach() {
@@ -480,7 +487,6 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         File directory = new File(getFilesDir(), "recordings");
         imports.execute(() -> {
             var recordings = ReflectCatalog.localRecordings(directory, transcriptStore, profiles);
-            recordingCatalog = recordings;
             var conversations = ReflectCatalog.localConversations(recordings, conversationStore);
             runOnUiThread(() -> {
                 if (!isDestroyed()) view.setRecordings(recordings);
@@ -502,13 +508,26 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         catch (IOException | RuntimeException error) { notice("Не удалось открыть разговор"); }
     }
 
-    @Override public Future<?> searchConversations(List<ReflectCatalog.Conversation> conversations, String query,
-                                                  Consumer<List<ReflectCatalog.Conversation>> result) {
+    @Override public Future<?> searchConversationQuotes(List<ReflectCatalog.Conversation> conversations, String query,
+                                                       Consumer<List<ReflectCatalog.Quote>> result) {
         if (isDestroyed() || imports.isShutdown()) return CompletableFuture.completedFuture(null);
         return imports.submit(() -> {
-            var matches = ReflectCatalog.searchConversations(conversations, query, transcriptStore);
+            var matches = ReflectCatalog.searchConversationQuotes(conversations, query, transcriptStore);
             runOnUiThread(() -> { if (!isDestroyed()) result.accept(matches); });
         });
+    }
+
+    @Override public void openConversationQuote(ReflectCatalog.Quote quote) {
+        try {
+            openLocalDetail(quote.conversation().recording.file, quote.conversation().title, false, false);
+            seekPlaybackMillis(quote.startMs());
+        } catch (IOException | RuntimeException failure) {
+            notice("Не удалось открыть реплику");
+        }
+    }
+
+    @Override public void openRecordingTranscript() {
+        transcripts.openRecordingTranscript();
     }
 
     @Override public void closeTranscript() { closeRecorder(); }

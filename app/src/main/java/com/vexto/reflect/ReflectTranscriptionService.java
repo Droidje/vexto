@@ -135,7 +135,7 @@ public final class ReflectTranscriptionService extends Service {
                 int percent = Math.round(fraction * 100);
                 var previous = started.progress;
                 if (stage == previous.stage() && percent == previous.percent()) return;
-                started.progress = new ReflectLocalTranscription.Progress(stage, percent, previous.speakers());
+                started.progress = previous.advance(stage, percent);
                 changed(started);
             }
 
@@ -144,7 +144,7 @@ public final class ReflectTranscriptionService extends Service {
                 int speakers = transcript.getSpeakers().size();
                 var previous = started.progress;
                 if (speakers == 0 || speakers == previous.speakers()) return;
-                started.progress = new ReflectLocalTranscription.Progress(previous.stage(), previous.percent(), speakers);
+                started.progress = previous.withSpeakers(speakers);
                 changed(started);
             }
 
@@ -289,7 +289,7 @@ public final class ReflectTranscriptionService extends Service {
                 .setOngoing(true)
                 .setVisibility(Notification.VISIBILITY_PRIVATE)
                 .setContentIntent(open)
-                .setProgress(100, current.percent(), current.percent() == 0 || !current.cancellable());
+                .setProgress(100, current.overallPercent(), current.overallPercent() == 0 || !current.cancellable());
         if (Build.VERSION.SDK_INT >= 31) builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
         if (request != null && current.cancellable()) {
             Intent cancel = new Intent(this, ReflectTranscriptionService.class).setAction(ACTION_CANCEL)

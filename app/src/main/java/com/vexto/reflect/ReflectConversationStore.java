@@ -89,6 +89,14 @@ final class ReflectConversationStore extends SQLiteOpenHelper {
         return update(recording, title, AUTOMATIC, "title_state = ?", PENDING);
     }
 
+    /** Explicit navigation from a retained recording can restore its archived conversation. */
+    boolean restore(File recording) {
+        ContentValues values = new ContentValues(1);
+        values.put("title_state", AUTOMATIC);
+        return getWritableDatabase().update("conversations", values, "recording = ? AND title_state = ?",
+                new String[]{recording.getName(), Integer.toString(DELETED)}) == 1;
+    }
+
     boolean delete(File recording) {
         return update(recording, null, DELETED, "title_state != ?", DELETED);
     }

@@ -35,6 +35,7 @@ final class ReflectView extends ViewGroup {
         void toggleMenu();
         void attach();
         void openRecorder();
+        void quickRecord();
         void startRecording();
         void pauseRecording();
         void finishRecording();
@@ -427,7 +428,12 @@ final class ReflectView extends ViewGroup {
                 outside.setOnClickListener(view -> actions.toggleMenu());
                 place(outside, 0, 0, WIDTH, HEIGHT);
             }
-            control(screen == Screen.MENU ? "Закрыть меню" : "Добавить", 318, 765, 59, 59, actions::toggleMenu);
+            View add = control(screen == Screen.MENU ? "Закрыть меню" : "Добавить", 318, 765, 59, 59,
+                    actions::toggleMenu);
+            if (screen == Screen.HOME) add.setOnLongClickListener(view -> {
+                actions.quickRecord();
+                return true;
+            });
             tabControl(Screen.HOME, () -> show(Screen.HOME));
             tabControl(Screen.RECORDS, () -> show(Screen.RECORDS));
             tabControl(Screen.SPEAKERS, () -> {

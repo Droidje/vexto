@@ -39,8 +39,9 @@ final class ReflectLibraryView extends ViewGroup {
     interface Actions {
         void openRecording(ReflectCatalog.Recording recording);
         void openConversation(ReflectCatalog.Conversation conversation);
-        Future<?> searchConversations(List<ReflectCatalog.Conversation> conversations, String query,
-                                      Consumer<List<ReflectCatalog.Conversation>> result);
+        Future<?> searchConversationQuotes(List<ReflectCatalog.Conversation> conversations, String query,
+                                          Consumer<List<ReflectCatalog.Quote>> result);
+        void openConversationQuote(ReflectCatalog.Quote quote);
         void addSpeaker();
         void openSpeaker(ReflectCatalog.Speaker speaker);
     }
@@ -63,6 +64,7 @@ final class ReflectLibraryView extends ViewGroup {
     private Future<?> conversationSearch;
     private Runnable pendingSearch;
     private int searchGeneration;
+    private boolean searchInside;
     private float scale = 1;
     private int measuredWidth = -1;
 
@@ -122,7 +124,10 @@ final class ReflectLibraryView extends ViewGroup {
         });
         search.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { renderRows(true); }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                searchInside = false;
+                renderRows(true);
+            }
             @Override public void afterTextChanged(Editable s) {}
         });
         return search;
@@ -173,6 +178,7 @@ final class ReflectLibraryView extends ViewGroup {
     void setConversations(List<ReflectCatalog.Conversation> conversations) {
         this.conversations = conversations;
         renderRows(false);
+        scroller.invalidateViews();
     }
 
     void updateProgress(File recording, ReflectLocalTranscription.Progress progress) {
@@ -241,16 +247,25 @@ final class ReflectLibraryView extends ViewGroup {
         int request = ++searchGeneration;
         if (pendingSearch != null) removeCallbacks(pendingSearch);
         if (conversationSearch != null) conversationSearch.cancel(true);
-        if (query.trim().isEmpty() || conversations.isEmpty()) {
+        if (query.trim().isEmpty()) {
             adapter.rows.addAll(conversations);
             return;
         }
-        adapter.rows.add(new TextRow("Ищем по разговорам…", false));
-        pendingSearch = () -> conversationSearch = actions.searchConversations(conversations, query, results -> {
+        if (!searchInside) {
+            adapter.rows.addAll(ReflectCatalog.searchConversations(conversations, query));
+            if (adapter.rows.isEmpty()) {
+                adapter.rows.add(new TextRow("Ничего не найдено", false));
+                adapter.rows.add(new SearchInside());
+            }
+            return;
+        }
+        adapter.rows.add(new TextRow("Ищем в разговорах…", false));
+        pendingSearch = () -> conversationSearch = actions.searchConversationQuotes(conversations, query, results -> {
             if (request != searchGeneration) return;
             adapter.rows.clear();
             adapter.rows.addAll(results);
-            if (results.isEmpty()) adapter.rows.add(new TextRow("Ничего не найдено", false));
+            if (results.size() == 100) adapter.rows.add(new TextRow("Первые 100 совпадений. Уточните запрос.", false));
+            if (results.isEmpty()) adapter.rows.add(new TextRow("В тексте разговоров совпадений нет", false));
             adapter.notifyDataSetChanged();
             scroller.animate().cancel();
             scroller.setAlpha(1f);
@@ -261,6 +276,8 @@ final class ReflectLibraryView extends ViewGroup {
         });
         postDelayed(pendingSearch, 180);
     }
+
+    private static final class SearchInside {}
 
     private void collectRecordings(String query) {
         String section = null;
@@ -295,7 +312,8 @@ final class ReflectLibraryView extends ViewGroup {
         @Override public boolean isEnabled(int position) {
             Object item = getItem(position);
             return item instanceof ReflectCatalog.Recording || item instanceof ReflectCatalog.Conversation
-                    || item instanceof ReflectCatalog.Speaker;
+                    || item instanceof ReflectCatalog.Speaker || item instanceof ReflectCatalog.Quote
+                    || item instanceof SearchInside;
         }
 
         @Override public View getView(int position, View recycled, ViewGroup parent) {
@@ -314,6 +332,19 @@ final class ReflectLibraryView extends ViewGroup {
                 return row.conversation(artwork, conversation, progress(conversation.recording.file), () -> {
                     dismissKeyboard();
                     actions.openConversation(conversation);
+                });
+            }
+            if (item instanceof ReflectCatalog.Quote quote) {
+                return row.quote(artwork, quote, () -> {
+                    dismissKeyboard();
+                    actions.openConversationQuote(quote);
+                });
+            }
+            if (item instanceof SearchInside) {
+                return row.action(artwork, "Искать в разговорах", () -> {
+                    dismissKeyboard();
+                    searchInside = true;
+                    renderRows(true);
                 });
             }
             TextRow label = (TextRow) item;
