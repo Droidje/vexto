@@ -21,6 +21,12 @@ final class SpeakerIdentityMatcher {
     /** The caller supplies the transaction so the prototype set is frozen for the recording. */
     static Map<String, String> match(SQLiteDatabase db, String recording, String revision,
                                      Set<String> unlinkedLocalIds, Set<String> usedProfileIds) {
+        return match(db, recording, revision, unlinkedLocalIds, usedProfileIds, Set.of());
+    }
+
+    static Map<String, String> match(SQLiteDatabase db, String recording, String revision,
+                                     Set<String> unlinkedLocalIds, Set<String> usedProfileIds,
+                                     Set<String> excludedProfileIds) {
         if (unlinkedLocalIds.isEmpty()) return Map.of();
         Map<String, float[]> targets = new LinkedHashMap<>();
         try (Cursor rows = db.rawQuery("SELECT local_id, dimension, vector FROM embeddings "
@@ -35,6 +41,7 @@ final class SpeakerIdentityMatcher {
         for (float[] target : targets.values()) {
             prototypes.computeIfAbsent(target.length, dimension -> loadPrototypes(db, recording, dimension));
         }
+        for (var gallery : prototypes.values()) gallery.keySet().removeAll(excludedProfileIds);
         return matchSignatures(targets, prototypes, usedProfileIds);
     }
 
