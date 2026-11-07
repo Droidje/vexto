@@ -6,6 +6,7 @@ import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
+import android.graphics.Path;
 import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.Typeface;
@@ -35,6 +36,8 @@ import java.util.Map;
 
 /** Native conversation detail with a virtualized, scrollable transcript. */
 final class ReflectTranscriptView extends FrameLayout {
+    private static final Avatar PENDING = new Avatar("transcript_avatar_pending", "Эмоция не определена");
+    private static final Path PENDING_CLIP = pendingClip();
     private static final Avatar NEUTRAL = new Avatar("transcript_avatar_neutral", "Оценка эмоции: нейтральная");
     private static final Avatar JOY = new Avatar("transcript_avatar_joy", "Оценка эмоции: радость");
     private static final Avatar SADNESS = new Avatar("transcript_avatar_sadness", "Оценка эмоции: грусть");
@@ -336,6 +339,12 @@ final class ReflectTranscriptView extends FrameLayout {
 
     private record Avatar(String asset, String description) {}
 
+    private static Path pendingClip() {
+        Path clip = new Path();
+        clip.addCircle(100, 100, 100, Path.Direction.CW);
+        return clip;
+    }
+
     private final class AvatarView extends View {
         private Avatar avatar;
 
@@ -345,13 +354,13 @@ final class ReflectTranscriptView extends FrameLayout {
         }
 
         void show(Emotion emotion) {
-            Avatar value = switch (emotion == null ? Emotion.Neutral : emotion) {
+            Avatar value = emotion == null ? PENDING : switch (emotion) {
                 case Neutral -> NEUTRAL;
                 case Joy -> JOY;
                 case Sadness -> SADNESS;
                 case Anger -> ANGER;
             };
-            setContentDescription(emotion == null ? "Эмоция не определена" : value.description());
+            setContentDescription(value.description());
             if (avatar == value) return;
             avatar = value;
             invalidate();
@@ -359,7 +368,16 @@ final class ReflectTranscriptView extends FrameLayout {
 
         @Override protected void onDraw(Canvas canvas) {
             if (avatar == null) return;
-            if (avatar == JOY) {
+            if (avatar == PENDING) {
+                int saved = canvas.save();
+                canvas.scale(getWidth() / 200f, getHeight() / 200f);
+                canvas.clipPath(PENDING_CLIP);
+                artwork.imagePixels(canvas, avatar.asset(), 0, 0, 200, 200);
+                // Figma overlay exports include the stroke beyond the vector layer bounds.
+                artwork.icon(canvas, "transcript_avatar_pending_upper", -3, -21);
+                artwork.icon(canvas, "transcript_avatar_pending_center", 76.095f, 66);
+                canvas.restoreToCount(saved);
+            } else if (avatar == JOY) {
                 // The original 254×254 Figma PNG has a 201×201 visible disk starting at (26, 26).
                 int saved = canvas.save();
                 canvas.clipRect(0, 0, getWidth(), getHeight());

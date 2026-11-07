@@ -23,10 +23,20 @@ class QualityArtifactsTest {
         plan.validate()
         assertEquals(samples.size.toLong(), plan.sampleCount)
         assertTrue(plan.chunks.size >= 3)
+        val waves = ChunkWaveMaterializer(root, plan, source) { fail(it) }
+        assertTrue(plan.chunks.none { JobFiles.inside(root, it.wav).exists() })
         val joined = plan.chunks.flatMap { chunk ->
             val wav = JobFiles.inside(root, chunk.wav)
-            assertEquals(chunk.inputSha256, JobFiles.sha256(wav))
-            wav.readBytes().drop(44)
+            val pcm = waves.withChunk(chunk) { current ->
+                assertEquals(wav, current.wav)
+                assertTrue(current.wav.isFile)
+                assertEquals(chunk.inputSha256, current.inputSha256)
+                assertEquals(chunk.inputSha256, JobFiles.sha256(current.wav))
+                assertEquals(chunk.durationMs, current.durationMs)
+                current.wav.readBytes().drop(44)
+            }
+            assertFalse(wav.exists())
+            pcm
         }.toByteArray()
         assertArrayEquals(original.copyOfRange(44, original.size), joined)
         assertArrayEquals(original, source.readBytes())

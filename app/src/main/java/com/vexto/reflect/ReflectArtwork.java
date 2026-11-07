@@ -30,6 +30,7 @@ final class ReflectArtwork {
     final Typeface semibold;
     final Typeface latinSemibold;
     final Typeface duration;
+    final Typeface durationBadge;
 
     private final AssetManager assets;
     private final Map<String, Source> sources = new HashMap<>();
@@ -52,6 +53,7 @@ final class ReflectArtwork {
         semibold = cyrillicFallback(assets, 600);
         latinSemibold = dmSans(assets, 600);
         duration = dmSans(assets, 400);
+        durationBadge = dmSans(assets, 500);
         try {
             for (String file : assets.list("reflect")) {
                 int dot = file.lastIndexOf('.');

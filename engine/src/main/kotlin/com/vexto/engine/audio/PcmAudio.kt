@@ -8,6 +8,7 @@ import java.io.FileOutputStream
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
@@ -68,6 +69,20 @@ class PcmAudio internal constructor(
             val t = (pos - k).toFloat().coerceIn(0f, 1f)
             val g = curve[k] + (curve[next] - curve[k]) * t
             samples[i] = (samples[i] * g).coerceIn(-1f, 1f)
+        }
+    }
+
+    /** RMS envelope for the 32 playback bars; the quietest sections retain the dot baseline. */
+    internal fun previewWaveform(): IntArray {
+        if (frameEnergy.isEmpty()) return intArrayOf()
+        val bins = FloatArray(32)
+        frameEnergy.forEachIndexed { i, energy ->
+            val bin = i * bins.size / frameEnergy.size
+            bins[bin] = maxOf(bins[bin], energy)
+        }
+        val max = bins.max()
+        return IntArray(bins.size) { i ->
+            if (max > 0f) 2 + (20 * sqrt(bins[i] / max)).roundToInt() else 2
         }
     }
 

@@ -56,24 +56,27 @@ final class ReflectLibraryRow extends View {
     }
 
     ReflectLibraryRow recording(ReflectArtwork art, ReflectCatalog.Recording item, Runnable open) {
-        boolean hasSpeakers = !item.portraits.isEmpty();
+        String participants = String.join(", ", item.participants);
+        boolean hasSpeakers = !participants.isEmpty();
+        boolean hasTranscript = item.hasTranscript();
+        String status = hasTranscript ? "Есть текст" : "Сохранено";
         String timeAndLength = item.time + " · " + item.length;
-        return bind(hasSpeakers ? 109 : 88,
-                item.title + ", " + item.time + ", " + item.length + ", " + item.status, false, open, (canvas, paint) -> {
-            recordingCover(canvas, art, item.waveCover);
-            boolean arrow = !item.complete;
-            String status = item.status;
-            textRight(canvas, paint, status, arrow ? 361 : 377, 29, 17,
-                    item.complete ? 0xff34c759 : MUTED, art.regular, -.43f);
-            float available = (arrow ? 361 : 377) - 74 - 10 - paint.measureText(status);
+        String label = item.title + ", " + item.time + ", " + item.length + ", " + status;
+        if (hasSpeakers) label += ", участники: " + participants;
+        return bind(hasSpeakers ? 109 : 88, label, false, open, (canvas, paint) -> {
+            recordingCover(canvas, art);
+            float statusRight = hasTranscript ? 377 : 361;
+            textRight(canvas, paint, status, statusRight, 29, 17,
+                    hasTranscript ? 0xff34c759 : MUTED, art.regular, -.43f);
+            float available = statusRight - 74 - 10 - paint.measureText(status);
             rowTitle(canvas, paint, art, item.title, available);
             text(canvas, paint, timeAndLength, 74, 51, 16, MUTED, art.regular, -.23f);
-            if (arrow) chevron(canvas, paint, 373, 23);
+            if (!hasTranscript) chevron(canvas, paint, 373, 23);
             if (hasSpeakers) {
-                text(canvas, paint, "Участники:", 74, 83, 16, MUTED, art.regular, -.23f);
-                for (int i = 0; i < item.portraits.size(); i++) {
-                    art.image(canvas, item.portraits.get(i), 167 + 24 * i, 62, 32, 32);
-                }
+                String names = "Участники: " + participants;
+                style(paint, 16, MUTED, art.regular, -.23f);
+                CharSequence fitted = TextUtils.ellipsize(names, paint, 303, TextUtils.TruncateAt.END);
+                text(canvas, paint, fitted.toString(), 74, 83, 16, MUTED, art.regular, -.23f);
             }
             separator(canvas, paint, hasSpeakers ? 106 : 85);
         });
@@ -99,7 +102,7 @@ final class ReflectLibraryRow extends View {
                 if (open != null) chevron(canvas, paint, 373, 33);
                 return;
             }
-            style(paint, 14, 0xffae86e8, art.medium, -.42f);
+            style(paint, 14, 0xffae86e8, art.durationBadge, -.42f);
             float badgeWidth = paint.measureText(item.duration) + 16;
             style(paint, 18, Color.WHITE, nameFont, -.306f);
             float nameWidth = (open == null ? 377 : 354) - 104 - badgeWidth;
@@ -108,7 +111,7 @@ final class ReflectLibraryRow extends View {
             text(canvas, paint, name, 92, 38.5f, 18, Color.WHITE, nameFont, -.306f);
             paint.setColor(0xff220053);
             canvas.drawRoundRect(badgeX, 19, badgeX + badgeWidth, 45, 10, 10, paint);
-            text(canvas, paint, item.duration, badgeX + 8, 37, 14, 0xffae86e8, art.medium, -.42f);
+            text(canvas, paint, item.duration, badgeX + 8, 37, 14, 0xffae86e8, art.durationBadge, -.42f);
             if (open != null) chevron(canvas, paint, 373, 33);
         });
     }
@@ -116,8 +119,7 @@ final class ReflectLibraryRow extends View {
     ReflectLibraryRow conversation(ReflectArtwork art, ReflectCatalog.Conversation item, Runnable open) {
         return bind(91,
                 item.title + ", " + item.time + ", " + item.preview, false, open, (canvas, paint) -> {
-            if (item.recording != null) recordingCover(canvas, art, item.recording.waveCover);
-            else conversationCover(canvas, art, item.roomCover);
+            recordingCover(canvas, art);
             textRight(canvas, paint, item.time, 361, 29, 17, MUTED, art.duration, -.43f);
             float available = 279 - paint.measureText(item.time);
             rowTitle(canvas, paint, art, item.title, available);
@@ -152,26 +154,11 @@ final class ReflectLibraryRow extends View {
         canvas.drawText(fitted, 0, fitted.length(), 74, 29, paint);
     }
 
-    private static void conversationCover(Canvas canvas, ReflectArtwork art, boolean room) {
+    private static void recordingCover(Canvas canvas, ReflectArtwork art) {
         canvas.save();
         canvas.clipPath(COVER_CLIP);
-        if (room) {
-            art.image(canvas, "conversation_room", -29, -203, 261, 564);
-        } else {
-            canvas.scale(-1, 1, 39.5f, 43.5f);
-            art.image(canvas, "conversation_sprint", 14, 11, 51, 65);
-        }
-        canvas.restore();
-    }
-
-    private static void recordingCover(Canvas canvas, ReflectArtwork art, boolean wave) {
-        canvas.save();
-        canvas.clipPath(COVER_CLIP);
-        canvas.save();
         canvas.scale(1, -1, 39.5f, 44);
         art.image(canvas, "record_prism", 9, -17, 61, 122);
-        canvas.restore();
-        if (wave) art.image(canvas, "record_wave", 9, -1, 60, 90);
         canvas.restore();
     }
 

@@ -49,7 +49,6 @@ final class ReflectLibraryView extends ViewGroup {
     private List<ReflectCatalog.Conversation> conversations = Collections.emptyList();
     private float scale = 1;
     private int measuredWidth = -1;
-    private boolean managingSpeakers;
 
     ReflectLibraryView(Context context, ReflectArtwork artwork, Page page, Actions actions) {
         super(context);
@@ -91,7 +90,7 @@ final class ReflectLibraryView extends ViewGroup {
         search.setTypeface(artwork.regular);
         search.setTextColor(Color.WHITE);
         search.setHintTextColor(0xff808080);
-        search.setHint(page == Page.RECORDS ? "Поиск по участникам, тегам" : "Поиск по имени, id");
+        search.setHint(page == Page.RECORDS ? "Поиск по записи, участникам" : "Поиск по имени, id");
         search.setOnEditorActionListener((field, action, event) -> {
             if (action != EditorInfo.IME_ACTION_SEARCH) return false;
             dismissKeyboard();
@@ -130,11 +129,6 @@ final class ReflectLibraryView extends ViewGroup {
         updateContent();
     }
 
-    void manageSpeakers(boolean enabled) {
-        managingSpeakers = enabled;
-        updateContent();
-    }
-
     void setConversations(List<ReflectCatalog.Conversation> conversations) {
         this.conversations = conversations;
         renderRows(false);
@@ -148,7 +142,6 @@ final class ReflectLibraryView extends ViewGroup {
         boolean empty = emptySpeakers();
         if (search != null) search.setVisibility(empty ? GONE : VISIBLE);
         scroller.setVisibility(empty ? GONE : VISIBLE);
-        if (addSpeaker != null) addSpeaker.setVisibility(managingSpeakers ? VISIBLE : GONE);
         renderRows(false);
         invalidate();
     }
@@ -215,7 +208,7 @@ final class ReflectLibraryView extends ViewGroup {
         @Override public boolean isEnabled(int position) {
             Object item = getItem(position);
             return item instanceof ReflectCatalog.Recording || item instanceof ReflectCatalog.Conversation
-                    || (managingSpeakers && item instanceof ReflectCatalog.Speaker);
+                    || item instanceof ReflectCatalog.Speaker;
         }
 
         @Override public View getView(int position, View recycled, ViewGroup parent) {
@@ -228,7 +221,7 @@ final class ReflectLibraryView extends ViewGroup {
                 });
             }
             if (item instanceof ReflectCatalog.Speaker speaker) {
-                return row.speaker(artwork, speaker, managingSpeakers ? () -> actions.openSpeaker(speaker) : null);
+                return row.speaker(artwork, speaker, () -> actions.openSpeaker(speaker));
             }
             if (item instanceof ReflectCatalog.Conversation conversation) {
                 return row.conversation(artwork, conversation, () -> actions.openConversation(conversation));
@@ -252,15 +245,15 @@ final class ReflectLibraryView extends ViewGroup {
         }
         if (search != null && search.getVisibility() != GONE) search.measure(exact(px(361)), exact(px(48)));
         if (scroller.getVisibility() != GONE) scroller.measure(exact(width),
-                exact(Math.max(0, height - px(scrollTop() + (managingSpeakers ? 72 : 0)))));
-        if (addSpeaker != null && managingSpeakers) addSpeaker.measure(exact(px(195)), exact(px(48)));
+                exact(Math.max(0, height - px(scrollTop() + (addSpeaker != null ? 72 : 0)))));
+        if (addSpeaker != null) addSpeaker.measure(exact(px(195)), exact(px(48)));
     }
 
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         if (search != null && search.getVisibility() != GONE) search.layout(px(16), px(51), px(377), px(99));
         if (scroller.getVisibility() != GONE) scroller.layout(0, px(scrollTop()), getWidth(),
-                Math.max(px(scrollTop()), getHeight() - px(managingSpeakers ? 72 : 0)));
-        if (addSpeaker != null && managingSpeakers) addSpeaker.layout(px(100), emptySpeakers() ? px(446) : getHeight() - px(60),
+                Math.max(px(scrollTop()), getHeight() - px(addSpeaker != null ? 72 : 0)));
+        if (addSpeaker != null) addSpeaker.layout(px(100), emptySpeakers() ? px(446) : getHeight() - px(60),
                 px(295), emptySpeakers() ? px(494) : getHeight() - px(12));
     }
 
