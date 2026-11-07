@@ -105,6 +105,14 @@ class TranscriptionEngine(context: Context) {
         val client = StageClient(context)
         val earlyAsr = java.util.concurrent.ConcurrentHashMap<WorkerStage, WorkerResult>()
         val results = java.util.Collections.synchronizedList(mutableListOf<WorkerResult>())
+        fun observeResult(result: WorkerResult) {
+            synchronized(results) { peak = maxOf(peak, result.peakCombinedRssBytes) }
+        }
+        fun recordResult(kind: WorkerStage, result: WorkerResult) {
+            results += result
+            warnings += result.warnings
+            if (!result.completed) warnings += "${kind.name}: ${result.error ?: "incomplete"}"
+        }
         suspend fun worker(
             kind: WorkerStage,
             name: Stage,
@@ -132,11 +140,15 @@ class TranscriptionEngine(context: Context) {
                 times[name] = requireNotNull(saved).elapsedMs
                 saved
             } else stage(name) { progress ->
-                var first = client.run(request, saved, progress)
+                var first = client.run(request, saved, progress).also(::observeResult)
                 if (!first.completed && first.error.orEmpty().contains("MEMORY")) {
                     InferenceResources.serialOnly = true
-                    val retry = request.copy(resumeKey = request.resumeKey ?: "memory-retry")
-                    first = client.run(retry, first, progress)
+                    // A streaming ASR can be holding its lease while waiting for diarization.
+                    // Close those queues before a serial retry; otherwise neither can advance.
+                    if (!streaming) {
+                        val retry = request.copy(resumeKey = request.resumeKey ?: "memory-retry")
+                        first = client.run(retry, first, progress).also(::observeResult)
+                    }
                 }
                 val attemptedNpu = kind == WorkerStage.EMOTION && !first.completed && request.allowNpu &&
                     runCatching { JobFiles.load<String>(emotionNpuAttemptFile(job)) }.getOrNull() == request.requestId
@@ -145,22 +157,18 @@ class TranscriptionEngine(context: Context) {
                     val retry = request.copy(requestId = UUID.randomUUID().toString(), allowNpu = false)
                     val partial = checkpoint?.worker(kind, input, inputHash, dependencies, plan)?.second
                         ?.copy(requestId = retry.requestId)
-                    client.run(retry, partial, progress)
+                    client.run(retry, partial, progress).also(::observeResult)
                 }
             }
-            if (record) {
-                results += result
-                synchronized(results) { peak = maxOf(peak, result.peakCombinedRssBytes) }
-                warnings += result.warnings
-                if (!result.completed) warnings += "${kind.name}: ${result.error ?: "incomplete"}"
-            }
+            observeResult(result)
+            if (record) recordResult(kind, result)
             return result
         }
         val languageFile = File(job, "language.json")
         val (denoise, diarization, languageResult) = coroutineScope {
             val cleaned = async { if (profile.denoise) worker(WorkerStage.DENOISE, Stage.Denoising, "original.wav") else null }
             val live = freshPlan && profile.fast && audioMs > 300_000
-            val diarized = async { worker(WorkerStage.DIARIZE, Stage.Diarization, "original.wav", streaming = live) }
+            val diarized = async { worker(WorkerStage.DIARIZE, Stage.Diarization, "original.wav", streaming = live, record = !live) }
             val identified = async {
                 val t0 = SystemClock.elapsedRealtime()
                 val languageSlot = InferenceResources.acquire(InferenceResources.Cost(2, 120_000_000))
@@ -188,7 +196,12 @@ class TranscriptionEngine(context: Context) {
                     if (kind == WorkerStage.WHISPER) listOf("", detected.first.whisperLanguage) else listOf(""),
                     initial, streaming = true, record = false)
             })
-            Triple(clean, diarized.await(), detected)
+            val firstDiarization = diarized.await()
+            val finalDiarization = if (live && !firstDiarization.completed && firstDiarization.error.orEmpty().contains("MEMORY")) {
+                warnings += "STREAMING_DIARIZATION_MEMORY_RETRY"
+                worker(WorkerStage.DIARIZE, Stage.Diarization, "original.wav")
+            } else firstDiarization.also { if (live) recordResult(WorkerStage.DIARIZE, it) }
+            Triple(clean, finalDiarization, detected)
         }
         val view = if (denoise != null) {
             val cleaned = File(job, "denoised.wav")

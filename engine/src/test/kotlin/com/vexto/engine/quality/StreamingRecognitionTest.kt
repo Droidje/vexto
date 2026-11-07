@@ -2,6 +2,9 @@ package com.vexto.engine.quality
 
 import com.vexto.engine.audio.PcmWave
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.toList
 import org.junit.Assert.*
 import org.junit.Rule
@@ -11,6 +14,31 @@ import java.io.File
 
 class StreamingRecognitionTest {
     @get:Rule val tmp = TemporaryFolder()
+    @Test fun failedDiarizationClosesWaitingAsrBeforeSerialRetry() = runBlocking {
+        val dir = tmp.newFolder("memory")
+        val input = File(dir, "original.wav")
+        PcmWave.Writer(input).use { it.write(FloatArray(110 * 16000) { .1f }) }
+        JobFiles.save(File(dir, "diarization-progress.json"),
+            DiarizationProgress(65_000, listOf(PipelineTurn(0, 0, 65_000))))
+        val diarization = CompletableDeferred<WorkerResult>()
+        val entered = mutableSetOf<WorkerStage>()
+        val result = withTimeout(5000) {
+            StreamingRecognition.run(dir, input, diarization, slavic = true) { stage, initial ->
+                entered += stage
+                if (entered.size == 2) diarization.complete(WorkerResult(WorkerStage.DIARIZE,
+                    error = "MEMORY_BUDGET_EXCEEDED"))
+                try {
+                    StreamingRecognition.tasks(dir, initial, emptySet()) {}.collect {}
+                    WorkerResult(stage, completed = true)
+                } catch (_: IllegalArgumentException) {
+                    WorkerResult(stage, error = "STREAM_ABORTED")
+                }
+            }
+        }
+        assertEquals(setOf(WorkerStage.GIGAAM, WorkerStage.WHISPER), result.keys)
+        assertTrue(result.values.all { !it.completed && it.error == "STREAM_ABORTED" })
+    }
+
     @Test fun livePrefixIsIdenticalToFinalGeometryAndClosesTheQueue() = runBlocking {
         val dir = tmp.newFolder("stream")
         val input = File(dir, "original.wav")
