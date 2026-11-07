@@ -41,8 +41,9 @@ internal object StageDispatcher {
             WorkerStage.DIARIZE -> {
                 val work = prepareOutput(File(job, "diarization"))
                 val stable: ((Long, List<com.vexto.engine.runtime.NativeSpeakerTurn>) -> Unit)? = if (!request.streaming) null else { frontier, rows ->
+                    val ids = rows.sortedBy { it.startMs }.map { it.speakerId }.distinct().withIndex().associate { it.value to it.index }
                     val partial = rows.map { row -> PipelineTurn(
-                        row.speakerId.removePrefix("speaker_").toInt() - 1, row.startMs, row.endMs) }
+                        ids.getValue(row.speakerId), row.startMs, row.endMs) }
                     JobFiles.save(File(job, "diarization-progress.json"), DiarizationProgress(frontier, partial))
                 }
                 val diarized = LongRecordingDiarization.run(models.file("nemotron"), input, work, runner, stable)

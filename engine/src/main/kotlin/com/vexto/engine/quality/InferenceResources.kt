@@ -45,7 +45,8 @@ internal object InferenceResources {
         WorkerStage.VOICEPRINT -> Cost(2, 250_000_000)
         WorkerStage.EMOTION -> Cost(2, 650_000_000)
         WorkerStage.SELECT -> Cost(2, 1_650_000_000)
-        WorkerStage.GIGAAM, WorkerStage.GIGAAM_REFINE ->
+        WorkerStage.GIGAAM_REFINE -> Cost(4, 1_200_000_000)
+        WorkerStage.GIGAAM ->
             Cost(if (profile.fast) 2 else 4, if (profile.fast) 750_000_000 else 1_200_000_000)
         WorkerStage.WHISPER, WorkerStage.WHISPER_REFINE ->
             if (profile.fast && request.stage == WorkerStage.WHISPER) Cost(2, 800_000_000)
