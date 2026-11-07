@@ -5,8 +5,9 @@ import kotlinx.serialization.Serializable
 import com.vexto.engine.model.VoiceEmbedding
 import com.vexto.engine.review.SpeakerNamesArtifact
 import com.vexto.engine.pipeline.UtteranceEmotionEvidence
+import com.vexto.engine.pipeline.UtteranceOverlapEvidence
 
-@Serializable enum class WorkerStage { DENOISE, DIARIZE, VOICEPRINT, GIGAAM, WHISPER, GIGAAM_REFINE, WHISPER_REFINE, SELECT, EMOTION }
+@Serializable enum class WorkerStage { DENOISE, DIARIZE, VOICEPRINT, GIGAAM, WHISPER, GIGAAM_REFINE, WHISPER_REFINE, SELECT, EMOTION, OVERLAP }
 @Serializable data class WorkerRequest(
     val stage: WorkerStage,
     val jobDir: String,
@@ -32,6 +33,7 @@ import com.vexto.engine.pipeline.UtteranceEmotionEvidence
     val turns: List<PipelineTurn> = emptyList(),
     val voices: Map<Int, VoiceEmbedding> = emptyMap(),
     val emotions: List<UtteranceEmotionEvidence> = emptyList(),
+    val overlaps: List<UtteranceOverlapEvidence> = emptyList(),
     val warnings: List<String> = emptyList(),
     val error: String? = null,
     val outputSha256: String? = null,

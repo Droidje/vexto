@@ -1,0 +1,100 @@
+{
+  "date": "2026-11-07",
+  "device": {
+    "kind": "ARM64 Android API35 emulator",
+    "ram_mb": 4096,
+    "resolution": [
+      786,
+      1704
+    ],
+    "density": 320
+  },
+  "runtime": "sherpa ONNX Runtime 1.28.2 CPU 2 threads",
+  "threshold": 0.9120559394359589,
+  "model_revision": "natural-overlap-v1:e32068086dfeed1026f7e98debe34ba287cf36049ba268728633b8330442c948:centered-4s-v1",
+  "desktop_parity": {
+    "windows": 82,
+    "max_error": 8.910894393920898e-06,
+    "decision_changes": 0
+  },
+  "android_runs": [
+    {
+      "label": "first_extraction",
+      "completed": true,
+      "elapsedMs": 3797,
+      "peakCombinedRssBytes": 726372352,
+      "error": null
+    },
+    {
+      "label": "verified_cached_model",
+      "completed": true,
+      "elapsedMs": 3206,
+      "peakCombinedRssBytes": 697729024,
+      "error": null
+    }
+  ],
+  "fixtures": [
+    {
+      "audio": "ES2008a-238.wav",
+      "label": 1,
+      "kind": "sustained",
+      "pytorch": 0.9965608716011047,
+      "android": 0.9965608716011047
+    },
+    {
+      "audio": "ES2008a-566.wav",
+      "label": 0,
+      "kind": "backchannel",
+      "pytorch": 0.15763650834560394,
+      "android": 0.1576366424560547
+    },
+    {
+      "audio": "ES2008b-1294.wav",
+      "label": 1,
+      "kind": "sustained",
+      "pytorch": 0.9913216233253479,
+      "android": 0.9913215041160583
+    },
+    {
+      "audio": "ES2008a-742.wav",
+      "label": 0,
+      "kind": "backchannel",
+      "pytorch": 0.7024539113044739,
+      "android": 0.70244961977005
+    },
+    {
+      "audio": "ES2008c-1440.wav",
+      "label": 1,
+      "kind": "sustained",
+      "pytorch": 0.9999995231628418,
+      "android": 0.9999995827674866
+    },
+    {
+      "audio": "ES2008b-1140.wav",
+      "label": 0,
+      "kind": "backchannel",
+      "pytorch": 0.028813675045967102,
+      "android": 0.028813421726226807
+    },
+    {
+      "audio": "ES2008a-282.wav",
+      "label": 1,
+      "kind": "sustained",
+      "pytorch": 0.896568238735199,
+      "android": 0.896567702293396
+    },
+    {
+      "audio": "ES2009d-1698.wav",
+      "label": 0,
+      "kind": "backchannel",
+      "pytorch": 0.9278050065040588,
+      "android": 0.9278041124343872
+    }
+  ],
+  "limitations": [
+    "Public English pilot; not an independent Russian overlap quality test.",
+    "Eight selected regression windows include one known false positive and one known false negative.",
+    "Center-only policy can miss overlap outside the center; utterances under four seconds are not evaluated.",
+    "Full ASR pipeline and physical-phone speed were not measured."
+  ]
+}

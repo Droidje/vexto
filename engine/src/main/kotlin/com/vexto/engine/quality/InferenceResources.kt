@@ -44,6 +44,7 @@ internal object InferenceResources {
         WorkerStage.DIARIZE -> Cost(if (request.streaming) 2 else 4, 600_000_000)
         WorkerStage.VOICEPRINT -> Cost(2, 250_000_000)
         WorkerStage.EMOTION -> Cost(2, 650_000_000)
+        WorkerStage.OVERLAP -> Cost(2, NativeBudget)
         WorkerStage.SELECT -> Cost(2, 1_650_000_000)
         WorkerStage.GIGAAM_REFINE -> Cost(4, 1_200_000_000)
         WorkerStage.GIGAAM ->

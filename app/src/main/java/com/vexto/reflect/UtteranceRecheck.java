@@ -33,17 +33,28 @@ final class UtteranceRecheck {
         final int endMs;
         final String text;
         final EmotionProbabilities emotion;
+        final Boolean overlapDetected;
         final List<TimedWord> words;
 
         Piece(int startMs, int endMs, String text, EmotionProbabilities emotion) {
-            this(startMs, endMs, text, emotion, List.of());
+            this(startMs, endMs, text, emotion, List.of(), null);
+        }
+
+        Piece(int startMs, int endMs, String text, EmotionProbabilities emotion, Boolean overlapDetected) {
+            this(startMs, endMs, text, emotion, List.of(), overlapDetected);
         }
 
         Piece(int startMs, int endMs, String text, EmotionProbabilities emotion, List<TimedWord> words) {
+            this(startMs, endMs, text, emotion, words, null);
+        }
+
+        Piece(int startMs, int endMs, String text, EmotionProbabilities emotion,
+              List<TimedWord> words, Boolean overlapDetected) {
             this.startMs = startMs;
             this.endMs = endMs;
             this.text = text;
             this.emotion = emotion;
+            this.overlapDetected = overlapDetected;
             this.words = words == null ? List.of() : words;
         }
     }
@@ -97,7 +108,9 @@ final class UtteranceRecheck {
         for (Piece piece : kept) {
             ReflectTranscript.Line donor = donor(original, replace, piece, selected);
             next.add(new ReflectTranscript.Line(donor.speakerId, piece.startMs, piece.endMs,
-                    piece.text.trim(), piece.emotion, donor.speakerName));
+                    piece.text.trim(), piece.emotion, donor.speakerName,
+                    piece.overlapDetected != null ? piece.overlapDetected
+                            : piece.startMs == donor.startMs && piece.endMs == donor.endMs ? donor.overlapDetected : null));
         }
         ReflectTranscript updated = new ReflectTranscript(next);
         return updated.sameLines(original) ? original : updated;
@@ -111,7 +124,8 @@ final class UtteranceRecheck {
             int start = Math.max(windowStartMs, piece.startMs);
             int end = Math.min(windowEndMs, piece.endMs);
             if (end <= start) continue;
-            usable.add(new Piece(start, end, piece.text, piece.emotion, piece.words));
+            usable.add(new Piece(start, end, piece.text, piece.emotion, piece.words,
+                    start == piece.startMs && end == piece.endMs ? piece.overlapDetected : null));
         }
         usable.sort(Comparator.comparingInt((Piece piece) -> piece.startMs).thenComparingInt(piece -> piece.endMs));
         return usable;
@@ -145,7 +159,8 @@ final class UtteranceRecheck {
         int start = Math.max(piece.startMs, selected.startMs - EDGE_MS);
         int end = Math.min(piece.endMs, selected.endMs + EDGE_MS);
         if (end <= start || overlap(start, end, selected.startMs, selected.endMs) <= 0) return null;
-        return new Piece(start, end, piece.text, piece.emotion);
+        return new Piece(start, end, piece.text, piece.emotion,
+                start == piece.startMs && end == piece.endMs ? piece.overlapDetected : null);
     }
 
     private static Piece trimByWords(Piece piece, ReflectTranscript.Line selected,
@@ -165,7 +180,8 @@ final class UtteranceRecheck {
             text.append(word.text.trim());
         }
         if (text.length() == 0) return null;
-        return new Piece(start, end, text.toString(), piece.emotion);
+        return new Piece(start, end, text.toString(), piece.emotion,
+                start == piece.startMs && end == piece.endMs ? piece.overlapDetected : null);
     }
 
     private static boolean belongsToSelected(int startMs, int endMs, ReflectTranscript.Line selected,
@@ -196,7 +212,7 @@ final class UtteranceRecheck {
                 }
             }
             if (words.isEmpty()) continue;
-            result.add(new Piece(piece.startMs, piece.endMs, String.join(" ", words), piece.emotion));
+            result.add(new Piece(piece.startMs, piece.endMs, String.join(" ", words), piece.emotion, piece.overlapDetected));
         }
         return result;
     }
@@ -223,7 +239,8 @@ final class UtteranceRecheck {
         if (!changed) return neighbor;
         if (words.isEmpty() || start >= neighbor.endMs) return null;
         return new ReflectTranscript.Line(neighbor.speakerId, start, neighbor.endMs, String.join(" ", words),
-                neighbor.emotionProbabilities, neighbor.speakerName);
+                neighbor.emotionProbabilities, neighbor.speakerName,
+                start == neighbor.startMs ? neighbor.overlapDetected : null);
     }
 
     private static List<String> tokens(String text) {

@@ -8,11 +8,13 @@ import com.vexto.engine.audio.PcmWave
 import com.vexto.engine.model.*
 import com.vexto.engine.model.export.TranscriptExport
 import com.vexto.engine.models.QualityModelStore
+import com.vexto.engine.models.OverlapModelStore
 import com.vexto.engine.quality.*
 import com.vexto.engine.review.*
 import com.vexto.engine.pipeline.RecordingLanguage
 import com.vexto.engine.pipeline.SpokenLanguageIdentifier
 import com.vexto.engine.pipeline.UtteranceEmotionAnnotations
+import com.vexto.engine.pipeline.UtteranceOverlapAnnotations
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.ProducerScope
@@ -66,6 +68,11 @@ class TranscriptionEngine(context: Context) {
             return value
         }
         val manifest = QualityModelStore.manifest(context)
+        val overlapPack = runCatching { OverlapModelStore.manifest(context) }
+        val overlapManifest = overlapPack.getOrElse {
+            warnings += "OVERLAP_UNAVAILABLE:model_pack:${it.javaClass.simpleName}"
+            null
+        }
         val jobRoot = File(context.filesDir, "inference/jobs")
         val checkpoint = jobId?.let {
             require(uri.scheme == "file") { "Resumable transcription requires a saved recording" }
@@ -73,7 +80,9 @@ class TranscriptionEngine(context: Context) {
                 options.speakerCount, options.processingMode)
         }
         val job = checkpoint?.directory ?: File(jobRoot, UUID.randomUUID().toString()).apply { check(mkdirs()) }
-        checkpoint?.finished()?.let { send(TranscriptionEvent.Done(it.transcript, it.stats)); return }
+        if (overlapPack.isSuccess) checkpoint?.finished(overlapManifest?.revision)?.let {
+            send(TranscriptionEvent.Done(it.transcript, it.stats)); return
+        }
         if (options.speakerCount != null) warnings += "Nemotron automatically determines speakers; requested fixed count is not applied"
         val original = File(job, "original.wav")
         val originalHash = checkpoint?.decodedHash() ?: stage(Stage.Decoding) { progress ->
@@ -346,6 +355,24 @@ class TranscriptionEngine(context: Context) {
             val unscored = transcript.utterances.count { it.endMs > it.startMs && it.emotionProbabilities == null }
             if (unscored > 0) warnings += "EMOTION_FAILED:unscored_utterances=$unscored"
         }
+        if (overlapManifest != null) {
+            try {
+                val targetsFile = File(job, "overlap-targets.json")
+                JobFiles.save(targetsFile, UtteranceOverlapAnnotations.targets(transcript))
+                JobFiles.save(File(job, "overlap-model.json"), overlapManifest)
+                val overlap = worker(WorkerStage.OVERLAP, Stage.Overlap, "original.wav",
+                    dependencies = listOf(overlapManifest.revision, JobFiles.sha256(targetsFile)), record = false)
+                results += overlap
+                if (overlap.completed && overlap.error == null) {
+                    transcript = UtteranceOverlapAnnotations.attach(transcript, overlap.overlaps, overlapManifest.revision)
+                } else warnings += "OVERLAP_UNAVAILABLE:${overlap.error ?: "incomplete"}"
+            } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (error: Exception) {
+                // Optional acoustic metadata must never replace or discard the recognized text.
+                warnings += "OVERLAP_UNAVAILABLE:${error.javaClass.simpleName}"
+            }
+        }
         val coverage = PipelineCoverage(plan.chunks.size,
             all.values.count { it.source == AsrSource.GIGAAM }, all.values.count { it.source == AsrSource.WHISPER },
             selected.size, choices.values.count { it.status == AsrSelectionStatus.SELECTED_BY_LLM.name }, unresolved,
@@ -353,10 +380,12 @@ class TranscriptionEngine(context: Context) {
         val withinBudget = peak + AppRss.ReserveBytes <= AppRss.BudgetBytes
         val expectedStages = profile.expectedStages(slavic) + if (refinement.ids.isEmpty()) emptySet()
             else setOfNotNull(WorkerStage.GIGAAM_REFINE.takeIf { slavic }, WorkerStage.WHISPER_REFINE)
-        val allStagesSucceeded = results.map { it.stage }.toSet() == expectedStages &&
-            results.all { it.completed && it.error == null }
+        val requiredResults = results.filter { it.stage != WorkerStage.OVERLAP }
+        val allStagesSucceeded = requiredResults.map { it.stage }.toSet() == expectedStages &&
+            requiredResults.all { it.completed && it.error == null }
         val localLlmUsed = coverage.llmSelectedChunks > 0 || review.speakerNames?.status == "resolved"
-        val fullProfile = coverage.fullProfileCompleted(allStagesSucceeded, warnings, withinBudget, localLlmUsed)
+        val requiredWarnings = warnings.filterNot { it.startsWith("OVERLAP_UNAVAILABLE:") }
+        val fullProfile = coverage.fullProfileCompleted(allStagesSucceeded, requiredWarnings, withinBudget, localLlmUsed)
         val export = File(job, "transcript.json")
         val metadata = File(job, "transcript.metadata.json")
         JobFiles.write(export, TranscriptExport.submissionJson(transcript).toByteArray(Charsets.UTF_8))
@@ -377,7 +406,7 @@ class TranscriptionEngine(context: Context) {
             transcriptSha256 = JobFiles.sha256(export), metadataSha256 = JobFiles.sha256(metadata), warnings = stats.warnings,
             modelVerificationReused = models.verificationReused, processingProfile = profile,
             skippedSilenceMs = plan.skippedSamples / 16, localLlmUsed = localLlmUsed))
-        checkpoint?.saveFinished(transcript, stats)
+        checkpoint?.saveFinished(transcript, stats, overlapManifest?.revision)
         send(TranscriptionEvent.Done(transcript, stats))
     }
 

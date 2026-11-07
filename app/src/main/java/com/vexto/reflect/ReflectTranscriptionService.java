@@ -171,7 +171,7 @@ public final class ReflectTranscriptionService extends Service {
                     return;
                 }
                 started.progress = started.backgroundEmotions
-                        ? started.progress.advance(Stage.Emotion, 100)
+                        ? started.progress.advance(started.progress.stage(), 100)
                         : new ReflectLocalTranscription.Progress(null, 100, transcript.getSpeakers().size());
                 changed(started);
                 io.execute(() -> publishFinal(started, transcript, stats));
@@ -186,7 +186,9 @@ public final class ReflectTranscriptionService extends Service {
                 } else if (error instanceof OfflineModelPackException) {
                     message = "Установите проверенный офлайн-пакет моделей и повторите расшифровку.";
                 }
-                if (started.backgroundEmotions) message = "Не удалось определить эмоции. Расшифровка сохранена.";
+                if (started.backgroundEmotions) message = started.progress.stage() == Stage.Overlap
+                        ? "Не удалось проверить перебивания. Расшифровка сохранена."
+                        : "Не удалось определить эмоции. Расшифровка сохранена.";
                 complete(started, null, message);
             }
         });
@@ -318,7 +320,7 @@ public final class ReflectTranscriptionService extends Service {
             lines.add(new ReflectTranscript.Line(utterance.getSpeakerId(),
                     Math.toIntExact(utterance.getStartMs()), Math.toIntExact(utterance.getEndMs()),
                     utterance.getText(), utterance.getEmotionProbabilities(),
-                    output.speaker(utterance.getSpeakerId()).getName()));
+                    output.speaker(utterance.getSpeakerId()).getName(), utterance.getOverlapDetected()));
         }
         return new ReflectTranscript(lines);
     }
