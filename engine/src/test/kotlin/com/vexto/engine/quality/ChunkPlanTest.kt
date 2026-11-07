@@ -85,13 +85,22 @@ class ChunkPlanTest {
         return boundaries
     }
 
-    private fun assertExactPcm(source: File, directory: File, plan: ChunkPlan) {
+    private suspend fun assertExactPcm(source: File, directory: File, plan: ChunkPlan) {
         plan.validate()
         val expected = source.readBytes().copyOfRange(44, source.length().toInt())
+        val waves = ChunkWaveMaterializer(directory, plan, source) { fail(it) }
+        assertTrue(plan.chunks.none { JobFiles.inside(directory, it.wav).exists() })
         val joined = plan.chunks.flatMap { chunk ->
             val wav = JobFiles.inside(directory, chunk.wav)
-            assertEquals(chunk.inputSha256, JobFiles.sha256(wav))
-            wav.readBytes().drop(44)
+            val pcm = waves.withChunk(chunk) { current ->
+                assertEquals(wav, current.wav)
+                assertTrue(current.wav.isFile)
+                assertEquals(chunk.inputSha256, current.inputSha256)
+                assertEquals(chunk.inputSha256, JobFiles.sha256(current.wav))
+                current.wav.readBytes().drop(44)
+            }
+            assertFalse(wav.exists())
+            pcm
         }.toByteArray()
         assertArrayEquals(expected, joined)
     }
