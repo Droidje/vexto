@@ -19,7 +19,9 @@ internal object StageDispatcher {
             QualityModelStore.manifest(context))
         val input = JobFiles.inside(job, request.inputWav)
         val runner = NativeProcessRunner(context)
-        var nativePeak = 0L
+        val saved = if (request.resumeKey == null) null else
+            JobFiles.load<WorkerResult>(request.stage.resultFile(job)).takeIf { it.requestId == request.requestId }
+        var nativePeak = saved?.peakCombinedRssBytes ?: 0L
         val executor = LocalNativeExecutor { executable, args, dir, stdout, stderr, timeout ->
             runner.run(executable, args, dir, stdout, stderr, timeout).let {
                 nativePeak = maxOf(nativePeak, it.peakCombinedRssBytes)
@@ -31,16 +33,22 @@ internal object StageDispatcher {
             candidate.artifactFile.relativeTo(job).invariantSeparatorsPath, candidate.artifactSha256)
         fun checkpoint(result: WorkerResult) = JobFiles.save(request.stage.resultFile(job), result.copy(requestId = request.requestId))
 
+        fun prepareOutput(output: File): File {
+            if (request.resumeKey != null) JobCheckpoint.archiveRetryOutput(job, output)
+            return output
+        }
+
         return when (request.stage) {
             WorkerStage.DENOISE -> {
-                GtcrnDenoiserProvider(models.file("gtcrn")).use {
-                    it.denoise(input, File(job, "denoised.wav"), File(job, "denoising.json"), onProgress)
-                }
-                WorkerResult(request.stage)
+                val denoised = prepareOutput(File(job, "denoised.wav"))
+                val audit = prepareOutput(File(job, "denoising.json"))
+                GtcrnDenoiserProvider(models.file("gtcrn")).use { it.denoise(input, denoised, audit, onProgress) }
+                WorkerResult(request.stage, outputSha256 = if (request.resumeKey != null) JobFiles.sha256(denoised) else null)
             }
             WorkerStage.DIARIZE -> {
+                val work = prepareOutput(File(job, "diarization"))
                 val result = NativeDiarizationProvider.run(models.file("nemotron"), input,
-                    File(job, "diarization/turns.rttm"), File(job, "diarization"), runner)
+                    File(work, "turns.rttm"), work, runner)
                 val ids = result.turns.sortedBy { it.startMs }.map { it.speakerId }.distinct().withIndex().associate { it.value to it.index }
                 val durationMs = com.vexto.engine.audio.PcmWave.inspect(input).sampleCount / 16
                 val turns = result.turns.map { turn ->
@@ -57,31 +65,41 @@ internal object StageDispatcher {
                 WorkerResult(request.stage, voices = voices)
             }
             WorkerStage.GIGAAM -> {
-                val refs = mutableListOf<CandidateRef>()
+                val refs = saved?.candidates.orEmpty().toMutableList()
+                val known = refs.mapTo(mutableSetOf()) { it.chunkId }
                 val warnings = mutableListOf<String>()
                 val plan = chunkPlan()
                 val waves = ChunkWaveMaterializer(job, plan, input) { warnings += it }
+                val tasks = plan.chunks
+                var processed = known.size
+                if (processed > 0) onProgress(processed.toFloat() / tasks.size)
+                if (processed == tasks.size) {
+                    return WorkerResult(request.stage, candidates = refs, peakCombinedRssBytes = nativePeak)
+                }
                 GigaAmCandidateProvider(GigaAmCandidateProvider.Models(models.file("giga_encoder"),
                     models.file("giga_decoder"), models.file("giga_joiner"), models.file("giga_tokens"))).use { provider ->
-                    val tasks = plan.chunks
-                    for ((index, chunk) in tasks.withIndex()) {
+                    for (chunk in tasks) {
                         currentCoroutineContext().ensureActive()
+                        if (chunk.id in known) continue
                         try {
                             val candidate = waves.withChunk(chunk) { current ->
-                                provider.generate(current, File(job, "raw/gigaam/${chunk.id}.json"))
+                                prepareOutput(File(job, "raw/gigaam/${chunk.id}.native.json"))
+                                provider.generate(current, prepareOutput(File(job, "raw/gigaam/${chunk.id}.json")))
                             }
                             refs += reference(candidate)
                         }
                         catch (cancel: CancellationException) { throw cancel }
                         catch (failure: Exception) { warnings += "GIGAAM_FAILED:${chunk.id}:${failure.javaClass.simpleName}" }
-                        checkpoint(WorkerResult(request.stage, candidates = refs.toList(), warnings = warnings.toList()))
-                        onProgress((index + 1f) / tasks.size)
+                        checkpoint(WorkerResult(request.stage, candidates = refs.toList(), warnings = warnings.toList(),
+                            peakCombinedRssBytes = nativePeak))
+                        onProgress((++processed).toFloat() / tasks.size)
                     }
                 }
-                WorkerResult(request.stage, candidates = refs, warnings = warnings)
+                WorkerResult(request.stage, candidates = refs, warnings = warnings, peakCombinedRssBytes = nativePeak)
             }
             WorkerStage.WHISPER -> {
-                val refs = mutableListOf<CandidateRef>()
+                val refs = saved?.candidates.orEmpty().toMutableList()
+                val known = refs.mapTo(mutableSetOf()) { it.chunkId }
                 val warnings = mutableListOf<String>()
                 // 512 encoder frames cover 10.24s. Longer GigaAM chunks are windowed inside the provider.
                 val recorded = runCatching { JobFiles.load<RecordingLanguage>(File(job, "language.json")) }.getOrNull()
@@ -90,19 +108,23 @@ internal object StageDispatcher {
                 val plan = chunkPlan()
                 val waves = ChunkWaveMaterializer(job, plan, input) { warnings += it }
                 val tasks = plan.chunks
+                var processed = known.size
+                if (processed > 0) onProgress(processed.toFloat() / tasks.size)
 
-                for ((index, chunk) in tasks.withIndex()) {
+                for (chunk in tasks) {
                     currentCoroutineContext().ensureActive()
+                    if (chunk.id in known) continue
                     try {
                         val candidate = waves.withChunk(chunk) { current ->
-                            provider.generate(current, File(job, "raw/whisper/${chunk.id}/whisper.json"))
+                            val output = prepareOutput(File(job, "raw/whisper/${chunk.id}"))
+                            provider.generate(current, File(output, "whisper.json"))
                         }
                         refs += reference(candidate)
                     }
                     catch (cancel: CancellationException) { throw cancel }
                     catch (failure: Exception) { warnings += "WHISPER_FAILED:${chunk.id}:${failure.javaClass.simpleName}" }
                     checkpoint(WorkerResult(request.stage, candidates = refs.toList(), warnings = warnings.toList(), peakCombinedRssBytes = nativePeak))
-                    onProgress((index + 1f) / tasks.size)
+                    onProgress((++processed).toFloat() / tasks.size)
                 }
                 WorkerResult(request.stage, candidates = refs, warnings = warnings, peakCombinedRssBytes = nativePeak)
             }
@@ -110,12 +132,16 @@ internal object StageDispatcher {
                 val refs = listOf(WorkerStage.GIGAAM, WorkerStage.WHISPER).flatMap { stage ->
                     runCatching { JobFiles.load<WorkerResult>(stage.resultFile(job)).candidates }.getOrDefault(emptyList())
                 }
-                val choices = mutableListOf<ChoiceRef>()
+                val choices = saved?.choices.orEmpty().toMutableList()
+                val known = choices.mapTo(mutableSetOf()) { it.chunkId }
                 val warnings = mutableListOf<String>()
                 val selector = QwenAsrSelector(executor, models.file("qwen"))
                 val tasks = chunkPlan().chunks
-                for ((index, chunk) in tasks.withIndex()) {
+                var processed = known.size
+                if (processed > 0) onProgress(processed.toFloat() / tasks.size)
+                for (chunk in tasks) {
                     currentCoroutineContext().ensureActive()
+                    if (chunk.id in known) continue
                     val originals = refs.filter { it.chunkId == chunk.id }.mapNotNull { ref ->
                         runCatching {
                             ImmutableAsrCandidate.load(JobFiles.inside(job, ref.file), ref.sha256).also {
@@ -123,16 +149,17 @@ internal object StageDispatcher {
                             }
                         }.getOrElse { warnings += "INVALID_ORIGINAL:${chunk.id}:${ref.source}"; null }
                     }
-                    if (originals.isEmpty()) { warnings += "ASR_MISSING:${chunk.id}"; onProgress((index + 1f) / tasks.size); continue }
+                    if (originals.isEmpty()) { warnings += "ASR_MISSING:${chunk.id}"; onProgress((++processed).toFloat() / tasks.size); continue }
                     val pair = AsrCandidatePair(chunk.id, chunk.inputSha256, originals.firstOrNull { it.source == AsrSource.GIGAAM },
                         originals.firstOrNull { it.source == AsrSource.WHISPER })
+                    prepareOutput(File(job, "selection/${chunk.id}"))
                     val selected = selector.selectAll(listOf(pair), File(job, "selection")).single()
                     val ref = CandidateRef(chunk.id, selected.displayCandidate.source.wireName,
                         selected.selectedArtifact.relativeTo(job).invariantSeparatorsPath, selected.audit.selectedSha256)
                     choices += ChoiceRef(chunk.id, ref, selected.status.name, selected.audit.reason)
                     JobFiles.save(File(job, "selection/${chunk.id}/audit.json"), selected.audit)
                     checkpoint(WorkerResult(request.stage, choices = choices.toList(), warnings = warnings.toList(), peakCombinedRssBytes = nativePeak))
-                    onProgress((index + 1f) / tasks.size)
+                    onProgress((++processed).toFloat() / tasks.size)
                 }
                 WorkerResult(request.stage, choices = choices, warnings = warnings, peakCombinedRssBytes = nativePeak)
             }
@@ -143,9 +170,13 @@ internal object StageDispatcher {
                     checkpoint(WorkerResult(request.stage, emotions = emotions))
                     if (targets.isNotEmpty()) onProgress(emotions.size.toFloat() / targets.size)
                 }
-                save(emptyList())
+                val evidence = saved?.emotions.orEmpty()
+                val known = evidence.mapTo(mutableSetOf()) { it.target.index }
+                val pending = targets.filter { it.index !in known }
+                save(evidence)
                 EmotionProvider(models.file("emotion")).use { provider ->
-                    val emotions = provider.annotateUtterances(input, targets, ::save)
+                    val added = provider.annotateUtterances(input, pending) { save(evidence + it) }
+                    val emotions = (evidence + added).sortedBy { it.target.index }
                     save(emotions)
                     WorkerResult(request.stage, emotions = emotions)
                 }
