@@ -253,14 +253,21 @@ def verify_job(job_dir, allow_legacy=False):
         check(view_pcm == joined.hexdigest(), "chunk_pcm_not_exact_input_view")
         recorded = language_record(root)
         whisper_only = recorded is not None and recorded["route"] == "whisper_only"
-        excluded = ({"GIGAAM", "SELECT"} if whisper_only else set()) | (
+        adaptive = modern and "localLlmUsed" in report
+        excluded = ({"GIGAAM"} | ({"SELECT"} if not adaptive else set()) if whisper_only else set()) | (
             {"DENOISE", "VOICEPRINT", "EMOTION"} if fast else set())
         required_stages = tuple(name for name in STAGES if name not in excluded)
+        refine_path = root / "refinement-plan.json"
+        refine_ids = set(document(refine_path)["chunks"]) if refine_path.exists() else set()
+        check(refine_ids <= set(chunks), "refinement_outside_chunk_plan")
+        if refine_ids:
+            required_stages += (("WHISPER_REFINE",) if whisper_only else ("GIGAAM_REFINE", "WHISPER_REFINE"))
         if fast:
             check(not (root / "stages/DENOISE.result.json").exists() and view == "original.wav",
                   "denoise_present_in_fast_mode")
         if whisper_only:
-            check(not (root / "stages/GIGAAM.result.json").exists() and not (root / "stages/SELECT.result.json").exists(),
+            check(not (root / "stages/GIGAAM.result.json").exists() and
+                  (adaptive or not (root / "stages/SELECT.result.json").exists()),
                   "gigaam_present_for_foreign_language")
         stages = {}
         for name in required_stages:
@@ -309,14 +316,26 @@ def verify_job(job_dir, allow_legacy=False):
         if whisper_only:
             summary["counts"]["gigaam_chunks"] = 0
         check(len(originals) == (len(chunks) if whisper_only else 2 * len(chunks)), "missing_raw_asr_candidate")
+        for stage, source in (("GIGAAM_REFINE", "gigaam"), ("WHISPER_REFINE", "whisper")):
+            if stage not in stages: continue
+            seen = set()
+            for ref in stages[stage]["candidates"]:
+                path, value = candidate(ref)
+                key = (ref["chunkId"], ref["source"])
+                check(ref["source"] == source and ref["chunkId"] in refine_ids and key not in seen,
+                      "invalid_refined_candidate")
+                seen.add(key)
+                originals[key] = (path, ref["sha256"])
+            check(len(seen) == len(refine_ids), "missing_refined_candidate")
         choices = document(root / "selection.json")
         if whisper_only:
-            check(all(choice["status"] == "ONE_AVAILABLE" and choice["reason"] == "language_route_whisper_only"
+            check(all(choice["status"] == "ONE_AVAILABLE" and choice["reason"] in
+                      ("language_route_whisper_only", "one_available_candidate")
                       and choice["candidate"]["source"] == "whisper" for choice in choices),
                   "foreign_language_selection_not_whisper_only")
-        else:
+        if "SELECT" in stages:
             check(choices == stages["SELECT"]["choices"], "selection_journal_mismatch")
-        selected, llm, unresolved, one_available = {}, 0, 0, 0
+        selected, llm, unresolved, one_available, equivalent = {}, 0, 0, 0, 0
         for choice in choices:
             ident, ref = choice["chunkId"], choice["candidate"]
             check(ident == ref["chunkId"] and ident not in selected, "duplicate_selection_or_chunk_mismatch")
@@ -347,12 +366,20 @@ def verify_job(job_dir, allow_legacy=False):
                 check(call == {"tool": "select_asr_variant", "chunk_id": ident, "source": ref["source"]}, "invalid_llm_local_tool_call")
                 check(audit.get("qualityValidated", False) is False, "unsubstantiated_quality_claim")
                 llm += 1
+            elif choice["status"] == "EQUIVALENT":
+                check(not whisper_only and audit["selectedByLlm"] is False and
+                      audit["decision"] == "exact_text_equality" and choice["reason"] == "identical_original_texts",
+                      "invalid_equivalence_audit")
+                check(document(originals[(ident, "gigaam")][0])["text"] ==
+                      document(originals[(ident, "whisper")][0])["text"], "unequal_texts_claimed_equivalent")
+                equivalent += 1
             else:
                 check(choice["status"] in ("UNRESOLVED", "ONE_AVAILABLE") and audit["selectedByLlm"] is False, "invalid_selection_status")
                 unresolved += choice["status"] == "UNRESOLVED"
                 one_available += choice["status"] == "ONE_AVAILABLE"
             selected[ident] = value["text"]
-        summary["counts"].update(selected_chunks=len(selected), llm_selected_chunks=llm, unresolved_chunks=unresolved, one_available_chunks=one_available)
+        summary["counts"].update(selected_chunks=len(selected), llm_selected_chunks=llm, unresolved_chunks=unresolved,
+                                 one_available_chunks=one_available, equivalent_chunks=equivalent, refined_chunks=len(refine_ids))
         check(set(selected) == set(chunks), "missing_selected_chunk")
         export = root / "transcript.json"
         if export.exists():
@@ -375,6 +402,13 @@ def verify_job(job_dir, allow_legacy=False):
             summary["metadata_verified"] = True
             summary["hashes"]["metadata"] = sha(metadata)
             check(integer(report["audioMs"]) and report["audioMs"] == frames // 16 and integer(report["processingMs"], 1), "invalid_report_timings")
+            names = stages.get("SELECT", {}).get("speakerNames") or {}
+            named = names.get("status") == "resolved"
+            if named:
+                check(isinstance(document(root / "speaker-names/names.stdout"), list), "missing_name_inference_evidence")
+            used_llm = llm > 0 or named
+            if adaptive: check(type(report["localLlmUsed"]) is bool and report["localLlmUsed"] == used_llm,
+                               "local_llm_usage_mismatch")
             if whisper_only:
                 expected = dict(expectedChunks=len(chunks), gigaamChunks=0, whisperChunks=len(chunks), selectedChunks=len(selected), llmSelectedChunks=0, unresolvedChunks=0)
                 check(report["complete"] is True and report["selectionResolved"] is True and report["fullProfileCompleted"] is False, "foreign_language_profile_flags")
@@ -382,7 +416,8 @@ def verify_job(job_dir, allow_legacy=False):
             else:
                 expected = dict(expectedChunks=len(chunks), gigaamChunks=len(chunks), whisperChunks=len(chunks), selectedChunks=len(selected), llmSelectedChunks=llm, unresolvedChunks=unresolved)
                 check(report["complete"] is True and report["selectionResolved"] is True and
-                      report["fullProfileCompleted"] is bool(chunks), "reported_profile_incomplete")
+                      report["fullProfileCompleted"] is (bool(chunks) and used_llm), "reported_profile_incomplete")
+            if "equivalentChunks" in report["coverage"]: expected["equivalentChunks"] = equivalent
             check(all(type(value) is int for value in report["coverage"].values()) and report["coverage"] == expected, "report_coverage_mismatch")
             summary["processing_ms"] = report["processingMs"]
             check(not any("_FAILED:" in warning or warning.startswith(("ASR_MISSING:", "INVALID_")) for warning in report["warnings"]), "report_contains_failure_warning")
@@ -393,7 +428,7 @@ def verify_job(job_dir, allow_legacy=False):
         if whisper_only:
             check(llm == 0 and one_available == len(chunks) and unresolved == 0, "foreign_language_selection_not_whisper_only")
         else:
-            check(llm == len(chunks), "llm_selection_not_fully_confirmed")
+            check(llm + equivalent == len(chunks), "llm_selection_not_fully_confirmed")
         summary["valid"] = True
         summary["quality_success"] = bool(chunks) and summary["submission_export_verified"] and (not modern or summary["metadata_verified"])
     except InvalidJob as error:

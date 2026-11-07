@@ -19,6 +19,10 @@ on:
         description: Comma separated experimental precisions (f32,f16,q8_0)
         type: string
         default: 'f32,q8_0'
+      audio_integration:
+        description: Run short native contracts and complete offline APK smoke on a disposable 4GB AVD
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -27,6 +31,14 @@ env:
   ANDROID_BUILD_TOOLS: 35.0.0
 
 jobs:
+  audio-integration:
+    if: inputs.audio_integration
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/audio-followup.yml
+    with:
+      native_base_run: ${{ inputs.native_base_run }}
   checks:
     name: Python and Android checks
     runs-on: ubuntu-24.04

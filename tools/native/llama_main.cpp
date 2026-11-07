@@ -70,6 +70,11 @@ int main(int argc, char ** argv) {
             if (max_tokens < 1 || max_tokens > (summary ? 192 : 16))
                 throw std::runtime_error("Qwen output token budget exceeded");
             int count = -llama_tokenize(vocab, formatted.data(), int(formatted.size()), nullptr, 0, true, true);
+            const auto audit = vexto::option(args, "--prompt-audit-file");
+            if (!audit.empty()) vexto::write_file(audit, vexto::json{
+                {"prompt_utf8_bytes", prompt.size()}, {"prompt_tokens", count}, {"context_tokens", cp.n_ctx},
+                {"max_output_tokens", max_tokens}, {"threads", cp.n_threads},
+                {"accepted", count > 0 && count + max_tokens <= int(cp.n_ctx)}}.dump());
             if (count <= 0 || count + max_tokens > int(cp.n_ctx)) throw std::runtime_error("QWEN_CONTEXT_BUDGET_EXCEEDED");
             std::vector<llama_token> tokens(count);
             if (llama_tokenize(vocab, formatted.data(), int(formatted.size()), tokens.data(), count, true, true) != count)

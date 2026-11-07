@@ -13,14 +13,15 @@ import zipfile
 from score_diarization import parse_rttm, score
 
 
-def rebuild_frontend(lib, models):
+def rebuild_frontend(lib, models, abi='x86_64'):
     ndk = Path(os.environ['ANDROID_HOME']) / 'ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64'
     compiler = ndk / 'bin/clang++'
     sources = list((models.resolve().parents[1] / 'nemotron').glob('*/include/nemo_speech/diar.h'))
     if len(sources) != 1:
         raise RuntimeError('Expected one pinned Nemotron source tree')
-    for suffix in ('', '_avx2'):
-        subprocess.run([str(compiler), '--target=x86_64-linux-android28',
+    target = {'x86_64': 'x86_64-linux-android28', 'arm64-v8a': 'aarch64-linux-android28'}[abi]
+    for suffix in (('', '_avx2') if abi == 'x86_64' else ('',)):
+        subprocess.run([str(compiler), '--target=' + target,
             '--sysroot=' + str(ndk / 'sysroot'), '-std=c++17', '-O2', '-fPIE', '-pie', '-static-libstdc++',
             '-I' + str(sources[0].parents[1]), 'tools/native/nemotron_main.cpp', 'tools/native/parent_death.cpp',
             '-L' + str(lib), '-lnemo_speech_asr_c' + suffix, '-llog', '-Wl,-z,max-page-size=16384',
