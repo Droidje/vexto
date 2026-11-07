@@ -36,6 +36,7 @@ class OfflineModelPackException(message: String, cause: IOException? = null) : I
 object QualityModelStore {
     private val verificationCache = ModelVerificationCache()
     private val summaryVerificationCache = ModelVerificationCache()
+    private val emotionVerificationCache = ModelVerificationCache()
 
     private fun readManifest(context: Context): Pair<QualityManifest, String> {
         val bytes = context.assets.open("quality/manifest.json").use { it.readBytes() }
@@ -63,6 +64,10 @@ object QualityModelStore {
 
     internal suspend fun prepareSummary(context: Context): QualityModels =
         prepare(context, setOf("qwen"), summaryVerificationCache) {}
+
+    /** Fast jobs publish their dialogue before this deferred extraction/verification. */
+    internal suspend fun prepareEmotion(context: Context): QualityModels =
+        prepare(context, setOf("emotion"), emotionVerificationCache) {}
 
     private suspend fun prepare(
         context: Context,

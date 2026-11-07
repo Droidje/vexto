@@ -139,6 +139,9 @@ internal object StageDispatcher {
                 val evidence = saved?.emotions.orEmpty()
                 val known = evidence.mapTo(mutableSetOf()) { it.target.index }
                 val pending = targets.filter { it.index !in known }
+                if (pending.isNotEmpty() && ProcessingProfile.read(job).backgroundEmotions) {
+                    QualityModelStore.prepareEmotion(context)
+                }
                 val backends = saved?.backends.orEmpty().toMutableSet()
                 val accelerator = if (request.allowNpu && pending.isNotEmpty()) EmotionNative.npuDriver() else null
                 if (accelerator != null) JobFiles.save(emotionNpuAttemptFile(job), request.requestId)

@@ -84,7 +84,8 @@ final class ReflectLibraryRow extends View {
         String participants = String.join(", ", item.participants);
         boolean hasSpeakers = !participants.isEmpty();
         boolean hasTranscript = item.hasTranscript();
-        String status = progress != null ? progress.overallPercent() + "%" : hasTranscript ? "Есть текст" : "Сохранено";
+        boolean processing = progress != null && !progress.backgroundEmotions();
+        String status = processing ? progress.overallPercent() + "%" : hasTranscript ? "Есть текст" : "Сохранено";
         String timeAndLength = item.timeLabel + " · " + item.length;
         String label = item.title + ", " + item.timeLabel + ", " + item.length + ", " + status;
         if (hasSpeakers) label += ", участники: " + participants;
@@ -94,7 +95,7 @@ final class ReflectLibraryRow extends View {
             recordingCover(canvas, art);
             float statusRight = hasTranscript || progress != null ? 377 : 361;
             textRight(canvas, paint, status, statusRight, 29, 17,
-                    progress != null ? 0xff63b7ff : hasTranscript ? 0xff34c759 : MUTED, art.regular, -.43f);
+                    processing ? 0xff63b7ff : hasTranscript ? 0xff34c759 : MUTED, art.regular, -.43f);
             float available = statusRight - 74 - 10 - paint.measureText(status);
             rowTitle(canvas, paint, art, item.title, available);
             text(canvas, paint, timeAndLength, 74, 51, 16, MUTED, art.regular, -.23f);
@@ -151,7 +152,8 @@ final class ReflectLibraryRow extends View {
 
     ReflectLibraryRow conversation(ReflectArtwork art, ReflectCatalog.Conversation item,
                                     ReflectLocalTranscription.Progress progress, Runnable open) {
-        String description = progress == null ? item.preview : progress.title() + " · " + progress.overallPercent() + "%";
+        String description = progress == null || progress.backgroundEmotions() ? item.preview
+                : progress.title() + " · " + progress.overallPercent() + "%";
         return bind(91,
                 item.title + ", " + item.recording.timeLabel + ", " + description, false, open, (canvas, paint) -> {
             recordingCover(canvas, art);
