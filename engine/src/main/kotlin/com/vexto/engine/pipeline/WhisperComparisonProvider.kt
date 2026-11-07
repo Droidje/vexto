@@ -42,15 +42,24 @@ class WhisperComparisonProvider(
     private val timeoutMs: Long = 600_000,
     private val audioContext: Int = 768,
     private val language: String = "ru",
+    private val fastDecoding: Boolean = false,
 ) {
-    suspend fun generate(chunk: ComparisonChunk, artifactFile: File): ImmutableAsrCandidate {
+    suspend fun generate(chunk: ComparisonChunk, artifactFile: File): ImmutableAsrCandidate =
+        generate(chunk, artifactFile) {}
+
+    /** Progress represents completed audio windows, not a timer-based estimate. */
+    suspend fun generate(chunk: ComparisonChunk, artifactFile: File,
+                         onProgress: (Float) -> Unit): ImmutableAsrCandidate {
         val capacityMs = minOf(10_000L, audioContext * 20L)
-        if (chunk.durationMs <= capacityMs) return generateMeasured(chunk, artifactFile).first
-        return generateWindowed(chunk, artifactFile, capacityMs)
+        if (chunk.durationMs <= capacityMs) {
+            return generateMeasured(chunk, artifactFile).first.also { onProgress(1f) }
+        }
+        return generateWindowed(chunk, artifactFile, capacityMs, onProgress)
     }
 
     /** Whisper's encoder context stays bounded; SDK selection can export this entire candidate. */
-    private suspend fun generateWindowed(chunk: ComparisonChunk, artifactFile: File, capacityMs: Long): ImmutableAsrCandidate {
+    private suspend fun generateWindowed(chunk: ComparisonChunk, artifactFile: File, capacityMs: Long,
+                                        onProgress: (Float) -> Unit): ImmutableAsrCandidate {
         val info = PcmWave.inspect(chunk.wav)
         require(info.sampleRate == 16000 && info.sampleCount > 0)
         val window = capacityMs * 16
@@ -76,6 +85,7 @@ class WhisperComparisonProvider(
             check(wav.delete()) { "Cannot release completed Whisper window" }
             from = to
             index++
+            onProgress(from.toFloat() / info.sampleCount)
         }
         return ImmutableAsrCandidate.create(chunk.id, AsrSource.WHISPER, chunk.inputSha256,
             texts.joinToString(""), tokens, words, artifactFile)
@@ -113,6 +123,7 @@ class WhisperComparisonProvider(
             "-of", prefix.absolutePath, "-ojf", "-l", language, "-ng", "-t", threads.toString(),
             "-bs", beamSize.toString(), "-bo", bestOf.toString(), "-ac", audioContext.toString())
         if (flashAttention) arguments += "-fa"
+        if (fastDecoding) arguments += "--no-temperature-fallback"
         val result = executor.run("libvexto_whisper_exec.so", arguments, dir,
             File(dir, artifactFile.nameWithoutExtension + ".stdout"),
             File(dir, artifactFile.nameWithoutExtension + ".stderr"), timeoutMs)
@@ -129,6 +140,7 @@ class WhisperComparisonProvider(
             put("audio_context_capacity_ms", audioContext * 20L); put("input_duration_ms", chunk.durationMs)
             put("threads", threads); put("beam_size", beamSize); put("best_of", bestOf)
             put("flash_attention", flashAttention); put("use_gpu", false); put("language", language)
+            put("fast_decoding", fastDecoding); put("temperature_fallback", !fastDecoding)
             put("elapsed_ms", result.elapsedMs); put("peak_combined_rss_bytes", result.peakCombinedRssBytes)
         }
         writeImmutableArtifact(File(dir, artifactFile.nameWithoutExtension + ".profile-audit.json"),

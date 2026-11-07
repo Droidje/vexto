@@ -39,8 +39,7 @@ data class ProcessingProfile(
             require(audioMs >= 0)
             val mode = requested.resolve(audioMs)
             val fast = mode == ProcessingMode.FAST
-            return ProcessingProfile(requested, mode, !fast, 2, if (fast) 2 else 1,
-                2, if (fast) 2 else 4).also { it.validate() }
+            return ProcessingProfile(requested, mode, !fast, 2, 1, 2, 4).also { it.validate() }
         }
 
         fun read(job: File): ProcessingProfile {

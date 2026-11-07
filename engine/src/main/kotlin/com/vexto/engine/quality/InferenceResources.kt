@@ -50,7 +50,7 @@ internal object InferenceResources {
         WorkerStage.GIGAAM ->
             Cost(if (profile.fast) 2 else 4, if (profile.fast) 750_000_000 else 1_200_000_000)
         WorkerStage.WHISPER, WorkerStage.WHISPER_REFINE ->
-            if (profile.fast && request.stage == WorkerStage.WHISPER) Cost(2, 800_000_000)
+            if (profile.fast && request.stage == WorkerStage.WHISPER) Cost(4, 800_000_000)
             else Cost(4, NativeBudget)
     }
 }

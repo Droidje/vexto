@@ -73,6 +73,8 @@ int main(int argc, char ** argv) {
             params.print_realtime = false; params.print_progress = false;
             params.print_timestamps = false; params.print_special = false;
             params.greedy.best_of = std::stoi(vexto::option(args, "-bo", "1"));
+            // FAST performs one greedy decode instead of hidden temperature retries.
+            if (vexto::flag(args, "--no-temperature-fallback")) params.temperature_inc = 0.0f;
             params.beam_search.beam_size = beams;
             if (whisper_full(context.get(), params, pcm.data(), int(pcm.size())) != 0)
                 throw std::runtime_error("Whisper inference failed");
