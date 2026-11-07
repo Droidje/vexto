@@ -1,0 +1,16 @@
+{
+  "transcript": [
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 100,
+      "end_ms": 862,
+      "text": "Творог свежий?"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 2018,
+      "end_ms": 3122,
+      "text": "Вы об этом знаете?"
+    }
+  ]
+}

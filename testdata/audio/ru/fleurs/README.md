@@ -24,6 +24,8 @@
 
 ## Источник, атрибуция и лицензия
 
+Для проверки смены голосов добавлен отдельный [набор RINCO с RTTM и JSON](../rinco/README.md). Его аннотации относятся к собственным WAV; к FLEURS они не применяются.
+
 **FLEURS: Few-shot Learning Evaluation of Universal Representations of Speech** (2022). Авторы: Alexis Conneau, Min Ma, Simran Khanuja, Yu Zhang, Vera Axelrod, Siddharth Dalmia, Jason Riesa, Clara Rivera, Ankur Bapna / Google.
 
 - [Официальная карточка датасета](https://huggingface.co/datasets/google/fleurs).

@@ -1,0 +1,21 @@
+{
+  "id": "pinchuk-interview-31m48s",
+  "audio": "pinchuk-interview-31m48s.ogg",
+  "language": "ru",
+  "title": "Интервью с Виктором Пинчуком о фотовыставке «Уличные зарисовки»",
+  "author": "ГАУ С «Севастопольская телерадиокомпания»",
+  "date": "2024-02-14",
+  "source_page": "https://commons.wikimedia.org/wiki/File:Viktor_Pinchuk,_interview_(STV).webm",
+  "source_page_revision": "https://commons.wikimedia.org/w/index.php?title=File:Viktor_Pinchuk,_interview_(STV).webm&oldid=1078339178",
+  "source_media_url": "https://upload.wikimedia.org/wikipedia/commons/2/20/Viktor_Pinchuk%2C_interview_%28STV%29.webm",
+  "source_video_url": "https://www.youtube.com/watch?v=WFQLEPzi_Ok",
+  "duration_seconds_from_source_page": 1908,
+  "duration_independently_verified": false,
+  "transcript_reference": null,
+  "diarization_reference": null,
+  "models_run": false,
+  "manual_listening_review": false,
+  "license": "CC-BY-4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "changes": "Original audio stream extracted from WebM into Ogg by stream copy. No trimming, resampling, denoising, transcoding, transcription or diarization."
+}

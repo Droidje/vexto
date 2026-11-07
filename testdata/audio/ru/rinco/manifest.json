@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "recordings": [
+    {
+      "id": "rinco-ru-01",
+      "audio": "rinco-ru-01.wav",
+      "diarization_reference": "rinco-ru-01.rttm",
+      "transcript_reference": "rinco-ru-01.reference.json",
+      "text_reference": "rinco-ru-01.txt",
+      "language": "ru",
+      "speaker_count": 2,
+      "global_speaker_identity": false,
+      "reference_type": "published_manual_utterance_annotations",
+      "reference_tiers": [
+        "Voice",
+        "Text"
+      ],
+      "annotation_resolution": "utterance envelopes, not word-level speech activity",
+      "independent_listening_review": false,
+      "source_record": "https://doi.org/10.5281/zenodo.8119302",
+      "source_archive_url": "https://zenodo.org/records/8119302/files/RINCO_Russian_Intonation_Corpus-v01.zip?download=1",
+      "publisher_archive_md5": "63ff0a4366e82cfaac21a220dba5f27b",
+      "source_audio_member": "INTON-EAF/1-Questions/q-112.wav",
+      "source_annotation_member": "INTON-EAF/1-Questions/q-112.eaf",
+      "source_audio_sha256": "96e1926014827e86541abbeef471595e8ace3b63f2d8da50dd5076ca1b2bc509",
+      "source_annotation_sha256": "05c466e44ab51e4c7d6c00a4fe2bb7800aa27886f0fefb8a342c9c97ce1f9539",
+      "source_annotation_file": "source/q-112.eaf",
+      "source_sample_count": 938668,
+      "crop_start_sample": 303849,
+      "crop_end_sample": 445940,
+      "sample_rate": 44100,
+      "sample_count": 142091,
+      "duration_seconds": 3.222018140589569,
+      "source_bindings": [
+        {
+          "speaker_id": "speaker_1",
+          "source_voice_label": "женский",
+          "voice_annotation_id": "a24",
+          "text_annotation_id": "a4",
+          "source_start_ms": 6990,
+          "source_end_ms": 7752
+        },
+        {
+          "speaker_id": "speaker_2",
+          "source_voice_label": "мужской",
+          "voice_annotation_id": "a25",
+          "text_annotation_id": "a5",
+          "source_start_ms": 8908,
+          "source_end_ms": 10012
+        }
+      ],
+      "audio_sha256": "973fff3183d3ef60832b12f26a44e5952b95e01ff1b63a7aa4b7b6965270ea27",
+      "rttm_sha256": "ef8509ddb4b134b780a75f811a1c96dfd6d970ac92e69b452d3803aedeb3da34",
+      "json_sha256": "ccf4a999f8f1a328d1ce29f20a01ecf57902f4c4a9fde033ad1e3b95923522e2",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Contiguous exact PCM crop containing one female-labelled and one male-labelled utterance; no resampling, splicing, denoising or generated labels. Source Voice/Text intervals shifted by crop offset."
+    },
+    {
+      "id": "rinco-ru-02",
+      "audio": "rinco-ru-02.wav",
+      "diarization_reference": "rinco-ru-02.rttm",
+      "transcript_reference": "rinco-ru-02.reference.json",
+      "text_reference": "rinco-ru-02.txt",
+      "language": "ru",
+      "speaker_count": 2,
+      "global_speaker_identity": false,
+      "reference_type": "published_manual_utterance_annotations",
+      "reference_tiers": [
+        "Voice",
+        "Text"
+      ],
+      "annotation_resolution": "utterance envelopes, not word-level speech activity",
+      "independent_listening_review": false,
+      "source_record": "https://doi.org/10.5281/zenodo.8119302",
+      "source_archive_url": "https://zenodo.org/records/8119302/files/RINCO_Russian_Intonation_Corpus-v01.zip?download=1",
+      "publisher_archive_md5": "63ff0a4366e82cfaac21a220dba5f27b",
+      "source_audio_member": "INTON-EAF/1-Questions/q-1122.wav",
+      "source_annotation_member": "INTON-EAF/1-Questions/q-1122.eaf",
+      "source_audio_sha256": "ff509418d711ea7011d50ef5571835a477cf990bfe96cf62dffab571ed25ff4d",
+      "source_annotation_sha256": "25507f40f55a4dba81f44a2558176251bd9a1f7465a7f4253475074e6e3ad103",
+      "source_annotation_file": "source/q-1122.eaf",
+      "source_sample_count": 539080,
+      "crop_start_sample": 99313,
+      "crop_end_sample": 290531,
+      "sample_rate": 44100,
+      "sample_count": 191218,
+      "duration_seconds": 4.336009070294785,
+      "source_bindings": [
+        {
+          "speaker_id": "speaker_1",
+          "source_voice_label": "женский",
+          "voice_annotation_id": "a12",
+          "text_annotation_id": "a2",
+          "source_start_ms": 2352,
+          "source_end_ms": 3790
+        },
+        {
+          "speaker_id": "speaker_2",
+          "source_voice_label": "мужской",
+          "voice_annotation_id": "a13",
+          "text_annotation_id": "a3",
+          "source_start_ms": 4936,
+          "source_end_ms": 6488
+        }
+      ],
+      "audio_sha256": "5b46f87f1fca0fc8dd452193c07dbc80ff8ec1438d63cadacb7d8ad94282a18f",
+      "rttm_sha256": "8e96f057ec8be7201e5cda9ec3bc9a15e7ff8b2e48f7e93e87bc07d09602a5b1",
+      "json_sha256": "c40ab1e300193cf11fc935ff12fc1f09ac6f590265dd30bd99b60c6815bced2f",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Contiguous exact PCM crop containing one female-labelled and one male-labelled utterance; no resampling, splicing, denoising or generated labels. Source Voice/Text intervals shifted by crop offset."
+    },
+    {
+      "id": "rinco-ru-03",
+      "audio": "rinco-ru-03.wav",
+      "diarization_reference": "rinco-ru-03.rttm",
+      "transcript_reference": "rinco-ru-03.reference.json",
+      "text_reference": "rinco-ru-03.txt",
+      "language": "ru",
+      "speaker_count": 2,
+      "global_speaker_identity": false,
+      "reference_type": "published_manual_utterance_annotations",
+      "reference_tiers": [
+        "Voice",
+        "Text"
+      ],
+      "annotation_resolution": "utterance envelopes, not word-level speech activity",
+      "independent_listening_review": false,
+      "source_record": "https://doi.org/10.5281/zenodo.8119302",
+      "source_archive_url": "https://zenodo.org/records/8119302/files/RINCO_Russian_Intonation_Corpus-v01.zip?download=1",
+      "publisher_archive_md5": "63ff0a4366e82cfaac21a220dba5f27b",
+      "source_audio_member": "INTON-EAF/1-Questions/q-12.wav",
+      "source_annotation_member": "INTON-EAF/1-Questions/q-12.eaf",
+      "source_audio_sha256": "3c43442fba82b01ce73867660e0f829c8b26b6154b764b92dc29a95c6dc8375b",
+      "source_annotation_sha256": "930b0c5d1f7d98b5f10ef3f7892d7fea2c74137355d27187eb44f601231534f6",
+      "source_annotation_file": "source/q-12.eaf",
+      "source_sample_count": 1096918,
+      "crop_start_sample": 113513,
+      "crop_end_sample": 340452,
+      "sample_rate": 44100,
+      "sample_count": 226939,
+      "duration_seconds": 5.1460090702947845,
+      "source_bindings": [
+        {
+          "speaker_id": "speaker_1",
+          "source_voice_label": "женский",
+          "voice_annotation_id": "a18",
+          "text_annotation_id": "a2",
+          "source_start_ms": 2674,
+          "source_end_ms": 4472
+        },
+        {
+          "speaker_id": "speaker_2",
+          "source_voice_label": "мужской",
+          "voice_annotation_id": "a19",
+          "text_annotation_id": "a3",
+          "source_start_ms": 5670,
+          "source_end_ms": 7620
+        }
+      ],
+      "audio_sha256": "d09e789ac43f4f2b278b157d6d3316673b897732f363b253afb242b68b240207",
+      "rttm_sha256": "8138d58d5f440fe3ef75895b1fd643a6cfb4b47883667a57e3d9d8ad036237c0",
+      "json_sha256": "1d0d3b9775fb0fe57751991ec9a90c019a72b374449d7bef875b264fb66aa4a5",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Contiguous exact PCM crop containing one female-labelled and one male-labelled utterance; no resampling, splicing, denoising or generated labels. Source Voice/Text intervals shifted by crop offset."
+    },
+    {
+      "id": "rinco-ru-04",
+      "audio": "rinco-ru-04.wav",
+      "diarization_reference": "rinco-ru-04.rttm",
+      "transcript_reference": "rinco-ru-04.reference.json",
+      "text_reference": "rinco-ru-04.txt",
+      "language": "ru",
+      "speaker_count": 2,
+      "global_speaker_identity": false,
+      "reference_type": "published_manual_utterance_annotations",
+      "reference_tiers": [
+        "Voice",
+        "Text"
+      ],
+      "annotation_resolution": "utterance envelopes, not word-level speech activity",
+      "independent_listening_review": false,
+      "source_record": "https://doi.org/10.5281/zenodo.8119302",
+      "source_archive_url": "https://zenodo.org/records/8119302/files/RINCO_Russian_Intonation_Corpus-v01.zip?download=1",
+      "publisher_archive_md5": "63ff0a4366e82cfaac21a220dba5f27b",
+      "source_audio_member": "INTON-EAF/1-Questions/q-143.wav",
+      "source_annotation_member": "INTON-EAF/1-Questions/q-143.eaf",
+      "source_audio_sha256": "cae378feca503cddedf7978291a1e3c7431cfcb2a53e7aac07ba07e0f3d405fb",
+      "source_annotation_sha256": "7d69c566d261d968cf3ab7861598e8434bad7a545bd58331b821c7eebf9d8161",
+      "source_annotation_file": "source/q-143.eaf",
+      "source_sample_count": 156890,
+      "crop_start_sample": 0,
+      "crop_end_sample": 102533,
+      "sample_rate": 22050,
+      "sample_count": 102533,
+      "duration_seconds": 4.650022675736961,
+      "source_bindings": [
+        {
+          "speaker_id": "speaker_1",
+          "source_voice_label": "женский",
+          "voice_annotation_id": "a7",
+          "text_annotation_id": "a1",
+          "source_start_ms": 5,
+          "source_end_ms": 1690
+        },
+        {
+          "speaker_id": "speaker_2",
+          "source_voice_label": "мужской",
+          "voice_annotation_id": "a8",
+          "text_annotation_id": "a2",
+          "source_start_ms": 2905,
+          "source_end_ms": 4550
+        }
+      ],
+      "audio_sha256": "7b4192c3d748b28f34b7ee7793958ec784e068d656331c8ceb8137784a3454b7",
+      "rttm_sha256": "1cc06d1e83bfa67120b4628c39ed76cfa5384f5ef705d90c3b8c541fb9c21783",
+      "json_sha256": "7f837bc79d21cbc404c448e324b445e4f19375881935612b41bf627ec1335ee9",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Contiguous exact PCM crop containing one female-labelled and one male-labelled utterance; no resampling, splicing, denoising or generated labels. Source Voice/Text intervals shifted by crop offset."
+    },
+    {
+      "id": "rinco-ru-05",
+      "audio": "rinco-ru-05.wav",
+      "diarization_reference": "rinco-ru-05.rttm",
+      "transcript_reference": "rinco-ru-05.reference.json",
+      "text_reference": "rinco-ru-05.txt",
+      "language": "ru",
+      "speaker_count": 2,
+      "global_speaker_identity": false,
+      "reference_type": "published_manual_utterance_annotations",
+      "reference_tiers": [
+        "Voice",
+        "Text"
+      ],
+      "annotation_resolution": "utterance envelopes, not word-level speech activity",
+      "independent_listening_review": false,
+      "source_record": "https://doi.org/10.5281/zenodo.8119302",
+      "source_archive_url": "https://zenodo.org/records/8119302/files/RINCO_Russian_Intonation_Corpus-v01.zip?download=1",
+      "publisher_archive_md5": "63ff0a4366e82cfaac21a220dba5f27b",
+      "source_audio_member": "INTON-EAF/1-Questions/q-144.wav",
+      "source_annotation_member": "INTON-EAF/1-Questions/q-144.eaf",
+      "source_audio_sha256": "56164d61c921431cffeaa8ef9e4e2414b72f6a43163f708169b5a875b3baadc1",
+      "source_annotation_sha256": "f8de42310b1debacef6fc8007a437feb00e1305b5dbd639e66a136ec4a12bc6c",
+      "source_annotation_file": "source/q-144.eaf",
+      "source_sample_count": 792255,
+      "crop_start_sample": 65532,
+      "crop_end_sample": 196157,
+      "sample_rate": 22050,
+      "sample_count": 130625,
+      "duration_seconds": 5.924036281179139,
+      "source_bindings": [
+        {
+          "speaker_id": "speaker_1",
+          "source_voice_label": "женский",
+          "voice_annotation_id": "a26",
+          "text_annotation_id": "a2",
+          "source_start_ms": 3072,
+          "source_end_ms": 4908
+        },
+        {
+          "speaker_id": "speaker_2",
+          "source_voice_label": "мужской",
+          "voice_annotation_id": "a27",
+          "text_annotation_id": "a3",
+          "source_start_ms": 6036,
+          "source_end_ms": 8796
+        }
+      ],
+      "audio_sha256": "804e2929b98853bc0e2bdf8d9f4fd5ee1e2767ed65f155f32a8e68b77d3e9ccb",
+      "rttm_sha256": "fdc7b9ad8424a39d2a25553a934f17ec10c1d1c3315f8b6565789ac774cb88a1",
+      "json_sha256": "05ce5a7c7b9342e7d229342ccac1050d0aea52b033883791ea54084db4583a41",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Contiguous exact PCM crop containing one female-labelled and one male-labelled utterance; no resampling, splicing, denoising or generated labels. Source Voice/Text intervals shifted by crop offset."
+    }
+  ]
+}
