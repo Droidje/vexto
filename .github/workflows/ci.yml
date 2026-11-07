@@ -59,7 +59,7 @@ jobs:
     name: Full Android APK (ARM64 and x86_64)
     if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v7
         with:

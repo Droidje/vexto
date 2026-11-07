@@ -19,7 +19,7 @@ data class ProcessingProfile(
     val whisperModelId: String get() = if (fast) "whisper_fast" else "whisper"
     val speakerAnnotations: Boolean get() = !fast
 
-    fun expectedStages(slavic: Boolean): Set<WorkerStage> = WorkerStage.entries.toSet() -
+    fun expectedStages(slavic: Boolean): Set<WorkerStage> = WorkerStage.entries.toSet() - setOf(WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE) -
         (if (denoise) emptySet() else setOf(WorkerStage.DENOISE)) -
         (if (speakerAnnotations) emptySet() else setOf(WorkerStage.VOICEPRINT, WorkerStage.EMOTION)) -
         (if (slavic) emptySet() else setOf(WorkerStage.GIGAAM))

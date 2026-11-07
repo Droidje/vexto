@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 project(vexto_emotion LANGUAGES C CXX)
+add_library(vexto_cpu SHARED cpu_features.cpp)
+target_compile_features(vexto_cpu PRIVATE cxx_std_17)
 
 # Both adapters dlopen sherpa's sole ORT runtime; prepare pinned 1.28.2 headers offline.
 set(ORT_HEADERS "${CMAKE_CURRENT_LIST_DIR}/include")

@@ -56,6 +56,14 @@ class AsrSelectionTool {
         }
     }
 
+    fun equivalent(pair: AsrCandidatePair, selectedFile: File): AsrSelection {
+        require(allPresentCandidatesIntact(pair))
+        val first = requireNotNull(pair.gigaam)
+        require(first.text == requireNotNull(pair.whisper).text)
+        return copyCandidate(first, selectedFile, AsrSelectionStatus.EQUIVALENT, "exact_text_equality",
+            "identical_original_texts", null)
+    }
+
     /** Equal quality priority. With two candidates, GigaAM is only an unconfirmed display policy. */
     fun fallback(pair: AsrCandidatePair, selectedFile: File, reason: String, response: String? = null,
         responseKind: String = "tool_json_v1", scopedToolCallSha256: String? = null): AsrSelection {

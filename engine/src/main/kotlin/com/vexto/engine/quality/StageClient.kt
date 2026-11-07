@@ -12,6 +12,20 @@ import kotlin.coroutines.resumeWithException
 internal class StageClient(private val context: Context) {
     suspend fun run(request: WorkerRequest, checkpoint: WorkerResult? = null,
                     onProgress: (Float) -> Unit = {}): WorkerResult {
+        val slot = InferenceResources.acquire(InferenceResources.cost(request, ProcessingProfile.read(File(request.jobDir))))
+        var releaseSlot = true
+        try { return runInSlot(request, checkpoint, slot, onProgress) }
+        catch (error: IOException) {
+            // Never admit a replacement while an old native heap may still be alive.
+            if (error.message?.contains("TERMINATION_UNCONFIRMED") == true) releaseSlot = false
+            throw error
+        } finally {
+            if (releaseSlot) withContext(NonCancellable) { InferenceResources.release(slot) }
+        }
+    }
+
+    private suspend fun runInSlot(request: WorkerRequest, checkpoint: WorkerResult?, slot: Int,
+                                  onProgress: (Float) -> Unit): WorkerResult {
         withContext(Dispatchers.Main) {
             blockedLease?.let {
                 if (!it.dead.isCompleted) throw IOException("PREVIOUS_WORKER_TERMINATION_UNCONFIRMED")
@@ -34,7 +48,7 @@ internal class StageClient(private val context: Context) {
         val speakers = runCatching { JobFiles.load<List<PipelineTurn>>(File(job, "turns.json")).map { it.speaker }.distinct().size }.getOrDefault(1)
         val timeout = StageTimeoutPolicy.milliseconds(request.stage, audioMs, plan?.chunks?.size ?: 1, speakers)
         val started = SystemClock.elapsedRealtime()
-        val lease = Lease(context, request, path, onProgress)
+        val lease = Lease(context, request, path, slot, onProgress)
         var failure: Throwable? = null
         val result = try {
             // Only this deadline becomes null. Cancellation of the caller, including an outer
@@ -59,7 +73,7 @@ internal class StageClient(private val context: Context) {
     }
 
     /** State is confined to the main thread; death callbacks remain installed during cancellation. */
-    private class Lease(val context: Context, val request: WorkerRequest, val path: File, val onProgress: (Float) -> Unit) {
+    private class Lease(val context: Context, val request: WorkerRequest, val path: File, val slot: Int, val onProgress: (Float) -> Unit) {
         val dead = CompletableDeferred<Unit>()
         private val main = Handler(Looper.getMainLooper())
         private var bound = false
@@ -156,7 +170,7 @@ internal class StageClient(private val context: Context) {
                 }
             }
             try {
-                bound = context.bindService(Intent(context, InferenceStageService::class.java), connection!!, Context.BIND_AUTO_CREATE)
+                bound = context.bindService(Intent(context, listOf(InferenceSlot0::class.java, InferenceSlot1::class.java, InferenceSlot2::class.java, InferenceSlot3::class.java)[slot]), connection!!, Context.BIND_AUTO_CREATE)
                 if (!bound && waiting.isActive) waiting.resumeWithException(IOException("Cannot bind inference worker"))
             } catch (error: Exception) {
                 if (waiting.isActive) waiting.resumeWithException(error)

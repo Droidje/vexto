@@ -73,7 +73,7 @@ class PersistentNativeExecutor internal constructor(
         val stable = configuration(args)
         if (child == null) {
             runner.cleanupOrphans()
-            val binary = File(runner.nativeDir, name)
+            val binary = NativeCpuDispatch.executable(runner.nativeDir, name)
             if (!binary.isFile || !binary.canExecute()) throw NativeProcessException(
                 NativeProcessException.Reason.IO, "Native executable is not installer-extracted: $name")
             check(directory.mkdirs() || directory.isDirectory)

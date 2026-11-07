@@ -31,6 +31,7 @@ class QwenAsrSelector(
         if (pair.gigaam == null || pair.whisper == null) {
             return fallback("one_available_candidate")
         }
+        if (pair.gigaam.text == pair.whisper.text) return tool.equivalent(pair, selected)
         val request = try { promptBuilder.renderScopedSource(pair) } catch (_: SelectorPromptTooLarge) {
             return fallback("prompt_exceeds_context_budget")
         } catch (_: Exception) {

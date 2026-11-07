@@ -21,6 +21,7 @@ internal class ChunkWaveMaterializer(
     jobDir: File,
     plan: ChunkPlan,
     expectedInput: File,
+    private val readers: List<WorkerStage> = emptyList(),
     private val warning: (String) -> Unit,
 ) {
     private val job = jobDir.canonicalFile
@@ -43,38 +44,46 @@ internal class ChunkWaveMaterializer(
         currentCoroutineContext().ensureActive()
         val file = checkedPath(chunk)
         var created = false
-        try {
-            val parent = requireNotNull(file.parentFile)
-            check(parent.mkdirs() || parent.isDirectory)
-            require(checkedPath(chunk) == file)
+        file.parentFile?.mkdirs()
+        val lock = File(file.parentFile, ".${chunk.id}.lock")
+        // File locks synchronize independent Android processes, not just coroutine consumers.
+        java.io.RandomAccessFile(lock, "rw").use { owner -> owner.channel.lock().use {
             if (Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
-                // A killed previous worker may have left the exact verified chunk behind.
-                // Reuse it for fallback ASR, retaining this non-owned file for audit.
                 require(Files.isRegularFile(file.toPath(), NOFOLLOW_LINKS) && !Files.isSymbolicLink(file.toPath()))
                 if (JobFiles.sha256(file) != chunk.inputSha256) JobCheckpoint.archiveRetryOutput(job, file)
             }
             if (!Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
-                Files.createFile(file.toPath()) // Reserve a fresh path; never overwrite another file.
+                Files.createFile(file.toPath())
                 created = true
                 PcmWave.crop(input, file, chunk.fromSample, chunk.toSample)
             }
+        } }
+        try {
             currentCoroutineContext().ensureActive()
-            // Existing providers validate this SHA and fsync the immutable candidate before returning.
             return block(ComparisonChunk(chunk.id, file, chunk.inputSha256, chunk.durationMs))
         } finally {
-            if (created) {
-                try {
-                    require(checkedPath(chunk) == file)
+            if (readers.isEmpty() && created) Files.deleteIfExists(file.toPath())
+        }
+    }
+
+    /** A published candidate proves that consumer finished reading and verifying this WAV. */
+    fun releaseCompleted(chunk: AudioChunk) {
+        if (readers.isEmpty() || !readers.all { stage -> runCatching {
+                JobFiles.load<WorkerResult>(stage.resultFile(job)).candidates.any {
+                    it.chunkId == chunk.id && it.sha256.matches(Regex("[a-f0-9]{64}"))
+                }
+            }.getOrDefault(false) }) return
+        val file = checkedPath(chunk)
+        try {
+            java.io.RandomAccessFile(File(file.parentFile, ".${chunk.id}.lock"), "rw").use { owner ->
+                owner.channel.lock().use {
                     if (Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
-                        require(Files.isRegularFile(file.toPath(), NOFOLLOW_LINKS))
+                        require(Files.isRegularFile(file.toPath(), NOFOLLOW_LINKS) && !Files.isSymbolicLink(file.toPath()))
                         Files.delete(file.toPath())
                     }
-                } catch (failure: Exception) {
-                    // A retained temporary must not erase an already durable ASR result.
-                    warning("CHUNK_CLEANUP_FAILED:${chunk.id}:${failure.javaClass.simpleName}")
                 }
             }
-        }
+        } catch (failure: Exception) { warning("CHUNK_CLEANUP_FAILED:${chunk.id}:${failure.javaClass.simpleName}") }
     }
 
     private fun checkedPath(chunk: AudioChunk): File {

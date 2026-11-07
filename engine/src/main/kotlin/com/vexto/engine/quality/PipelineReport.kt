@@ -11,18 +11,19 @@ data class PipelineCoverage(
     val selectedChunks: Int,
     val llmSelectedChunks: Int,
     val unresolvedChunks: Int,
+    val equivalentChunks: Int = 0,
 ) {
     init {
         require(expectedChunks >= 0)
-        require(listOf(gigaamChunks, whisperChunks, selectedChunks, llmSelectedChunks, unresolvedChunks)
+        require(listOf(gigaamChunks, whisperChunks, selectedChunks, llmSelectedChunks, unresolvedChunks, equivalentChunks)
             .all { it in 0..expectedChunks })
-        require(llmSelectedChunks + unresolvedChunks <= selectedChunks)
+        require(llmSelectedChunks + equivalentChunks + unresolvedChunks <= selectedChunks)
     }
     val complete: Boolean get() = selectedChunks == expectedChunks
     val selectionResolved: Boolean get() = complete && unresolvedChunks == 0
     fun fullProfileCompleted(stagesSucceeded: Boolean, warnings: List<String>, withinBudget: Boolean): Boolean =
         expectedChunks > 0 && complete && selectionResolved && gigaamChunks == expectedChunks &&
-            whisperChunks == expectedChunks && llmSelectedChunks == expectedChunks && stagesSucceeded && withinBudget &&
+            whisperChunks == expectedChunks && llmSelectedChunks + equivalentChunks == expectedChunks && stagesSucceeded && withinBudget &&
             warnings.none { it.contains("_FAILED:") || it.startsWith("ASR_MISSING:") || it.startsWith("INVALID_") }
 }
 

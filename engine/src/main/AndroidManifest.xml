@@ -1,5 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
+        <service android:name="com.vexto.engine.quality.InferenceSlot0" android:process=":inference0" android:exported="false" />
+        <service android:name="com.vexto.engine.quality.InferenceSlot1" android:process=":inference1" android:exported="false" />
+        <service android:name="com.vexto.engine.quality.InferenceSlot2" android:process=":inference2" android:exported="false" />
+        <service android:name="com.vexto.engine.quality.InferenceSlot3" android:process=":inference3" android:exported="false" />
         <service android:name="com.vexto.engine.quality.InferenceStageService"
             android:process=":inference" android:exported="false" />
     </application>
