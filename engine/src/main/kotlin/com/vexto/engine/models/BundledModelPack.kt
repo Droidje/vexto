@@ -5,6 +5,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import java.io.File
 import java.io.FileOutputStream
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
@@ -20,8 +21,14 @@ internal object BundledModelPack {
     private const val SplitPrefix = "vexto_models_"
     private const val AssetDir = "vexto-models"
 
-    fun installed(context: Context): Boolean =
-        context.applicationInfo.splitNames?.any { it.startsWith(SplitPrefix) } == true
+    fun installed(context: Context): Boolean {
+        if (context.applicationInfo.splitNames?.any { it.startsWith(SplitPrefix) } == true) return true
+        return try {
+            context.assets.open("$AssetDir/embedded").use { true }
+        } catch (_: FileNotFoundException) {
+            false
+        }
+    }
 
     /** The engine serializes preparation before starting any worker that reads these files. */
     suspend fun prepare(
