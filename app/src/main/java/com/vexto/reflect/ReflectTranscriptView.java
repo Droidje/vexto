@@ -51,6 +51,7 @@ final class ReflectTranscriptView extends FrameLayout {
         void cancelTranscription();
         void openTranscriptOptions();
         void openTranscriptStyle();
+        void requestDeleteConversation();
         void toggleSummary();
         void retrySummary();
         void playTranscriptAudio();
@@ -304,14 +305,13 @@ final class ReflectTranscriptView extends FrameLayout {
         summaryIcon = new ReflectSummaryIcon(getContext(), artwork, preferences, layoutWidth / 393f);
         summaryIcon.setEnabled(!lines.isEmpty());
         summaryIcon.setPanelOpen(summaryState != null);
-        summaryIcon.setAlpha(lines.isEmpty() ? .55f : 1f);
         summaryIcon.setFocusable(true);
         summaryIcon.setBackground(new RippleDrawable(ColorStateList.valueOf(0x30ffffff), null,
                 style.rounded(Color.WHITE, 24)));
         summaryIcon.setOnClickListener(v -> actions.toggleSummary());
         place(summaryIcon, 16, 28, 48, 48, true);
-        icon("transcript_add", "Импортировать транскрипт", 64, 28, 48, 48, true, actions::importTranscript);
-        icon("transcript_style", "Настройки чтения", 112, 28, 48, 48, true, actions::openTranscriptStyle);
+        icon("transcript_style", "Настройки чтения", 64, 28, 48, 48, true, actions::openTranscriptStyle);
+        icon("trash", "Удалить разговор", 112, 28, 48, 48, true, actions::requestDeleteConversation);
     }
 
     private TextView titleView() {

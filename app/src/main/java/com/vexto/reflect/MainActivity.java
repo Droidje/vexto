@@ -41,6 +41,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private ReflectPreferences preferences;
     private ReflectTranscriptStore transcriptStore;
     private ReflectConversationStore conversationStore;
+    private ReflectConversationTitles titles;
+    private List<ReflectCatalog.Recording> recordingCatalog = List.of(); // Only accessed on imports.
     private ReflectTranscriptController transcripts;
     private SpeakerProfiles profiles;
     private SpeakerProfilesUi profilesUi;
@@ -70,6 +72,10 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         view = new ReflectView(this, this, preferences);
         transcriptStore = new ReflectTranscriptStore(getFilesDir());
         conversationStore = new ReflectConversationStore(this);
+        titles = new ReflectConversationTitles(this, conversationStore, transcriptStore, imports, recording -> {
+            transcripts.titleChanged(recording);
+            imports.execute(() -> publishConversations(ReflectCatalog.localConversations(recordingCatalog, conversationStore)));
+        });
         profiles = new SpeakerProfiles(this);
         SpeakerDirectory speakerDirectory = new SpeakerDirectory(getFilesDir(), transcriptStore, profiles);
         profilesUi = new SpeakerProfilesUi(this, view, profiles, speakerDirectory, imports, this::notice,
@@ -77,11 +83,10 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
                     if (transcripts != null) transcripts.refreshSpeakerNames();
                     refreshRecordings();
                 });
-        transcripts = new ReflectTranscriptController(this, view, preferences, transcriptStore, conversationStore, imports,
+        transcripts = new ReflectTranscriptController(this, view, preferences, transcriptStore, conversationStore, titles, imports,
                 this::notice, this::playFrom, this::play, this::refreshRecordings, profiles, profilesUi);
         setContentView(view);
         fullscreen();
-        refreshRecordings();
         if (state != null) {
             ReflectView.Screen tab = ReflectView.Screen.valueOf(state.getString("tab", HOME.name()));
             if (ReflectView.isTab(tab)) view.show(tab);
@@ -475,13 +480,20 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         File directory = new File(getFilesDir(), "recordings");
         imports.execute(() -> {
             var recordings = ReflectCatalog.localRecordings(directory, transcriptStore, profiles);
+            recordingCatalog = recordings;
             var conversations = ReflectCatalog.localConversations(recordings, conversationStore);
             runOnUiThread(() -> {
-                if (!isDestroyed()) {
-                    view.setRecordings(recordings);
-                    view.setConversations(conversations);
-                }
+                if (!isDestroyed()) view.setRecordings(recordings);
             });
+            publishConversations(conversations);
+        });
+    }
+
+    private void publishConversations(List<ReflectCatalog.Conversation> conversations) {
+        runOnUiThread(() -> {
+            if (isDestroyed()) return;
+            view.setConversations(conversations);
+            titles.catalog(conversations);
         });
     }
 
@@ -510,6 +522,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override public void cancelTranscription() { transcripts.cancelTranscription(); }
     @Override public void toggleSummary() { transcripts.toggleSummary(); }
     @Override public void retrySummary() { transcripts.retrySummary(); }
+    @Override public void requestDeleteConversation() { transcripts.requestDeleteConversation(this::closeTranscript); }
     @Override public void openTranscriptOptions() { transcripts.options(); }
     @Override public void openTranscriptStyle() { transcripts.styleOptions(); }
     @Override public void playTranscriptAudio() { play(); }
@@ -521,16 +534,27 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override public void openSpeaker(ReflectCatalog.Speaker speaker) { profilesUi.openProfile(speaker.id); }
     @Override public void closeSpeakerProfile() { profilesUi.closeProfile(); }
     @Override public void openSpeakerMenu() { profilesUi.openMenu(); }
+    @Override public void renameSpeakerProfile() { profilesUi.renameProfile(); }
 
     @Override public void openSpeakerUtterance(SpeakerDirectory.Utterance utterance) {
         if (view.screen() != SPEAKER_PROFILE || profilesUi.profileId() == null) return;
-        try {
-            openLocalDetail(utterance.recording(), "Разговор", false, false);
-            transcriptFromSpeaker = true;
-            playFrom(utterance.startMs());
-        } catch (IOException | RuntimeException error) {
-            notice("Не удалось открыть запись");
-        }
+        String profile = profilesUi.profileId();
+        imports.execute(() -> {
+            boolean deleted;
+            try { deleted = conversationStore.isDeleted(utterance.recording()); }
+            catch (RuntimeException unavailable) { deleted = false; }
+            boolean recordingDetails = deleted;
+            runOnUiThread(() -> {
+                if (isDestroyed() || view.screen() != SPEAKER_PROFILE || !profile.equals(profilesUi.profileId())) return;
+                try {
+                    openLocalDetail(utterance.recording(), "Разговор", recordingDetails, false);
+                    transcriptFromSpeaker = true;
+                    playFrom(utterance.startMs());
+                } catch (IOException | RuntimeException error) {
+                    notice("Не удалось открыть запись");
+                }
+            });
+        });
     }
 
     @Override public void openMicrophoneSettings() {
@@ -575,6 +599,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     @Override protected void onStop() {
+        titles.foreground(false);
         if (hasRecordingDraft()) finishRecording();
         stopPlayer();
         super.onStop();
@@ -583,6 +608,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override protected void onResume() {
         super.onResume();
         transcripts.resumeProcessing();
+        titles.foreground(true);
+        refreshRecordings();
         refreshSpeakers();
         transcripts.refreshSpeakerNames();
     }
@@ -596,6 +623,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         cancelReviewWaveform();
         session.cancel();
         if (isFinishing()) discardDraft();
+        titles.destroy();
         transcripts.destroy();
         profilesUi.close();
         imports.execute(() -> {

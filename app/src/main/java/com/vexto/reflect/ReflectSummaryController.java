@@ -17,6 +17,7 @@ import java.util.function.Consumer;
 final class ReflectSummaryController {
     private final Activity activity;
     private final ReflectTranscriptStore store;
+    private final ReflectConversationTitles titles;
     private final Executor io;
     private final Consumer<ReflectSummaryState> display;
 
@@ -28,10 +29,11 @@ final class ReflectSummaryController {
     private ReflectSummaryState state;
     private Generation active;
 
-    ReflectSummaryController(Activity activity, ReflectTranscriptStore store, Executor io,
+    ReflectSummaryController(Activity activity, ReflectTranscriptStore store, ReflectConversationTitles titles, Executor io,
                              Consumer<ReflectSummaryState> display) {
         this.activity = activity;
         this.store = store;
+        this.titles = titles;
         this.io = io;
         this.display = display;
     }
@@ -113,9 +115,10 @@ final class ReflectSummaryController {
         Generation job = new Generation(recording, source);
         active = job;
         state = job.state;
+        titles.prioritizeSummary();
         try {
             job.task = ReflectEngine.summarize(activity.getApplicationContext(), source.text(),
-                    new ReflectEngine.SummaryListener() {
+                    titles.warmEligibility(job.recording), new ReflectEngine.SummaryWithTitleListener() {
                 @Override public void onProgress(int done, int total, long remainingMs) {
                     if (active != job || destroyed) return;
                     int percent = total <= 0 ? -1 : Math.min(99, Math.round(100f * done / total));
@@ -140,6 +143,10 @@ final class ReflectSummaryController {
                     });
                 }
 
+                @Override public void onTitle(String title) {
+                    titles.acceptWarm(job.recording, job.source.fingerprint(), title);
+                }
+
                 @Override public void onError(Throwable error) {
                     finish(job, failure("Не удалось создать резюме на устройстве. Повторите попытку."));
                 }
@@ -147,6 +154,13 @@ final class ReflectSummaryController {
         } catch (RuntimeException unavailable) {
             finish(job, failure("Не удалось запустить локальную модель. Повторите попытку."));
         }
+    }
+
+    void cancel(File recording) {
+        if (active == null || !active.recording.equals(recording)) return;
+        if (active.task != null) active.task.cancel();
+        active = null;
+        titles.summaryFinished();
     }
 
     void destroy() {
@@ -164,6 +178,7 @@ final class ReflectSummaryController {
     private void finish(Generation job, ReflectSummaryState result) {
         if (destroyed || active != job) return;
         active = null;
+        titles.summaryFinished();
         job.state = result;
         show(job);
     }

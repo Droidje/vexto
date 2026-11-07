@@ -1,6 +1,7 @@
 package com.vexto.reflect;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
@@ -59,6 +60,54 @@ public class ReflectConversationsTest {
             assertEquals(newest.file, after.get(0).recording.file);
             assertEquals("Разговор №3", after.get(1).title);
             assertEquals("Разговор №1", store.title(oldest.file));
+        }
+    }
+
+    @Test public void automaticTitleIsOneTimeAndManualTitleWins() {
+        var first = recording(new File("first.wav"), "Имя записи");
+        var second = recording(new File("second.wav"), "Другая запись");
+        try (var store = new ReflectConversationStore(context)) {
+            var initial = ReflectCatalog.localConversations(List.of(second, first), store);
+            assertTrue(initial.get(0).needsTitle);
+            assertTrue(store.completeTitle(first.file, "Бюджет выставки"));
+            assertFalse(store.completeTitle(first.file, "Другое название модели"));
+            assertEquals("Бюджет выставки", store.title(first.file));
+            assertTrue(store.rename(first.file, "Моё имя для выставки"));
+            assertTrue(store.rename(second.file, "Разговор №2"));
+            assertFalse(store.completeTitle(second.file, "Поздний ответ модели"));
+        }
+        try (var store = new ReflectConversationStore(context)) {
+            var reopened = ReflectCatalog.localConversations(List.of(second, first), store);
+            assertEquals("Разговор №2", reopened.get(0).title);
+            assertEquals("Моё имя для выставки", reopened.get(1).title);
+            assertEquals("Имя записи", reopened.get(1).recording.title);
+            assertFalse(reopened.get(0).needsTitle);
+            assertFalse(reopened.get(1).needsTitle);
+        }
+    }
+
+    @Test public void migrationPreservesNumbersAndDeletionKeepsTheRecording() throws Exception {
+        File directory = new File(context.getFilesDir(), "recordings");
+        Files.createDirectories(directory.toPath());
+        File audio = Files.write(new File(directory, "old.wav").toPath(), new byte[]{1}).toFile();
+        try (var old = context.openOrCreateDatabase("conversations.db", Context.MODE_PRIVATE, null)) {
+            old.execSQL("CREATE TABLE conversations (number INTEGER PRIMARY KEY AUTOINCREMENT, recording TEXT NOT NULL UNIQUE)");
+            old.execSQL("INSERT INTO conversations VALUES (17, 'old.wav')");
+            old.setVersion(1);
+        }
+        var entry = recording(audio, "Старое имя записи");
+        try (var store = new ReflectConversationStore(context)) {
+            var migrated = ReflectCatalog.localConversations(List.of(entry), store);
+            assertEquals("Разговор №17", migrated.get(0).title);
+            assertTrue(migrated.get(0).needsTitle);
+            assertTrue(store.delete(audio));
+        }
+        try (var store = new ReflectConversationStore(context)) {
+            assertTrue(ReflectCatalog.localConversations(List.of(entry), store).isEmpty());
+            assertTrue(store.isDeleted(audio));
+            assertTrue(audio.isFile());
+            assertFalse(store.completeTitle(audio, "Поздний ответ модели"));
+            assertFalse(store.rename(audio, "Позднее переименование"));
         }
     }
 

@@ -30,7 +30,11 @@ final class ReflectActionSheet {
     }
 
     void option(String title, Runnable action) {
-        TextView button = style.text(title, 16, Color.WHITE, style.art.regular);
+        option(title, Color.WHITE, action);
+    }
+
+    void option(String title, int color, Runnable action) {
+        TextView button = style.text(title, 16, color, style.art.regular);
         button.setMinHeight(style.px(44));
         button.setPadding(style.px(10), 0, style.px(10), 0);
         button.setBackground(style.pressable(0xff303030, 14));

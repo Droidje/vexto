@@ -46,6 +46,7 @@ final class ReflectView extends ViewGroup {
         void refreshSpeakers();
         void closeSpeakerProfile();
         void openSpeakerMenu();
+        void renameSpeakerProfile();
         void openSpeakerUtterance(SpeakerDirectory.Utterance utterance);
     }
 
@@ -125,7 +126,7 @@ final class ReflectView extends ViewGroup {
         settings = new ReflectSettingsView(context, artwork, preferences, actions::openMicrophoneSettings);
         transcript = new ReflectTranscriptView(context, artwork, preferences, actions);
         speakerProfile = new SpeakerProfileView(context, artwork, preferences, actions::closeSpeakerProfile,
-                actions::openSpeakerMenu, actions::openSpeakerUtterance);
+                actions::openSpeakerMenu, actions::renameSpeakerProfile, actions::openSpeakerUtterance);
         speakerProfile.setBackgroundColor(BACKGROUND);
         processing = new ReflectProcessingView(context, artwork, preferences, actions::closeTranscript);
         export = new ReflectExportView(context, artwork, preferences, actions);

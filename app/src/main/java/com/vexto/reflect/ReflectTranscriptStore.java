@@ -14,6 +14,7 @@ import java.nio.file.StandardCopyOption;
 /** Private sidecar files keyed by the saved recording filename. */
 final class ReflectTranscriptStore {
     private static final int MAX_TITLE_LENGTH = 200;
+    private static final String SUMMARY_VERSION = "v2:";
     private static final int MAX_SUMMARY_BYTES = 64 * 1024;
     private static final Object TRANSCRIPT_WRITE_LOCK = new Object();
     private final File filesDirectory;
@@ -31,20 +32,36 @@ final class ReflectTranscriptStore {
         File file = sidecar(recording, ".summary");
         if (!file.isFile() || file.length() > MAX_SUMMARY_BYTES) return null;
         String value = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-        String prefix = "v1:" + fingerprint + "\n";
+        String prefix = SUMMARY_VERSION + fingerprint + "\n";
         return value.startsWith(prefix) && !value.substring(prefix.length()).trim().isEmpty()
                 ? value.substring(prefix.length()) : null;
     }
 
     boolean saveSummary(File recording, String fingerprint, String summary) throws IOException {
         if (summary == null || summary.trim().isEmpty()) return false;
-        byte[] data = ("v1:" + fingerprint + "\n" + summary.trim()).getBytes(StandardCharsets.UTF_8);
+        byte[] data = (SUMMARY_VERSION + fingerprint + "\n" + summary.trim()).getBytes(StandardCharsets.UTF_8);
         if (data.length > MAX_SUMMARY_BYTES) return false;
+        return withCurrentText(recording, fingerprint, () -> {
+            writeAtomically(sidecar(recording, ".summary"), data);
+            return true;
+        });
+    }
+
+    boolean withCurrentText(File recording, String fingerprint, TranscriptUpdate update) throws IOException {
         synchronized (TRANSCRIPT_WRITE_LOCK) {
             ReflectTranscript current = load(recording);
             if (current == null || !ReflectSummaryController.sourceOf(current).fingerprint().equals(fingerprint)) return false;
-            writeAtomically(sidecar(recording, ".summary"), data);
-            return true;
+            return update.save();
+        }
+    }
+
+    interface TranscriptUpdate {
+        boolean save() throws IOException;
+    }
+
+    void deleteSummary(File recording) throws IOException {
+        synchronized (TRANSCRIPT_WRITE_LOCK) {
+            Files.deleteIfExists(sidecar(recording, ".summary").toPath());
         }
     }
 

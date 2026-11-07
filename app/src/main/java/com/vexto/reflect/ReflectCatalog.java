@@ -63,12 +63,15 @@ final class ReflectCatalog {
     static final class Conversation {
         final String title, preview, search;
         final Recording recording;
+        final boolean needsTitle;
 
-        Conversation(String title, String preview, Recording recording) {
-            this.title = title;
+        Conversation(ReflectConversationStore.Entry entry, String preview, Recording recording) {
+            this.title = entry == null ? "Разговор" : entry.title();
             this.preview = preview;
             this.recording = recording;
-            this.search = title + " " + recording.search;
+            needsTitle = entry != null && entry.needsTitle() && recording.hasTranscript();
+            this.search = title + " " + recording.search
+                    + (entry == null ? "" : " " + ReflectConversationStore.numberedTitle(entry.number()));
         }
     }
 
@@ -167,12 +170,14 @@ final class ReflectCatalog {
     }
 
     static List<Conversation> localConversations(List<Recording> recordings, ReflectConversationStore store) {
-        Map<String, Long> numbers;
-        try { numbers = store.assign(recordings); }
-        catch (RuntimeException unavailable) { numbers = Map.of(); }
+        Map<String, ReflectConversationStore.Entry> entries;
+        try { entries = store.assign(recordings); }
+        catch (RuntimeException unavailable) { entries = Map.of(); }
         List<Conversation> conversations = new ArrayList<>(recordings.size());
         for (Recording recording : recordings) {
-            conversations.add(new Conversation(ReflectConversationStore.title(numbers.get(recording.file.getName())),
+            var entry = entries.get(recording.file.getName());
+            if (entry != null && entry.deleted()) continue;
+            conversations.add(new Conversation(entry,
                     recording.hasTranscript() ? recording.preview : "Локальная аудиозапись · " + recording.length,
                     recording));
         }

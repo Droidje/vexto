@@ -19,6 +19,7 @@ final class ReflectSummaryIcon extends View {
     private final ReflectPreferences preferences;
     private final float scale;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint unavailablePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Matrix gradientMatrix = new Matrix();
     private final LinearGradient gradient = new LinearGradient(-15, -15, 15, 15,
             new int[]{0xff6deaff, 0xff88a5ff, 0xffd58bff, 0xffffbbd9}, null, Shader.TileMode.CLAMP);
@@ -29,7 +30,10 @@ final class ReflectSummaryIcon extends View {
         this.preferences = preferences;
         this.scale = scale;
         paint.setShader(gradient);
-        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+        var mask = new PorterDuffXfermode(PorterDuff.Mode.SRC_IN);
+        paint.setXfermode(mask);
+        unavailablePaint.setXfermode(mask);
+        unavailablePaint.setColor(0xff888888);
     }
 
     void setPanelOpen(boolean open) {
@@ -45,9 +49,11 @@ final class ReflectSummaryIcon extends View {
         canvas.scale(scale, scale);
         int layer = canvas.saveLayer(-13, -13, 13, 13, null);
         artwork.centeredIcon(canvas, "message-2-sparkle", 0, 0);
-        gradientMatrix.setRotate(animated ? (SystemClock.uptimeMillis() % CYCLE_MS) * 360f / CYCLE_MS : 0);
-        gradient.setLocalMatrix(gradientMatrix);
-        canvas.drawRect(-13, -13, 13, 13, paint);
+        if (isEnabled()) {
+            gradientMatrix.setRotate(animated ? (SystemClock.uptimeMillis() % CYCLE_MS) * 360f / CYCLE_MS : 0);
+            gradient.setLocalMatrix(gradientMatrix);
+        }
+        canvas.drawRect(-13, -13, 13, 13, isEnabled() ? paint : unavailablePaint);
         canvas.restoreToCount(layer);
         canvas.restoreToCount(outer);
         if (animated && canvas.isHardwareAccelerated() && isShown() && getWindowVisibility() == VISIBLE) {

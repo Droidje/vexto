@@ -116,6 +116,9 @@ public class PendingTranscriptionTest {
         var original = transcript("Встреча состоится в пятницу");
         String fingerprint = ReflectSummaryController.sourceOf(original).fingerprint();
         store.save(recording, original);
+        var summary = new File(new File(context.getFilesDir(), "transcripts"), recording.getName() + ".summary");
+        Files.write(summary.toPath(), ("v1:" + fingerprint + "\nСтарый пересказ.").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        assertNull(store.loadSummary(recording, fingerprint));
         assertTrue(store.saveSummary(recording, fingerprint, "Договорились встретиться в пятницу."));
 
         var reopened = new ReflectTranscriptStore(context.getFilesDir());

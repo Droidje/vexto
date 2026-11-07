@@ -4,9 +4,11 @@ import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Outline;
+import android.graphics.drawable.RippleDrawable;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
@@ -28,6 +30,7 @@ final class SpeakerProfileView extends FrameLayout {
     private final ReflectPreferences preferences;
     private final Runnable back;
     private final Runnable menu;
+    private final Runnable rename;
     private final Consumer<SpeakerDirectory.Utterance> openUtterance;
     private SpeakerDirectory.Detail detail;
     private ReflectPageStyle style;
@@ -37,13 +40,14 @@ final class SpeakerProfileView extends FrameLayout {
     private boolean revealProfile;
 
     SpeakerProfileView(Context context, ReflectArtwork artwork, ReflectPreferences preferences,
-                       Runnable back, Runnable menu,
+                       Runnable back, Runnable menu, Runnable rename,
                        Consumer<SpeakerDirectory.Utterance> openUtterance) {
         super(context);
         this.artwork = artwork;
         this.preferences = preferences;
         this.back = back;
         this.menu = menu;
+        this.rename = rename;
         this.openUtterance = openUtterance;
         setOutlineProvider(new ViewOutlineProvider() {
             @Override public void getOutline(View view, Outline outline) {
@@ -118,7 +122,16 @@ final class SpeakerProfileView extends FrameLayout {
         var profile = detail.profile();
         TextView name = style.title(ReflectCatalog.speakerName(profile.name(), profile.self()));
         if (profile.self()) name.setTextColor(ReflectPageStyle.SELF_ACCENT);
-        style.append(header, name, 0, 22);
+        LinearLayout nameRow = new LinearLayout(getContext());
+        nameRow.setGravity(Gravity.CENTER_VERTICAL);
+        int editSize = style.px(44);
+        name.setMaxWidth(width - list.getPaddingLeft() - list.getPaddingRight() - editSize);
+        nameRow.addView(name, new LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT));
+        View edit = iconButton("edit", "Переименовать спикера", rename);
+        edit.setBackground(new RippleDrawable(ColorStateList.valueOf(0x30ffffff), null,
+                style.rounded(Color.WHITE, 22)));
+        nameRow.addView(edit, new LinearLayout.LayoutParams(editSize, editSize));
+        style.append(header, nameRow, 0, 14);
 
         LinearLayout statistics = new LinearLayout(getContext());
         statistics.setBackground(style.rounded(ReflectPageStyle.CARD, 20));
@@ -151,6 +164,14 @@ final class SpeakerProfileView extends FrameLayout {
     }
 
     private void toolbarButton(String asset, String label, int side, Runnable action) {
+        View button = iconButton(asset, label, action);
+        button.setBackground(style.pressable(0xff212121, 24));
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(style.px(48), style.px(48), side | Gravity.TOP);
+        params.setMargins(style.px(16), style.px(60), style.px(16), 0);
+        addView(button, params);
+    }
+
+    private View iconButton(String asset, String label, Runnable action) {
         View button = new View(getContext()) {
             @Override protected void onDraw(Canvas canvas) {
                 int saved = canvas.save();
@@ -168,11 +189,8 @@ final class SpeakerProfileView extends FrameLayout {
         };
         button.setContentDescription(label);
         button.setFocusable(true);
-        button.setBackground(style.pressable(0xff212121, 24));
         button.setOnClickListener(view -> action.run());
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(style.px(48), style.px(48), side | Gravity.TOP);
-        params.setMargins(style.px(16), style.px(60), style.px(16), 0);
-        addView(button, params);
+        return button;
     }
 
     private static String time(long millis) {
