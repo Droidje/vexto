@@ -25,6 +25,10 @@ record PendingTranscription(File recording, String jobId, ProcessingMode process
                 UUID.randomUUID().toString(), new ReflectPreferences(context).processingMode());
     }
 
+    boolean dialogueReady(Context context) {
+        return new File(context.getFilesDir(), "inference/jobs/" + jobId + "/dialogue-ready.json").isFile();
+    }
+
     static PendingTranscription read(Context context) throws IOException {
         AtomicFile file = file(context);
         try (var input = file.openRead()) {

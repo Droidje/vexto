@@ -38,6 +38,11 @@ object ReflectEngine {
         fun onCoreReady(transcript: Transcript, artifactDirectory: String)
     }
 
+    /** Main dialogue is durable while optional emotion enrichment continues in the same job. */
+    interface EnrichmentListener : DetailedListener {
+        fun onDialogueReady(transcript: Transcript, artifactDirectory: String, warning: String?)
+    }
+
     interface SummaryListener {
         /** Remaining time is unknown (−1) until the first model response. */
         fun onProgress(done: Int, total: Int, remainingMs: Long)
@@ -168,7 +173,11 @@ object ReflectEngine {
                     when (event) {
                         is TranscriptionEvent.Progress -> listener.onProgress(event.stage, event.fraction)
                         is TranscriptionEvent.Partial -> listener.onPartial(event.transcript)
-                        is TranscriptionEvent.CoreReady -> (listener as? DetailedListener)?.onCoreReady(event.transcript, event.artifactDirectory)
+                        is TranscriptionEvent.CoreReady -> {
+                            if (event.finalText && listener is EnrichmentListener)
+                                listener.onDialogueReady(event.transcript, event.artifactDirectory, event.warning)
+                            else (listener as? DetailedListener)?.onCoreReady(event.transcript, event.artifactDirectory)
+                        }
                         is TranscriptionEvent.Done -> listener.onDone(event.transcript, event.stats)
                     }
                 }

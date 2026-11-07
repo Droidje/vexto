@@ -221,7 +221,7 @@ class TranscriptionEngine(context: Context) {
         val turnsFile = File(job, "turns.json")
         JobFiles.save(turnsFile, turns)
         // Signature extraction uses original audio and its own model lifetime, never clustering again.
-        val voices = if (profile.speakerAnnotations) worker(WorkerStage.VOICEPRINT, Stage.Voiceprints, "original.wav",
+        val voices = if (profile.voiceprints) worker(WorkerStage.VOICEPRINT, Stage.Voiceprints, "original.wav",
             dependencies = if (checkpoint != null) listOf(JobFiles.sha256(turnsFile)) else emptyList()).voices
             else emptyMap()
         fun attachVoices(transcript: Transcript): Transcript = transcript.copy(speakers = transcript.speakers.map { speaker ->
@@ -322,7 +322,18 @@ class TranscriptionEngine(context: Context) {
             transcript = names.attach(transcript)
             if (names.status !in setOf("resolved", "no_identity_cues")) warnings += "SPEAKER_NAMES:${names.status}"
         }
-        if (profile.speakerAnnotations) {
+        if (profile.backgroundEmotions && transcript.utterances.any { it.text.isNotBlank() }) {
+            JobFiles.write(File(job, "transcript.json"), TranscriptExport.submissionJson(transcript).toByteArray(Charsets.UTF_8))
+            JobFiles.write(File(job, "transcript.metadata.json"), TranscriptExport.jsonWithMetadata(transcript).toByteArray(Charsets.UTF_8))
+            JobFiles.save(File(job, "dialogue-ready.json"), transcript)
+            val dialogueWarning = when {
+                selected.size != plan.chunks.size -> "Часть аудио не распознана. Доступный текст и оригинальные результаты сохранены."
+                unresolved > 0 -> "Текст сохранён. Для части фрагментов выбор модели не подтверждён."
+                else -> null
+            }
+            send(TranscriptionEvent.CoreReady(transcript, job.absolutePath, finalText = true, warning = dialogueWarning))
+        }
+        run {
             val emotionTargets = UtteranceEmotionAnnotations.targets(transcript)
             val emotionTargetsFile = File(job, "emotion-targets.json")
             JobFiles.save(emotionTargetsFile, emotionTargets)
