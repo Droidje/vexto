@@ -1,7 +1,7 @@
 # Android native runtime
 
 `scripts/build_native_runtime.py` builds the exact revisions in `sources.json`
-using NDK r28c, CMake >=3.26 and Ninja. It never downloads models, installs global
+using NDK r28c, CMake >=3.26 and Ninja on macOS, Linux or Windows. It never downloads models, installs global
 packages, runs inference or invokes ADB. Supply prepared source trees explicitly:
 
 ```text
@@ -10,7 +10,7 @@ python scripts/build_native_runtime.py --ndk NDK_DIR --nemotron-source NEMO_DIR 
 
 The default ABIs are `arm64-v8a` and `x86_64`; repeat `--abi` or `--component` to
 select a subset. `--avx2` is an explicit emulator optimization for x86_64; leave
-it off for the generic x86 build. The prepared NeMo tree must have the audited
+it off for the generic x86 build. The prepared NeMo tree must contain the pinned llama.cpp checkout at `llama.cpp/` and have the audited
 `tools/benchmarks/patches/nemotron-android-liblog.patch` applied. Source archive
 SHA256 values and CMake anchors are recorded separately: an anchor alone is not
 a full source tree integrity check.

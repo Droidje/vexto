@@ -102,6 +102,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
                 }
                 catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
             } else if (state.getBoolean("ready")) view.show(READY);
+            transcripts.restoreExport(state);
         }
     }
 
@@ -424,6 +425,10 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override public void closeTranscript() { closeRecorder(); }
     @Override public void openExportOptions() { transcripts.exportOptions(); }
+    @Override public void closeExport() { transcripts.closeExport(); }
+    @Override public void selectExport(RecordingExport format) { transcripts.selectExport(format); }
+    @Override public void shareExport() { transcripts.shareExport(); }
+    @Override public void saveExport() { transcripts.saveExport(); }
     @Override public void importTranscript() { transcripts.pick(); }
     @Override public void transcribeRecording() { transcripts.transcribe(); }
     @Override public void cancelTranscription() { transcripts.cancelTranscription(); }
@@ -487,7 +492,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private void notice(String message) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show(); }
 
     @Override public void onBackPressed() {
-        if (view.screen() == MENU) toggleMenu();
+        if (view.screen() == EXPORT) transcripts.closeExport();
+        else if (view.screen() == MENU) toggleMenu();
         else if (view.screen() == SPEAKER_PROFILE) closeSpeakerProfile();
         else if (ReflectView.isTab(view.screen()) && view.screen() != HOME) view.show(HOME);
         else if (view.screen() != HOME) closeRecorder();

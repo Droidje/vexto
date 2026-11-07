@@ -58,6 +58,26 @@ public class SpeakerProfilesTest {
         assertFalse(new String(transcript.encode(),StandardCharsets.UTF_8).contains("Саша"));
     }
 
+    @Test public void importsNameWithoutTreatingItAsIdentityOrExportingSelfMarker() throws Exception {
+        String supplied = "А".repeat(128);
+        var imported = new ReflectTranscript(List.of(
+                new ReflectTranscript.Line("speaker_1", 0, 3000, "Реплика", null, supplied)));
+        String a = profiles.assign(first, imported).get("speaker_1");
+        String b = profiles.assign(second, imported).get("speaker_1");
+        assertNotEquals(a, b);
+        assertEquals(supplied, profiles.get(a).name());
+        profiles.markSelf(a);
+        assertEquals(supplied + " · Я", profiles.names(first, imported).get("speaker_1"));
+        var out = new ByteArrayOutputStream();
+        RecordingExport.MARKDOWN.write(out, first, imported, "Разговор", profiles.exportNames(first, imported));
+        String exported = out.toString(StandardCharsets.UTF_8);
+        assertTrue(exported.contains(supplied));
+        assertFalse(exported.contains("· Я"));
+        profiles.rename(a, "Алиса");
+        assertEquals("Алиса", profiles.exportNames(first, imported).get("speaker_1"));
+        assertEquals(supplied, profiles.exportNames(second, imported).get("speaker_1"));
+    }
+
     @Test public void localSpeakerIdsNeverActAsGlobalIdsAndRevisionsAreIsolated() throws Exception {
         var original = text("Первая версия"); var revised = text("Другая версия");
         var alice = profiles.create("Алиса"); var bob = profiles.create("Борис");

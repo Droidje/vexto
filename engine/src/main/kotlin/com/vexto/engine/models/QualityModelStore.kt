@@ -27,6 +27,8 @@ class QualityModels(val dir: File, val manifest: QualityManifest, val verificati
     fun file(id: String): File = JobFiles.inside(dir, manifest.artifacts.getValue(id).path)
 }
 
+class OfflineModelPackException(message: String, cause: IOException? = null) : IOException(message, cause)
+
 /** Offline packs live in app-scoped storage. No multi-GB duplicate copy inside APK/filesDir. */
 object QualityModelStore {
     private val verificationCache = ModelVerificationCache()
@@ -52,15 +54,21 @@ object QualityModelStore {
         }
         val coroutine = currentCoroutineContext()
         coroutine.ensureActive()
-        val hit = verificationCache.verify(manifestDigest, files) {
-            entries.forEachIndexed { i, (id, artifact) ->
-                coroutine.ensureActive()
-                val file = files[i]
-                if (!file.isFile || file.length() != artifact.bytes || JobFiles.sha256(file) != artifact.sha256) {
-                    throw IOException("Не установлен полный набор моделей: $id. Загрузите проверенный офлайн-пакет ${manifest.version} в ${root.name}.")
+        val hit = try {
+            verificationCache.verify(manifestDigest, files) {
+                entries.forEachIndexed { i, (id, artifact) ->
+                    coroutine.ensureActive()
+                    val file = files[i]
+                    if (!file.isFile || file.length() != artifact.bytes || JobFiles.sha256(file) != artifact.sha256) {
+                        throw OfflineModelPackException("Не установлен полный набор моделей: $id. Загрузите проверенный офлайн-пакет ${manifest.version} в ${root.name}.")
+                    }
+                    progress((i + 1f) / entries.size)
                 }
-                progress((i + 1f) / entries.size)
             }
+        } catch (error: OfflineModelPackException) {
+            throw error
+        } catch (error: IOException) {
+            throw OfflineModelPackException("Не удалось проверить локальный комплект моделей.", error)
         }
         coroutine.ensureActive()
         if (hit) progress(1f)

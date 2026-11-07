@@ -56,7 +56,9 @@ def main() -> int:
             raise ValueError(f'Remove or inspect interrupted pack artifact: {temporary}')
         source = Path(sources[model_id]) if model_id in sources else contained(args.source_dir, artifact['path']) if args.source_dir else None
         try:
-            if source is not None:
+            # An explicit ID override is mandatory. A source directory can be a
+            # partial cache when the remaining pinned files can be downloaded.
+            if source is not None and (model_id in sources or source.exists()):
                 if not valid(source, artifact):
                     raise ValueError(f'Source SHA256 or byte count mismatch: {model_id}')
                 try:
