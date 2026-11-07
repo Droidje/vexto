@@ -79,7 +79,9 @@ internal object StageDispatcher {
             WorkerStage.WHISPER -> {
                 val refs = mutableListOf<CandidateRef>()
                 val warnings = mutableListOf<String>()
-                val provider = WhisperComparisonProvider(executor, models.file("whisper"))
+                // The shared plan never exceeds 10 seconds (500 encoder frames).
+                // Keep a small padding margin instead of processing a 15.36-second window.
+                val provider = WhisperComparisonProvider(executor, models.file("whisper"), audioContext = 512)
                 val tasks = chunks()
                 for ((index, chunk) in tasks.withIndex()) {
                     currentCoroutineContext().ensureActive()
