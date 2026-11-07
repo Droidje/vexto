@@ -58,6 +58,25 @@ public class SpeakerProfilesTest {
         assertFalse(new String(transcript.encode(),StandardCharsets.UTF_8).contains("Саша"));
     }
 
+    @Test public void contextNameSurvivesConversionAndRefinesOnlyAutomaticPlaceholder() throws Exception {
+        var core = text("Меня зовут Анна.");
+        String profile = profiles.assign(first, core).get("speaker_1");
+        var output = new com.vexto.engine.model.Transcript(List.of(
+                new com.vexto.engine.model.Utterance("speaker_1", 0L, 3000L, "Меня зовут Анна.", List.of(), null)),
+                List.of(new Speaker("speaker_1", "Анна", null)));
+        var refined = ReflectTranscriptionService.convert(output);
+        assertEquals("Анна", refined.lines.get(0).speakerName);
+        var roundtrip = ReflectTranscript.parse(new java.io.ByteArrayInputStream(refined.encode()));
+        profiles.retainAcrossRefinement(first, core, roundtrip);
+        assertEquals(profile, profiles.assign(first, roundtrip).get("speaker_1"));
+        assertEquals("Анна", profiles.names(first, roundtrip).get("speaker_1"));
+        profiles.rename(profile, "Ручное имя");
+        profiles.assign(first, roundtrip);
+        assertEquals("Ручное имя", profiles.names(first, roundtrip).get("speaker_1"));
+        String separate = profiles.assign(second, roundtrip).get("speaker_1");
+        assertNotEquals(profile, separate);
+    }
+
     @Test public void importsNameWithoutTreatingItAsIdentityOrExportingSelfMarker() throws Exception {
         String supplied = "А".repeat(128);
         var imported = new ReflectTranscript(List.of(

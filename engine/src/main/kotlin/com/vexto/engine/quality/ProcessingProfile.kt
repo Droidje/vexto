@@ -22,7 +22,7 @@ data class ProcessingProfile(
     fun expectedStages(slavic: Boolean): Set<WorkerStage> = WorkerStage.entries.toSet() -
         (if (denoise) emptySet() else setOf(WorkerStage.DENOISE)) -
         (if (speakerAnnotations) emptySet() else setOf(WorkerStage.VOICEPRINT, WorkerStage.EMOTION)) -
-        (if (slavic) emptySet() else setOf(WorkerStage.GIGAAM, WorkerStage.SELECT))
+        (if (slavic) emptySet() else setOf(WorkerStage.GIGAAM))
 
     fun validate() {
         require(mode != ProcessingMode.AUTO)

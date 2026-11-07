@@ -258,7 +258,8 @@ public final class ReflectTranscriptionService extends Service {
             if (utterance.getText().trim().isEmpty()) continue;
             lines.add(new ReflectTranscript.Line(utterance.getSpeakerId(),
                     Math.toIntExact(utterance.getStartMs()), Math.toIntExact(utterance.getEndMs()),
-                    utterance.getText(), utterance.getEmotionProbabilities()));
+                    utterance.getText(), utterance.getEmotionProbabilities(),
+                    output.speaker(utterance.getSpeakerId()).getName()));
         }
         return new ReflectTranscript(lines);
     }

@@ -61,19 +61,17 @@ internal object StageDispatcher {
             WorkerStage.GIGAAM, WorkerStage.WHISPER ->
                 QueuedAsrStages.run(request, job, input, models, runner, onProgress)
             WorkerStage.SELECT -> {
-                val refs = listOf(WorkerStage.GIGAAM, WorkerStage.WHISPER).flatMap { stage ->
+                val slavic = JobFiles.load<RecordingLanguage>(File(job, "language.json")).route == RecordingLanguage.SLAVIC
+                val refs = listOfNotNull(WorkerStage.GIGAAM.takeIf { slavic }, WorkerStage.WHISPER).flatMap { stage ->
                     runCatching { JobFiles.load<WorkerResult>(stage.resultFile(job)).candidates }.getOrDefault(emptyList())
                 }
                 val choices = saved?.choices.orEmpty().toMutableList()
                 val known = choices.mapTo(mutableSetOf()) { it.chunkId }
                 val warnings = mutableListOf<String>()
                 val tasks = chunkPlan().chunks
+                var names = saved?.speakerNames
                 var processed = known.size
-                if (processed > 0) onProgress(processed.toFloat() / tasks.size.coerceAtLeast(1))
-                if (processed == tasks.size) {
-                    onProgress(1f)
-                    return WorkerResult(request.stage, choices = choices, peakCombinedRssBytes = nativePeak)
-                }
+                if (processed > 0) onProgress(0.95f * processed / tasks.size.coerceAtLeast(1))
                 runner.persistentExecutor(File(job, "workers/qwen")).use { session ->
                     val metered = LocalNativeExecutor { executable, args, dir, stdout, stderr, timeout ->
                         session.run(executable, args, dir, stdout, stderr, timeout).also {
@@ -91,7 +89,7 @@ internal object StageDispatcher {
                                 }
                             }.getOrElse { warnings += "INVALID_ORIGINAL:${chunk.id}:${ref.source}"; null }
                         }
-                        if (originals.isEmpty()) { warnings += "ASR_MISSING:${chunk.id}"; onProgress((++processed).toFloat() / tasks.size); continue }
+                        if (originals.isEmpty()) { warnings += "ASR_MISSING:${chunk.id}"; onProgress(0.95f * (++processed) / tasks.size); continue }
                         val pair = AsrCandidatePair(chunk.id, chunk.inputSha256, originals.firstOrNull { it.source == AsrSource.GIGAAM },
                             originals.firstOrNull { it.source == AsrSource.WHISPER })
                         prepareOutput(File(job, "selection/${chunk.id}"))
@@ -101,10 +99,24 @@ internal object StageDispatcher {
                         choices += ChoiceRef(chunk.id, ref, selected.status.name, selected.audit.reason)
                         JobFiles.save(File(job, "selection/${chunk.id}/audit.json"), selected.audit)
                         checkpoint(WorkerResult(request.stage, choices = choices.toList(), warnings = warnings.toList(), peakCombinedRssBytes = nativePeak))
-                        onProgress((++processed).toFloat() / tasks.size)
+                        onProgress(0.95f * (++processed) / tasks.size)
                     }
+                    // Keep the same Qwen model/context alive for one bounded naming request.
+                    names = try {
+                        val namingInput = SpeakerNamingInput.create(job, chunkPlan(), refs, choices)
+                        names?.takeIf { it.sourceSha256 == SpeakerNamePlan.sourceHash(namingInput) }
+                            ?: QwenSpeakerNames(metered, models.file("qwen")).infer(namingInput,
+                                prepareOutput(File(job, "speaker-names")))
+                    } catch (cancel: CancellationException) {
+                        throw cancel
+                    } catch (_: Exception) {
+                        SpeakerNamesArtifact("", "input_unavailable")
+                    }
+                    JobFiles.save(File(job, "speaker-names.json"), requireNotNull(names))
                 }
-                WorkerResult(request.stage, choices = choices, warnings = warnings, peakCombinedRssBytes = nativePeak)
+                onProgress(1f)
+                WorkerResult(request.stage, choices = choices, warnings = warnings,
+                    peakCombinedRssBytes = nativePeak, speakerNames = names)
             }
             WorkerStage.EMOTION -> {
                 val targets = JobFiles.load<List<UtteranceEmotionTarget>>(File(job, "emotion-targets.json"))

@@ -28,7 +28,7 @@ data class Utterance(
     val emotionProbabilities: EmotionProbabilities? = null,
 )
 
-/** Участник разговора. [id] стабилен и уходит в экспорт, [name] задаёт пользователь. */
+/** Участник разговора. [id] стабилен и уходит в экспорт, [name] — контекстная подсказка LLM или имя, заданное пользователем. */
 @Serializable
 data class Speaker(
     val id: String,

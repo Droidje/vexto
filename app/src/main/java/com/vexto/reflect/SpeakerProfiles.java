@@ -258,6 +258,17 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
                     linked.put(local, id);
                 }
             }
+            // A core may already have created placeholder profiles before LLM refinement arrived.
+            // User names, marked-self profiles and existing real names always take priority.
+            for (var supplied : importedNames(transcript).entrySet()) {
+                String id = linked.get(supplied.getKey());
+                if (id == null) continue;
+                Profile profile = get(db, id);
+                if (profile.automatic && !profile.self && profile.name.matches("Спикер [1-9][0-9]*")) {
+                    ContentValues values = new ContentValues(); values.put("name", checkedName(supplied.getValue()));
+                    db.update("profiles", values, "id=? AND automatic=1 AND is_self=0", new String[]{id});
+                }
+            }
             db.setTransactionSuccessful();
             return linked;
         } finally { db.endTransaction(); }
