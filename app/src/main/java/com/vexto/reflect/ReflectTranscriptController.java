@@ -67,12 +67,11 @@ final class ReflectTranscriptController {
         this.profiles = profiles;
         this.profilesUi = profilesUi;
         exports = new ReflectExportController(activity, view, io, profiles, notice);
-        local = new ReflectLocalTranscription(activity, store, profiles, io, this::processingChanged,
-                this::transcriptionFinished);
+        local = new ReflectLocalTranscription(activity, this::processingChanged, this::transcriptionFinished);
     }
 
     void open(File recording, String fallback, String length, int durationMs, boolean recordingDetails,
-              boolean startImmediately) {
+              boolean showProcessing, boolean startImmediately) {
         int current = ++generation;
         file = recording;
         title = fallback;
@@ -86,46 +85,36 @@ final class ReflectTranscriptController {
         view.transcriptView().waveform(null);
         view.transcriptView().speakerNames(Collections.emptyMap());
         render();
-        if (startImmediately) view.processingView().content(length, null);
-        view.show(startImmediately ? ReflectView.Screen.PROCESSING : ReflectView.Screen.TRANSCRIPT);
+        boolean processing = showProcessing && (startImmediately || local.progress(recording) != null);
+        if (processing) view.processingView().content(length, local.progress(recording));
+        view.show(processing ? ReflectView.Screen.PROCESSING : ReflectView.Screen.TRANSCRIPT);
+        // Start the foreground service while the activity is visible, before loading metadata on IO.
+        if (startImmediately && !local.start(recording)) showTranscriptAfterProcessing();
         io.execute(() -> {
             String resolvedTitle = resolveTitle(recording, fallback, recordingDetails);
             RecordingMetadata properties = RecordingMetadata.read(recording);
             try {
                 ReflectTranscript loaded = store.load(recording);
                 activity.runOnUiThread(() -> {
-                    if (activity.isDestroyed()) return;
-                    if (current != generation) {
-                        // The user can send processing to the background before metadata is loaded.
-                        if (startImmediately && loaded == null && !importing.contains(recording)) {
-                            if (local.busy()) notice.accept("Дождитесь завершения текущей обработки.");
-                            else local.start(recording);
-                        }
-                        return;
-                    }
+                    if (activity.isDestroyed() || current != generation) return;
                     title = resolvedTitle;
                     metadata = properties;
-                    transcript = loaded;
+                    if (transcript == null) transcript = loaded;
                     loading = false;
                     render();
                     refreshSpeakerNames(current, recording);
-                    if (startImmediately && loaded == null) transcribe();
-                    else showTranscriptAfterProcessing();
+                    if (local.progress(recording) == null) showTranscriptAfterProcessing();
                 });
             } catch (IOException | RuntimeException invalid) {
                 String readIssue = "Не удалось прочитать сохранённый транскрипт. Можно импортировать другой JSON.";
                 activity.runOnUiThread(() -> {
-                    if (activity.isDestroyed()) return;
-                    if (current != generation) {
-                        if (startImmediately) notice.accept(readIssue);
-                        return;
-                    }
+                    if (activity.isDestroyed() || current != generation) return;
                     title = resolvedTitle;
                     metadata = properties;
-                    issue = readIssue;
+                    if (transcript == null) issue = readIssue;
                     loading = false;
                     render();
-                    showTranscriptAfterProcessing();
+                    if (local.progress(recording) == null) showTranscriptAfterProcessing();
                     refreshSpeakerNames(current, recording);
                 });
             }
@@ -144,6 +133,12 @@ final class ReflectTranscriptController {
         transcript = null;
         metadata = null;
         view.transcriptView().clear();
+    }
+
+    void resumeProcessing() {
+        local.resume();
+        File active = local.activeRecording();
+        if (active != null) processingChanged(active);
     }
 
     void destroy() { local.close(); }
@@ -170,11 +165,13 @@ final class ReflectTranscriptController {
 
     void startBackground(File recording) {
         if (!canStartBackground() || importing.contains(recording)) return;
-        local.start(recording);
-        notice.accept("Расшифровка запущена в фоне");
+        if (local.start(recording)) notice.accept("Расшифровка запущена в фоне");
     }
 
-    void cancelTranscription() { local.cancel(file); }
+    void cancelTranscription() {
+        local.cancel(file);
+        if (local.progress(file) == null) showTranscriptAfterProcessing();
+    }
 
     void saveState(Bundle state) {
         if (view.screen() != ReflectView.Screen.TRANSCRIPT && view.screen() != ReflectView.Screen.PROCESSING
@@ -395,17 +392,21 @@ final class ReflectTranscriptController {
         view.updateLibraryProgress(recording, local.progress(recording));
         if (!recording.equals(file) || recordingDetails) return;
         var progress = local.progress(file);
-        if (view.screen() == ReflectView.Screen.PROCESSING) view.processingView().content(length, progress);
-        else view.transcriptView().transcription(progress);
+        if (view.screen() == ReflectView.Screen.PROCESSING) {
+            if (progress == null) showTranscriptAfterProcessing();
+            else view.processingView().content(length, progress);
+        } else view.transcriptView().transcription(progress);
     }
 
     private void transcriptionFinished(ReflectLocalTranscription.Result result) {
         view.updateLibraryProgress(result.recording(), null);
         if (result.recording().equals(file)) {
-            if (transcript == null) {
+            if (result.transcript() != null) {
                 transcript = result.transcript();
-                issue = transcript == null ? result.message() : null;
-                if (transcript != null) refreshSpeakerNames(generation, file);
+                issue = null;
+                refreshSpeakerNames(generation, file);
+            } else if (transcript == null) {
+                issue = result.message();
             }
             render();
             showTranscriptAfterProcessing();

@@ -154,12 +154,14 @@ public class SpeakerDirectoryTest {
         var preliminary = transcript("Первый вариант распознавания");
         var refined = new ReflectTranscript(List.of(new ReflectTranscript.Line("speaker_1", 0, 5800, "Другой вариант"),
                 new ReflectTranscript.Line("speaker_2", 5900, 7500, "Другая реплика")));
-        store.save(first, preliminary);
+        String jobId = java.util.UUID.randomUUID().toString();
+        assertTrue(store.saveEngineCore(first, jobId, preliminary));
         profiles.assign(first, preliminary);
         var chosen = profiles.create("Подтверждённый");
         profiles.link(first, preliminary, "speaker_1", chosen.id());
-        assertTrue(store.replaceIfSame(first, preliminary, refined));
-        profiles.retainAcrossRefinement(first, preliminary, refined);
+        var saved = store.saveEngineFinal(first, jobId, refined);
+        assertTrue(saved.owned());
+        profiles.retainAcrossRefinement(first, saved.provisional(), saved.transcript());
         var links = profiles.assign(first, refined);
         assertEquals(chosen.id(), links.get("speaker_1"));
         assertNotEquals(chosen.id(), links.get("speaker_2"));

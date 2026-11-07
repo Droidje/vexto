@@ -23,10 +23,7 @@ final class ReflectTranscriptStore {
 
     ReflectTranscript load(File recording) throws IOException {
         File path = sidecar(recording, ".json");
-        if (!path.exists()) return null;
-        try (FileInputStream input = new FileInputStream(path)) {
-            return ReflectTranscript.parse(input);
-        }
+        return readTranscript(path);
     }
 
     void save(File recording, ReflectTranscript transcript) throws IOException {
@@ -37,23 +34,57 @@ final class ReflectTranscriptStore {
         }
     }
 
-    boolean saveIfAbsent(File recording, ReflectTranscript transcript) throws IOException {
-        File path = sidecar(recording, ".json");
-        byte[] data = transcript.encode();
+    record EngineSave(ReflectTranscript transcript, ReflectTranscript provisional, boolean owned) {}
+
+    /** Claim a core before publishing it, so the same job can refine it after process death. */
+    boolean saveEngineCore(File recording, String jobId, ReflectTranscript transcript) throws IOException {
+        File target = sidecar(recording, ".json");
+        File marker = engineMarker(jobId, "published-core.json");
         synchronized (TRANSCRIPT_WRITE_LOCK) {
-            if (path.exists()) return false;
-            writeAtomically(path, data);
+            if (target.exists()) return false;
+            byte[] data = transcript.encode();
+            writeAtomically(marker, data);
+            writeAtomically(target, data);
             return true;
         }
     }
 
-    /** Replace only the exact provisional transcript owned by this task. Imports/manual changes win. */
-    boolean replaceIfSame(File recording, ReflectTranscript expected, ReflectTranscript replacement) throws IOException {
+    /** Only an empty slot or the job's unchanged core can receive the finished transcript. */
+    EngineSave saveEngineFinal(File recording, String jobId, ReflectTranscript transcript) throws IOException {
+        File target = sidecar(recording, ".json");
+        File marker = engineMarker(jobId, "published-final.json");
         synchronized (TRANSCRIPT_WRITE_LOCK) {
-            if (expected == null || !expected.sameLines(load(recording))) return false;
-            writeAtomically(sidecar(recording, ".json"), replacement.encode());
-            return true;
+            ReflectTranscript existing = readTranscript(target);
+            ReflectTranscript core = readTranscript(engineMarker(jobId, "published-core.json"));
+            ReflectTranscript finalWritten = readTranscript(marker);
+            if (finalWritten != null && finalWritten.sameLines(existing)) {
+                return new EngineSave(existing, core, true);
+            }
+            if (existing != null && (core == null || !core.sameLines(existing))) {
+                return new EngineSave(existing, null, false);
+            }
+            byte[] data = transcript.encode();
+            writeAtomically(marker, data);
+            writeAtomically(target, data);
+            return new EngineSave(transcript, core, true);
         }
+    }
+
+    private static ReflectTranscript readTranscript(File path) throws IOException {
+        if (!path.exists()) return null;
+        try (FileInputStream input = new FileInputStream(path)) {
+            return ReflectTranscript.parse(input);
+        }
+    }
+
+    private File engineMarker(String jobId, String name) throws IOException {
+        File root = new File(filesDirectory, "inference/jobs").getCanonicalFile();
+        File job = new File(root, jobId);
+        File marker = new File(job, name);
+        if (!root.equals(job.getCanonicalFile().getParentFile()) || !marker.equals(marker.getCanonicalFile())) {
+            throw new IOException("Invalid engine job storage path");
+        }
+        return marker;
     }
 
     void saveEngineArtifacts(File recording, String directory) throws IOException {
