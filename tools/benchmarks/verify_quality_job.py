@@ -254,8 +254,10 @@ def verify_job(job_dir, allow_legacy=False):
         recorded = language_record(root)
         whisper_only = recorded is not None and recorded["route"] == "whisper_only"
         adaptive = modern and "localLlmUsed" in report
+        deferred_emotion = fast and ((root / "dialogue-ready.json").is_file() or
+                                    any(s.get("stage") == "EMOTION" for s in report.get("stages", [])))
         excluded = ({"GIGAAM"} | ({"SELECT"} if not adaptive else set()) if whisper_only else set()) | (
-            {"DENOISE", "VOICEPRINT", "EMOTION"} if fast else set())
+            ({"DENOISE", "VOICEPRINT"} | (set() if deferred_emotion else {"EMOTION"})) if fast else set())
         required_stages = tuple(name for name in STAGES if name not in excluded)
         refine_path = root / "refinement-plan.json"
         refine_ids = set(document(refine_path)["chunks"]) if refine_path.exists() else set()
