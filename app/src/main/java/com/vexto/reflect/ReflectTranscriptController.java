@@ -277,7 +277,7 @@ final class ReflectTranscriptController {
                     try (OutputStream stream = activity.getContentResolver().openOutputStream(uri, "wt")) {
                         if (stream == null) throw new IOException("No export output");
                         format.write(stream, recording, source, exportTitle,
-                                format == RecordingExport.AUDIO || source == null ? Collections.emptyMap() : profiles.names(recording, source));
+                                format == RecordingExport.AUDIO || source == null ? Collections.emptyMap() : profiles.exportNames(recording, source));
                     }
                     deliver(current, () -> notice.accept("Файл экспортирован"));
                 }

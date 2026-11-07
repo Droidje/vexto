@@ -61,7 +61,7 @@ final class ReflectExportController {
         io.execute(() -> {
             try {
                 Map<String, String> resolved = recording == null || transcript == null
-                        ? Collections.emptyMap() : profiles.names(recording, transcript);
+                        ? Collections.emptyMap() : profiles.exportNames(recording, transcript);
                 deliver(current, () -> {
                     names = resolved;
                     ready = true;

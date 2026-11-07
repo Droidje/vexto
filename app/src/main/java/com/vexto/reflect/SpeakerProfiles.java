@@ -170,15 +170,30 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
     }
 
     Map<String, String> names(File recording, ReflectTranscript transcript) throws IOException {
+        return names(recording, transcript, true);
+    }
+
+    Map<String, String> exportNames(File recording, ReflectTranscript transcript) throws IOException {
+        return names(recording, transcript, false);
+    }
+
+    private Map<String, String> names(File recording, ReflectTranscript transcript, boolean markSelf) throws IOException {
         Map<String, String> allNames = new HashMap<>();
-        for (Profile profile : list()) allNames.put(profile.id, profile.self ? profile.name + " · Я" : profile.name);
-        Map<String, String> names = new HashMap<>();
-        for (ReflectTranscript.Line line : transcript.lines) {
-            if (line.speakerName != null) names.put(line.speakerId, line.speakerName);
+        for (Profile profile : list()) {
+            allNames.put(profile.id, markSelf && profile.self ? profile.name + " · Я" : profile.name);
         }
+        Map<String, String> names = importedNames(transcript);
         links(recording, transcript).forEach((local, profile) -> {
             if (allNames.containsKey(profile)) names.put(local, allNames.get(profile));
         });
+        return names;
+    }
+
+    private static Map<String, String> importedNames(ReflectTranscript transcript) {
+        Map<String, String> names = new HashMap<>();
+        for (ReflectTranscript.Line line : transcript.lines) {
+            if (line.speakerName != null) names.putIfAbsent(line.speakerId, line.speakerName);
+        }
         return names;
     }
 
@@ -231,9 +246,14 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
             if (!localIds.isEmpty()) {
                 var matches = SpeakerIdentityMatcher.match(db, key, revision, localIds, new HashSet<>(linked.values()));
                 Set<String> names = matches.size() == localIds.size() ? Set.of() : profileNames();
+                Map<String, String> imported = importedNames(transcript);
+                if (matches.size() != localIds.size()) names.addAll(imported.values());
                 for (String local : localIds) {
                     String id = matches.get(local);
-                    if (id == null) id = insertProfile(db, nextName(names), true).id;
+                    if (id == null) {
+                        String suppliedName = imported.get(local);
+                        id = insertProfile(db, suppliedName != null ? suppliedName : nextName(names), true).id;
+                    }
                     insertLink(db, key, revision, local, id);
                     linked.put(local, id);
                 }
