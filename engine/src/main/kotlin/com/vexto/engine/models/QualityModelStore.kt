@@ -21,7 +21,7 @@ data class QualityManifest(val version: String, val artifacts: Map<String, Quali
     companion object {
         val Required = setOf("gtcrn", "nemotron", "giga_encoder", "giga_decoder", "giga_joiner", "giga_tokens", "whisper", "qwen", "emotion", "voiceprint_embedding", "lid_encoder", "lid_decoder")
         val FastRequired = Required - setOf("giga_encoder", "giga_decoder", "giga_joiner", "giga_tokens", "whisper",
-            "gtcrn", "emotion", "voiceprint_embedding") +
+            "gtcrn", "emotion") +
             setOf("giga_fast_model", "giga_fast_tokens", "whisper_fast")
     }
 }

@@ -221,9 +221,8 @@ class TranscriptionEngine(context: Context) {
         val turnsFile = File(job, "turns.json")
         JobFiles.save(turnsFile, turns)
         // Signature extraction uses original audio and its own model lifetime, never clustering again.
-        val voices = if (profile.voiceprints) worker(WorkerStage.VOICEPRINT, Stage.Voiceprints, "original.wav",
+        val voices = worker(WorkerStage.VOICEPRINT, Stage.Voiceprints, "original.wav",
             dependencies = if (checkpoint != null) listOf(JobFiles.sha256(turnsFile)) else emptyList()).voices
-            else emptyMap()
         fun attachVoices(transcript: Transcript): Transcript = transcript.copy(speakers = transcript.speakers.map { speaker ->
             val acousticId = speaker.id.takeIf { it.startsWith("speaker_") }
                 ?.removePrefix("speaker_")?.toIntOrNull()?.minus(1)

@@ -6,15 +6,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ProcessingProfileTest {
-    @Test fun fastDefersEmotionWeightsAndKeepsVoiceprintsDisabled() {
+    @Test fun fastKeepsIdentityAndDefersEmotionWeights() {
         val fast = ProcessingProfile.resolve(ProcessingMode.AUTO, 300_001)
-        assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.GIGAAM, WorkerStage.WHISPER, WorkerStage.SELECT, WorkerStage.EMOTION),
+        assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.VOICEPRINT, WorkerStage.GIGAAM, WorkerStage.WHISPER, WorkerStage.SELECT, WorkerStage.EMOTION),
             fast.expectedStages(slavic = true))
-        assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.WHISPER, WorkerStage.SELECT, WorkerStage.EMOTION), fast.expectedStages(slavic = false))
-        assertFalse(fast.voiceprints)
+        assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.VOICEPRINT, WorkerStage.WHISPER, WorkerStage.SELECT, WorkerStage.EMOTION), fast.expectedStages(slavic = false))
+        assertTrue(fast.voiceprints)
         assertTrue(fast.backgroundEmotions)
         assertTrue("qwen" in QualityManifest.FastRequired)
-        assertTrue(QualityManifest.FastRequired.intersect(setOf("gtcrn", "emotion", "voiceprint_embedding")).isEmpty())
+        assertTrue("voiceprint_embedding" in QualityManifest.FastRequired)
+        assertTrue(QualityManifest.FastRequired.intersect(setOf("gtcrn", "emotion")).isEmpty())
 
         val quality = ProcessingProfile.resolve(ProcessingMode.AUTO, 300_000)
         assertTrue(quality.voiceprints)

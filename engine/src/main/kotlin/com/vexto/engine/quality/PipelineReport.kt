@@ -30,7 +30,7 @@ data class PipelineCoverage(
 
 @Serializable
 data class PipelineReport(
-    val schemaVersion: Int = 3,
+    val schemaVersion: Int = 4,
     val audioMs: Long,
     val processingMs: Long,
     val modelProfile: String,
