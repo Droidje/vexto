@@ -580,7 +580,7 @@ final class ReflectTranscriptController {
     }
 
     private void refreshSpeakerNames(int current, File recording) {
-        if (recordingDetails || transcript == null || transcript.lines.isEmpty()) return;
+        if (transcript == null || transcript.lines.isEmpty()) return;
         int request = ++transcriptRequest;
         profilesUi.speakerNames(recording, transcript, names -> {
             if (current == generation && request == transcriptRequest) {
