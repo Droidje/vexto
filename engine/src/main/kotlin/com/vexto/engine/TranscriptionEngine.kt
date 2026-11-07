@@ -96,7 +96,18 @@ class TranscriptionEngine(context: Context) {
             val result = if (saved?.completed == true) {
                 times[name] = saved.elapsedMs
                 saved
-            } else stage(name) { progress -> client.run(request, saved, progress) }
+            } else stage(name) { progress ->
+                val first = client.run(request, saved, progress)
+                val attemptedNpu = kind == WorkerStage.EMOTION && !first.completed && request.allowNpu &&
+                    runCatching { JobFiles.load<String>(emotionNpuAttemptFile(job)) }.getOrNull() == request.requestId
+                if (!attemptedNpu) first else {
+                    // The previous Binder is already dead. Reuse verified utterances and retry on CPU once.
+                    val retry = request.copy(requestId = UUID.randomUUID().toString(), allowNpu = false)
+                    val partial = checkpoint?.worker(kind, input, inputHash, dependencies, plan)?.second
+                        ?.copy(requestId = retry.requestId)
+                    client.run(retry, partial, progress)
+                }
+            }
             results += result
             peak = maxOf(peak, result.peakCombinedRssBytes)
             warnings += result.warnings

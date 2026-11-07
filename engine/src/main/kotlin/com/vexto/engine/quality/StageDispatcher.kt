@@ -165,20 +165,37 @@ internal object StageDispatcher {
             }
             WorkerStage.EMOTION -> {
                 val targets = JobFiles.load<List<UtteranceEmotionTarget>>(File(job, "emotion-targets.json"))
-                fun save(emotions: List<UtteranceEmotionEvidence>) {
-                    JobFiles.save(File(job, "emotion.json"), UtteranceEmotionArtifact(emotions))
-                    checkpoint(WorkerResult(request.stage, emotions = emotions))
-                    if (targets.isNotEmpty()) onProgress(emotions.size.toFloat() / targets.size)
-                }
                 val evidence = saved?.emotions.orEmpty()
                 val known = evidence.mapTo(mutableSetOf()) { it.target.index }
                 val pending = targets.filter { it.index !in known }
+                val backends = saved?.backends.orEmpty().toMutableSet()
+                val accelerator = if (request.allowNpu && pending.isNotEmpty()) EmotionNative.npuDriver() else null
+                if (accelerator != null) JobFiles.save(emotionNpuAttemptFile(job), request.requestId)
+
+                fun save(emotions: List<UtteranceEmotionEvidence>): WorkerResult {
+                    JobFiles.save(File(job, "emotion.json"), UtteranceEmotionArtifact(emotions))
+                    val result = WorkerResult(request.stage, emotions = emotions, backends = backends.toList())
+                    checkpoint(result)
+                    if (targets.isNotEmpty()) onProgress(emotions.size.toFloat() / targets.size)
+                    return result
+                }
                 save(evidence)
-                EmotionProvider(models.file("emotion")).use { provider ->
-                    val added = provider.annotateUtterances(input, pending) { save(evidence + it) }
-                    val emotions = (evidence + added).sortedBy { it.target.index }
-                    save(emotions)
-                    WorkerResult(request.stage, emotions = emotions)
+                EmotionProvider(models.file("emotion"), allowNpu = accelerator != null).use { provider ->
+                    fun recordBackend() {
+                        provider.backend?.let { backend ->
+                            backends += when {
+                                !request.allowNpu -> "cpu:after_worker_retry"
+                                accelerator == null -> "cpu:no_compatible_npu"
+                                else -> backend
+                            }
+                        }
+                    }
+                    val added = provider.annotateUtterances(input, pending) {
+                        recordBackend()
+                        save(evidence + it)
+                    }
+                    recordBackend()
+                    save((evidence + added).sortedBy { it.target.index })
                 }
             }
         }
