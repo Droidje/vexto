@@ -5,7 +5,7 @@
 - **Качественный:** GTCRN → Nemotron 3 F32 → GigaAM v3 E2E RNNT INT8 → Whisper Large v3 Q5_0 → Qwen3-1.7B Q4_K_M → GigaAM-Emo.
 - **Быстрый:** оригинальное аудио без GTCRN → тот же Nemotron → GigaAM v3 E2E CTC INT8 → Whisper Small Q5_1 → тот же Qwen и Emo.
 
-ASR-стадии последовательны; внутри каждой работают ограниченные очереди чанков и результатов. В GigaAM два постоянных обработчика, в быстром Whisper два, в качественном один из-за бюджета 2 ГБ. Модели загружаются один раз на обработчик, Qwen также остаётся загруженным на всю стадию. Тишина пропускается по полным интервалам Nemotron с контекстом; исходная временная шкала и RAW остаются сохранными. [Архитектура и ограничения](../docs/architecture/queued-audio-modes.md).
+ASR-стадии последовательны; внутри каждой работают ограниченные очереди чанков и результатов. В GigaAM два постоянных обработчика, в быстром Whisper два, в качественном один из-за бюджета 2 ГБ. Модели загружаются один раз на обработчик, Qwen также остаётся загруженным на всю стадию. Тишина пропускается по полным интервалам Nemotron с контекстом; исходная временная шкала и RAW остаются сохранными. Для записи длиннее пяти минут сам Nemotron не получает паузы от двух секунд, если таких пауз набралось хотя бы на минуту: вырезанный звук возвращается на исходную шкалу, а спикерный поток модели не перезапускается. Записи до пяти минут и почти сплошная речь идут в Nemotron целиком. [Архитектура и ограничения](../docs/architecture/queued-audio-modes.md).
 
 Язык определяется обрезанным Whisper tiny по первым 30 секундам оригинала одновременно с диаризацией. Для `ru`/`be` запускаются обе ASR и Qwen; для остальных кодов — Whisper с соответствующим языком, без GigaAM и Qwen. Как и в прежнем dev, Whisper-only не даёт `fullProfileCompleted`. При ошибке LID применяется русский маршрут с `LANGUAGE_ID_UNAVAILABLE`. Саммаризации и свободной перезаписи текста нет.
 
@@ -55,7 +55,7 @@ bash ./gradlew -PvextoSkipNative=true :engine:testDebugUnitTest
 python -m unittest discover -s tools/benchmarks/tests -v
 ```
 
-Debug-only `QualityEvalActivity`: положите короткий WAV в `<app-external-files>/eval/input.wav`, запустите `adb shell am start -n com.vexto.reflect/com.vexto.engine.eval.QualityEvalActivity`; результаты появятся в `quality-eval/`, подробные артефакты — в приватном job. `--es mode native-help` проверяет упаковку CLI. Для сравнения точности используются фрагменты20–40с, а не длинные бенчмарки.
+Debug-only `QualityEvalActivity`: положите WAV не длиннее 6 минут 40 секунд в `<app-external-files>/eval/input.wav`, запустите `adb shell am start -n com.vexto.reflect/com.vexto.engine.eval.QualityEvalActivity`; результаты появятся в `quality-eval/`, подробные артефакты — в приватном job. `--es mode native-help` проверяет упаковку CLI. Для сравнения точности используются фрагменты 20–40 с, а не длинные бенчмарки.
 
 [Архитектурное решение](../docs/architecture/quality-engine.md), [исторические замеры старого движка](../docs/research/legacy-engine.md), [исследования моделей](../docs/research/pipeline-2gb.md).
 

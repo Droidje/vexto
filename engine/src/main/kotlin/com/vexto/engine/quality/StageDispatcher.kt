@@ -4,7 +4,6 @@ import android.content.Context
 import com.vexto.engine.models.QualityModelStore
 import com.vexto.engine.pipeline.*
 import com.vexto.engine.review.*
-import com.vexto.engine.runtime.NativeDiarizationProvider
 import com.vexto.engine.runtime.NativeProcessRunner
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -41,8 +40,8 @@ internal object StageDispatcher {
             }
             WorkerStage.DIARIZE -> {
                 val work = prepareOutput(File(job, "diarization"))
-                val result = NativeDiarizationProvider.run(models.file("nemotron"), input,
-                    File(work, "turns.rttm"), work, runner)
+                val diarized = LongRecordingDiarization.run(models.file("nemotron"), input, work, runner)
+                val result = diarized.result
                 val ids = result.turns.sortedBy { it.startMs }.map { it.speakerId }.distinct().withIndex().associate { it.value to it.index }
                 val durationMs = com.vexto.engine.audio.PcmWave.inspect(input).sampleCount / 16
                 val turns = result.turns.map { turn ->
@@ -50,7 +49,8 @@ internal object StageDispatcher {
                     PipelineTurn(ids.getValue(turn.speakerId), turn.startMs, minOf(turn.endMs, durationMs))
                 }
                 JobFiles.save(File(job, "diarization/speaker-map.json"), ids)
-                WorkerResult(request.stage, turns = turns, peakCombinedRssBytes = result.process.peakCombinedRssBytes)
+                WorkerResult(request.stage, turns = turns, warnings = diarized.warnings,
+                    peakCombinedRssBytes = result.process.peakCombinedRssBytes)
             }
             WorkerStage.VOICEPRINT -> {
                 val turns = JobFiles.load<List<PipelineTurn>>(File(job, "turns.json"))
