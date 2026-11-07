@@ -32,7 +32,7 @@ class GtcrnDenoiserProvider internal constructor(private val processor: Processo
         fun flush(): FloatArray
     }
 
-    suspend fun denoise(inputWav: File, outputWav: File, auditFile: File): DenoiseAudit {
+    suspend fun denoise(inputWav: File, outputWav: File, auditFile: File, onProgress: (Float) -> Unit = {}): DenoiseAudit {
         require(inputWav.canonicalFile != outputWav.canonicalFile) { "Denoising must preserve original audio" }
         require(auditFile.canonicalFile != outputWav.canonicalFile && auditFile.canonicalFile != inputWav.canonicalFile)
         require(!outputWav.exists() && !auditFile.exists()) { "Denoising outputs must be fresh" }
@@ -58,6 +58,7 @@ class GtcrnDenoiserProvider internal constructor(private val processor: Processo
                     val count = minOf(16000L, info.sampleCount - offset).toInt()
                     append(processor.run(PcmWave.readFloat(inputWav, offset, count)))
                     offset += count
+                    onProgress(offset.toFloat() / info.sampleCount)
                 }
                 currentCoroutineContext().ensureActive()
                 append(processor.flush())

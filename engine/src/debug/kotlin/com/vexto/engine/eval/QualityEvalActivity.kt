@@ -16,8 +16,12 @@ class QualityEvalActivity : Activity() {
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         val mode = intent.getStringExtra("mode") ?: "pipeline"
+        val run = intent.getStringExtra("run")
+        require(run == null || run.matches(Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,63}")))
+        val inputName = intent.getStringExtra("input") ?: "input.wav"
+        require(inputName.matches(Regex("input\\.[a-z0-9]{1,8}")))
         scope.launch {
-            val out = File(getExternalFilesDir(null), "quality-eval").apply { mkdirs() }
+            val out = File(getExternalFilesDir(null), "quality-eval" + (run?.let { "/$it" } ?: "")).apply { mkdirs() }
             try {
                 if (mode == "native-help") {
                     val results = listOf("nemotron", "whisper", "llama").associateWith { name ->
@@ -29,7 +33,13 @@ class QualityEvalActivity : Activity() {
                     }
                     JobFiles.save(File(out, "native-help.json"), results)
                 } else {
-                    val audio = File(getExternalFilesDir(null), "eval/input.wav")
+                    val audio = if (run == null) File(getExternalFilesDir(null), "eval/$inputName") else File(out, inputName)
+                    val media = android.media.MediaMetadataRetriever()
+                    try {
+                        media.setDataSource(audio.absolutePath)
+                        val duration = media.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+                        require(duration != null && duration <= 40_000) { "Use a short audio fixture of at most 40 seconds" }
+                    } finally { media.release() }
                     TranscriptionEngine(this@QualityEvalActivity).transcribe(Uri.fromFile(audio)).collect { event ->
                         when (event) {
                             is TranscriptionEvent.Progress -> JobFiles.save(File(out, "progress.json"),
@@ -37,6 +47,10 @@ class QualityEvalActivity : Activity() {
                             is TranscriptionEvent.CoreReady -> JobFiles.write(File(out, "core-ready"), event.artifactDirectory.toByteArray())
                             is TranscriptionEvent.Partial -> Unit
                             is TranscriptionEvent.Done -> {
+                                val job = File(event.stats.artifactDirectory)
+                                for (name in listOf("transcript.json", "transcript.metadata.json", "completion.json")) {
+                                    JobFiles.write(File(out, name), File(job, name).readBytes())
+                                }
                                 JobFiles.save(File(out, "done.json"), mapOf("job" to event.stats.artifactDirectory,
                                     "peak_mb" to event.stats.peakMemoryMb.toString(), "warnings" to event.stats.warnings.joinToString("\n"),
                                     "full_profile_completed" to event.stats.fullProfileCompleted.toString(),
