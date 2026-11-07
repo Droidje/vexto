@@ -4,6 +4,7 @@ import android.os.Process as AndroidProcess
 import android.os.SystemClock
 import com.vexto.engine.review.LocalNativeExecutor
 import com.vexto.engine.review.LocalNativeResult
+import com.vexto.engine.review.NativeRequestRejectedException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -61,8 +62,10 @@ class PersistentNativeExecutor internal constructor(
                 @Suppress("UNREACHABLE_CODE") error("unreachable")
             }
         } catch (failure: Throwable) {
-            close()
-            future.cancel(true)
+            if (failure !is NativeRequestRejectedException) {
+                close()
+                future.cancel(true)
+            }
             throw failure
         }
     }
@@ -108,8 +111,11 @@ class PersistentNativeExecutor internal constructor(
                 require(response.length() in 1..65536) { "Native response missing or oversized" }
                 val result = Json.parseToJsonElement(response.readText()).jsonObject
                 response.delete()
-                if (result["ok"]?.jsonPrimitive?.booleanOrNull != true) throw NativeProcessException(
-                    NativeProcessException.Reason.EXIT, result["error"]?.jsonPrimitive?.content ?: "Native request failed")
+                if (result["ok"]?.jsonPrimitive?.booleanOrNull != true) {
+                    val error = result["error"]?.jsonPrimitive?.content ?: "Native request failed"
+                    if (error == NativeRequestRejectedException.ContextBudget) throw NativeRequestRejectedException(error)
+                    throw NativeProcessException(NativeProcessException.Reason.EXIT, error)
+                }
                 return LocalNativeResult(SystemClock.elapsedRealtime() - started, peak)
             }
             val code = runCatching { child!!.exitValue() }.getOrNull()
@@ -147,7 +153,7 @@ class PersistentNativeExecutor internal constructor(
         var i = 0
         while (i < args.size) {
             val arg = args[i++]
-            if (arg in setOf("-f", "-of", "--json-schema-file", "--chat-template-file")) {
+            if (arg in setOf("-f", "-of", "--json-schema-file", "--chat-template-file", "--prompt-audit-file")) {
                 require(i < args.size); i++
             } else result += arg
         }

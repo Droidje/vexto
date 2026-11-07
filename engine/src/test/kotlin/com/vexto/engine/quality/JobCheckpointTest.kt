@@ -2,6 +2,10 @@ package com.vexto.engine.quality
 
 import com.vexto.engine.audio.PcmWave
 import com.vexto.engine.models.QualityManifest
+import com.vexto.engine.model.ProcessingStats
+import com.vexto.engine.model.Transcript
+import com.vexto.engine.model.export.TranscriptExport
+import com.vexto.engine.review.QwenAsrSelector
 import com.vexto.engine.review.AsrSource
 import com.vexto.engine.review.ImmutableAsrCandidate
 import java.io.File
@@ -16,6 +20,34 @@ import org.junit.rules.TemporaryFolder
 class JobCheckpointTest {
     @get:Rule val temp = TemporaryFolder()
     private val manifest = QualityManifest("test", emptyMap())
+
+    @Test fun explicitRetryDoesNotReuseUnresolvedFailedOrLegacyFinishedSnapshots() {
+        val job = JobCheckpoint.open(temp.newFolder(), UUID.randomUUID().toString(), temp.newFile(), manifest, null)
+        val transcript = Transcript.Empty
+        val export = File(job.directory, "transcript.json").apply { writeText(TranscriptExport.submissionJson(transcript)) }
+        val metadata = File(job.directory, "transcript.metadata.json").apply { writeText(TranscriptExport.jsonWithMetadata(transcript)) }
+        val stats = ProcessingStats(0, 0, emptyMap(), 0, "test", 2, artifactDirectory = job.directory.absolutePath,
+            fullProfileCompleted = false)
+        val report = PipelineReport(audioMs = 0, processingMs = 0, modelProfile = "test",
+            coverage = PipelineCoverage(0, 0, 0, 0, 0, 0), complete = true, fullProfileCompleted = false,
+            selectionResolved = true, peakRssBytes = 0, reserveBytes = 0, budgetBytes = 1,
+            stageMs = emptyMap(), stages = listOf(WorkerResult(WorkerStage.SELECT, completed = true)),
+            transcriptSha256 = JobFiles.sha256(export), metadataSha256 = JobFiles.sha256(metadata), warnings = emptyList())
+        val reportFile = File(job.directory, "completion.json")
+        JobFiles.save(reportFile, report)
+        job.saveFinished(transcript, stats)
+        assertNotNull(job.finished()) // fullProfileCompleted is not required.
+        job.saveFinished(transcript, stats.copy(selectionResolved = false))
+        assertNull(job.finished())
+        job.saveFinished(transcript, stats)
+        JobFiles.save(reportFile, report.copy(stages = listOf(WorkerResult(WorkerStage.SELECT, error = "native failure"))))
+        assertNull(job.finished())
+        JobFiles.save(reportFile, report)
+        JobFiles.save(File(job.directory, "finished.checkpoint.json"), JobCheckpoint.Finished(transcript, stats))
+        assertNull(job.finished())
+        job.saveFinished(transcript, stats)
+        assertEquals(QwenAsrSelector.Version, requireNotNull(job.finished()).selectorVersion)
+    }
 
     @Test fun resumedJobRejectsAudioOrModelChanges() {
         val jobs = temp.newFolder()

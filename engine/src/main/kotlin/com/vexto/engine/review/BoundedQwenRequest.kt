@@ -4,7 +4,10 @@ import java.io.File
 
 /** Same immutable native configuration for ASR selection and speaker names: one warm model/context. */
 internal object BoundedQwenRequest {
-    const val MaxPromptBytes = 864
+    const val Protocol = "vexto-qwen-protocol=2"
+    // Byte limit bounds transport only. The native tokenizer enforces the unchanged 1024-token context.
+    const val MaxPromptBytes = 8192
+    const val MaxIdentityPromptBytes = 864
     fun arguments(model: File, request: SelectorRequest, dir: File): List<String> {
         require(request.prompt.toByteArray(Charsets.UTF_8).size <= MaxPromptBytes)
         dir.mkdirs()
@@ -19,6 +22,7 @@ internal object BoundedQwenRequest {
             "--cache-type-k", "f16", "--cache-type-v", "f16", "--seed", "42",
             "--temp", "0", "--repeat-penalty", "1.0", "-n", "16",
             "--json-schema-file", schema.absolutePath, "-f", prompt.absolutePath,
+            "--prompt-audit-file", File(dir, "prompt-budget.json").absolutePath,
         )
     }
 }
