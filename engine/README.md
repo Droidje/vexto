@@ -1,126 +1,88 @@
-# engine: офлайн-движок расшифровки
+# engine: локальный quality profile
 
-Android-библиотека (`com.vexto.engine`): аудиофайл → русский текст, спикеры, таймкоды и вероятности эмоций по репликам. Работает без сети, все модели внутри APK.
+По умолчанию включена вся связка: **GTCRN → Nemotron 3 F32 → GigaAM v3 E2E RNNT → Whisper Large v3 Q5_0 → Qwen3-1.7B Q4_K_M → GigaAM-Emo v1**. Whisper и GigaAM равноправны: Qwen выбирает один целый исходный вариант для каждого общего фрагмента. Саммаризации и свободной генерации исправленного текста нет.
 
-## Подготовка
+## Подготовка и сборка
 
-AAR sherpa-onnx (49 МБ), заголовки ONNX Runtime и веса (~575 МБ, включая 306 МБ GigaAM-Emo) скачиваются перед сборкой и не хранятся в Git. Установите Android SDK NDK `28.2.13676358` и CMake `3.22.1`:
-
-```sh
-scripts/fetch_models.sh                 # AAR + модели по умолчанию, sha256 проверяется
-./gradlew :engine:testDebugUnitTest :app:assembleDebug
-```
-
-Скачанное кэшируется в `~/.cache/vexto-models`, повторный запуск копирует из кэша. Файлы ложатся в `engine/libs/` и `engine/src/main/assets/models/` (оба пути в `.gitignore`). Скрипт пишет `assets/models/manifest.json` с набором моделей и порогом кластеризации. Смена ASR и диаризации не требует правки кода:
+Требуются JDK17, SDK35/BuildTools35.0.0, NDKr28c, CMake3.22.1+ и Ninja. Веса и native binaries не хранятся в Git. APK содержит код, лицензии и проверяемый manifest; **3 336 832 988 байта весов** устанавливаются отдельно, одним экземпляром в app-scoped storage.
 
 ```sh
-scripts/fetch_models.sh --asr gigaam-v3-rnnt-punct   # своя пунктуация и регистр
-scripts/fetch_models.sh --emb titanet-small --threshold 0.45
-```
-
-| параметр | варианты | по умолчанию |
-|---|---|---|
-| `--asr` | `gigaam-v3-rnnt`, `gigaam-v3-rnnt-punct`, `gigaam-v2-rnnt` | `gigaam-v3-rnnt` |
-| `--emb` | `eres2net`, `titanet-small`, `campplus` | `eres2net` |
-| `--threshold` | косинус для кластеризации спикеров, для eres2net 0,35–0,40 | `0.35` |
-
-При первом запуске модели копируются из assets в `filesDir/models` (sherpa-onnx грузит по пути), перед копированием проверяется свободное место. Повторная копия делается только при смене `version` в манифесте.
-
-## Конвейер
-
-1. Декодирование: `MediaExtractor` + `MediaCodec` (wav, mp3, m4a/aac, ogg/opus, flac, amr), даунмикс в моно, полифазный sinc-ресемплер в 16 кГц, PCM16 во временный файл в `cacheDir`. В памяти только энергия кадров 10 мс.
-2. Медленная АРУ (окно 0,5 с, усиление до +20 дБ) при чтении кусков: тихий собеседник иначе теряется в VAD.
-3. Диаризация: silero VAD → окна 1 с с шагом 0,5 с → эмбеддинг ERes2Net на окно → агломеративная кластеризация (средняя связь, порог 0,35) → кластеры меньше 5 с речи вливаются в ближайший → голосование окон по кадрам 10 мс.
-4. Распознавание: silero VAD (паузы от 0,3 с, поля 0,1 с), сегменты длиннее 20 с режутся в самом тихом месте, GigaAM v3 RNNT по одному сегменту, таймкоды токенов → слова.
-5. Сборка: слово получает спикера с наибольшим перекрытием, соседние слова одного спикера с паузой до 1 с склеиваются в реплику, `speaker_N` нумеруются по первому появлению.
-6. Пунктуация: для ASR без своей пунктуации только заглавная буква и точка в конце реплики, слова не меняются.
-7. Эмоции: [GigaAM-Emo v1, INT8](https://huggingface.co/vvpreo/gigaam-v3-onnx/tree/03cf125f754af526260037bc96f4edf0642e963b) оценивает исходное аудио каждой реплики по её таймкодам, без АРУ. Длинные реплики разбиваются на окна до 8 с, вероятности усредняются по длительности окон. Фрагменты короче 200 мс дополняются тишиной без захвата соседних реплик. При недоступности модели текст сохраняется, у необработанных строк оценок нет. Лицо в чате отображает прогноз модели.
-
-Модели грузятся по одной и освобождаются после своего этапа. Одновременно идёт одна расшифровка, остальные ждут. Для Emo используется C API уже упакованного в sherpa-onnx ONNX Runtime; второй рантайм в APK не включается. [Лицензия GigaAM](src/main/assets/licenses/gigaam-emo.txt) также входит в APK.
-
-Выбор моделей и параметров сделан по замерам на синтетических диалогах (TTS-голоса, сдвиг высоты, шум 10 дБ) и живой речи: WER 8–12 %, DER 10–15 %. Встроенная в sherpa-onnx диаризация pyannote + FastClustering на тех же данных давала DER вдвое выше.
-
-## API для UI (Java)
-
-```java
-ReflectEngine.Task task = ReflectEngine.transcribe(context, audioUri, new TranscriptionOptions(), new ReflectEngine.Listener() {
-    @Override public void onProgress(Stage stage, float fraction) {
-        progressText.setText(stage.getTitle() + " " + Math.round(fraction * 100) + "%");
-    }
-    @Override public void onPartial(Transcript transcript) {
-        adapter.show(transcript.getUtterances());   // распознанная часть, обновляется раз в 2 с
-    }
-    @Override public void onDone(Transcript transcript, ProcessingStats stats) {
-        String json = TranscriptExport.json(transcript);   // формат проверки заказчика
-    }
-    @Override public void onError(Throwable error) { }
-});
-// task.cancel() останавливает расшифровку, колбэки больше не придут
-```
-
-- Колбэки приходят в главном потоке, вся работа в фоне.
-- `new TranscriptionOptions(2)` задаёт известное число спикеров, по умолчанию оно определяется само.
-- Этапы `Stage`: `Preparing` (копирование моделей, только при первом запуске), `Decoding`, `Diarization`, `Recognition`, `Assembly`, `Punctuation`, `Emotion`. У каждого `getTitle()` для экрана.
-- `Transcript.getUtterances()`: `Utterance` с `getSpeakerId()`, `getStartMs()`, `getEndMs()`, `getText()`, `getWords()` и `getEmotionProbabilities()` (может быть `null`). `Transcript.speaker(id).displayName()` даёт «Спикер N» или имя.
-- Экспорт: `TranscriptExport.json/text/markdown/srt(transcript)` или `render(transcript, ExportFormat.Srt)`; у `ExportFormat` есть расширение и MIME-тип. JSON всегда с `speaker_N`, имена спикеров туда не попадают.
-- `ProcessingStats`: `getAudioMs()`, `getProcessingMs()`, `getRtf()`, `getStageMs()`, `getPeakMemoryMb()`.
-
-Из Kotlin: `TranscriptionEngine(context).transcribe(uri, options)` возвращает `Flow<TranscriptionEvent>` (`Progress`, `Partial`, `Done`), отмена через отмену корутины.
-
-## Прогон без UI
-
-В debug-сборке есть `EvalActivity`. Она обрабатывает все аудиофайлы в `/sdcard/Android/data/com.vexto.reflect/files/eval/` и для каждого `<name>.wav` пишет рядом `<name>.json` (схема заказчика) и `<name>.stats.json` (`audio_ms`, `processing_ms`, `rtf`, `peak_rss_mb`, `threads`, `stage_ms`). В конце появляется файл `_done` (`ok N` или текст ошибки).
-
-```sh
+bash scripts/fetch_models.sh --aar-only
+python scripts/prepare_emotion_runtime.py
+# Подготовленные pinned native sources, затем обе ABI; инструкции и source pins:
+# tools/native/README.md; scripts/build_native_runtime.py --help
+python scripts/prepare_quality_models.py --source-dir <готовые-модели> --download
+bash ./gradlew :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
-E=com.vexto.reflect/com.vexto.engine.eval.EvalActivity
-D=/sdcard/Android/data/com.vexto.reflect/files/eval
-adb shell am start -W -n $E                  # первый запуск: создаёт каталог и ставит модели
-adb push data/*.wav $D/
-adb shell am start -S -n $E                  # -e dir <путь> другой каталог, --ei speakers 2 число спикеров
-until adb shell ls $D/_done >/dev/null 2>&1; do sleep 3; done
-adb pull $D/. hyp/ && python3 tools/eval/score.py ref/ hyp/
-adb logcat -s VextoEval                      # RTF, пик памяти и время этапов по каждому файлу
+# Один раз запустите установленное приложение, затем:
+python scripts/install_quality_pack.py --serial <device> --pack-dir .agents/work/quality-pack/quality-508faa2fac36
 ```
 
-Каталог должно создать само приложение: если создать его через `adb shell mkdir`, приложение не сможет туда писать.
+`--source-dir` может содержать только готовые файлы (например, `nemotron/Nemotron-3-Diarization.f32.gguf`); при `--download` остальные веса берутся по закреплённым ссылкам.
 
-## Raw DER без распознавания текста
+F32 Nemotron собирается из оригинального pinned `.nemo` через `scripts/convert_nemotron_fullprecision.py`; его нельзя скачать по выдуманной ссылке или восстановить из Q8. См. [рецепт конвертации](../docs/research/nemotron-android.md). `--sources-json` provisioner принимает локальный JSON `model_id → filename`, который следует хранить в `.agents/local/`. Все файлы проверяются по размерам и SHA256 до установки и при подготовке сессии. Сам инференс работает без сети.
 
-В debug-сборке есть `com.vexto.engine.eval.DiarizationEvalActivity`. Она вызывает
-тот же production-декодер, VAD и `Diarizer` с `speakerCount=null`, но сохраняет
-сырой `<stem>.rttm` до ASR, `<stem>.stats.json` и `_done` (`ok N` / `error`).
-Stats содержат SHA256 WAV/RTTM/манифеста, времена этапов и VmHWM процесса.
+`-PvextoNdkPath=<path>` и `-PvextoCmakeVersion=<version>` позволяют использовать существующие инструменты без общих машинных путей. `-PvextoSkipNative=true` предназначен для JVM-тестов, а не поставки приложения. Обычная сборка останавливается, если отсутствуют обязательные native CLI для выбранных ABI.
 
-Intent `--es dir <unique-slug>` выбирает app-owned подкаталог
-`getExternalFilesDir("diar-eval")/<unique-slug>`; `--ei threads 4` задаёт 1–4 потока.
-Пустой каталог делает bootstrap установки моделей. После `ok 0` поместите туда
-тестовые WAV и удалите только `_done` своего bootstrap-запуска перед повторным стартом.
-Готовые RTTM/stats не перезаписываются: следующий независимый прогон использует
-новый slug. Для отдельных замеров запускайте каждый клип в свежем процессе.
+## Поведение
 
-После `adb pull` оценка на ноутбуке (reference модели на Android не передаётся):
+Каждая тяжёлая стадия работает в свежем `:inference` процессе. После ответа клиент ждёт смерти конкретного Binder и только затем запускает следующую модель. Native CLI берутся исключительно из installer-extracted `nativeLibraryDir`; загруженные исполняемые файлы не запускаются. Поддерживаются ARM64 и x86_64; факт сборки ARM64 не равен запуску на телефоне.
+
+Исходный mono PCM16/16k WAV сохраняется. GTCRN делает отдельную ASR-копию и восстанавливает её число отсчётов; `alignmentVerified=false` явно означает, что акустическая задержка не проверена. Nemotron и Emo получают оригинал. Общий план фрагментов до10с использует тихие границы, сохраняет каждый отсчёт ровно один раз и даёт обоим ASR одинаковый WAV/SHA. Whisper использует 512 кадров контекста (10,24 с) для общего плана до 10 с, чтобы сократить расход памяти при сравнении. Непрерывная речь на границе может пострадать; перекрывающиеся ASR-окна пока не реализованы.
+
+Qwen возвращает только `select_asr_variant(chunk_id, source)`. Ядро проверяет schema, identity и SHA, затем копирует байты сохранённого кандидата. Оба оригинала, native tokens/timestamps и модельный manifest остаются в `filesDir/inference/jobs/<id>`. Решения имеют статусы `SELECTED_BY_LLM`, `ONE_AVAILABLE`, `UNRESOLVED`. При последнем GigaAM является только техническим вариантом отображения; это не победа в качестве, оба результата сохранены. Способность Qwen выбирать более точный текст без аудио ещё не доказана.
+
+Базовый полный GigaAM-текст сохраняется до Whisper/LLM. Финальный текст заменяет только собственную неизменённую базовую копию; импорт и ручные изменения сохраняют приоритет. Приложение остаётся полностью локальным. Эмоции сохраняются в отдельном `emotion.json` и в вероятностях соответствующей реплики, не меняют текст и не являются достоверным определением чувств человека. Автоматического удаления архивов jobs пока нет: их жизненный цикл следует связать с удалением записи до длительного продуктового использования.
+
+Наблюдаемый суммарный RSS UI+worker+native child плюс резерв128MiB ограничивается watchdog бюджетом2 000 000 000 байт. ОС Android исключена. Sampling100мс не является жёсткой гарантией для кратких всплесков аллокатора. При отказе сохраняются готовые оригиналы и явные предупреждения; модели не подменяются незаметно более лёгкими.
+
+## API и проверки
+
+Публичный `ReflectEngine.Listener` и экспорт `Transcript` сохранены. `DetailedListener.onCoreReady` позволяет сохранить ранний полный результат. В `ProcessingStats` добавлены `artifactDirectory`, `warnings`, `complete` (покрытие фрагментов), `fullProfileCompleted`, `selectionResolved`. Параметры `punctuation`/`speakerCount` оставлены ради совместимости: текст больше не переписывается пунктуатором, Nemotron считает спикеров автоматически (неподдержанный фиксированный count отмечается предупреждением).
 
 ```sh
-python tools/benchmarks/score_dev_diarization.py --manifest MANIFEST.json --hypotheses-dir HYP_DIR --output SCORE.json
+bash scripts/fetch_models.sh --aar-only
+bash ./gradlew -PvextoSkipNative=true :engine:testDebugUnitTest
+python -m unittest discover -s tools/benchmarks/tests -v
 ```
 
-Scorer требует те же хеши русских фикстур, что у сохранённого Nemotron baseline,
-`status=completed`, `forced_speaker_count=null`, `asr_executed=false` и связанный
-хеш RTTM. При неполном/невалидном прогоне успешный pooled DER не публикуется.
-[Результат прямого сравнения dev](../docs/research/russian-diarization.md#прямое-сравнение-с-диаризатором-из-dev-apk).
+Debug-only `QualityEvalActivity`: положите короткий WAV в `<app-external-files>/eval/input.wav`, запустите `adb shell am start -n com.vexto.reflect/com.vexto.engine.eval.QualityEvalActivity`; результаты появятся в `quality-eval/`, подробные артефакты — в приватном job. `--es mode native-help` проверяет упаковку CLI. Для сравнения точности используются фрагменты20–40с, а не длинные бенчмарки.
 
-## Замеры на эмуляторе
+[Архитектурное решение](../docs/architecture/quality-engine.md), [исторические замеры старого движка](../docs/research/legacy-engine.md), [исследования моделей](../docs/research/pipeline-2gb.md).
 
-AVD Android 35 arm64, 4 vCPU, 4 ГБ RAM, хост Apple M4 Max, 4 потока, 24 wav-файла 16 кГц общей длиной 16,6 мин:
+Отдельный этап ERes2Net вычисляет голосовые признаки из оригинального аудио и интервалов Nemotron. Android сравнивает только признаки с совпадающими checkpoint, версией обработки и размерностью. При уверенном совпадении профили используют один глобальный UUID. Явное назначение пользователя сохраняется при замене промежуточного текста финальным. [Локальные профили и правило сопоставления](../docs/local-architecture.md).
 
-| | значение |
-|---|---|
-| RTF всего | 0,080 (по файлам 0,055–0,108) |
-| RTF по этапам | декодирование 0,005, диаризация 0,039, распознавание 0,037 |
-| RTF, mp3/m4a/ogg/flac 44,1–48 кГц стерео | 0,11–0,12, из них декодирование и ресемплинг ≈ 0,03–0,045 |
-| пиковый RSS процесса | 440–482 МБ |
-| длинные записи 10,4 и 31 мин | пик RSS 453 и 483 МБ, память от длины почти не зависит; RTF 0,29 и 0,42 при сильной фоновой нагрузке хоста (load average > 40), чистого замера нет |
-| WER / cpWER на 24 файлах | 10,2 % / 16,6 % (desktop-эталон того же конвейера 9,8 % / 15,6 %) |
+Для voiceprint больше не создаётся полная временная PCM-копия. Энергии кадров считаются потоково буфером64KiB; короткие окна читаются из исходного WAV через заимствованный `PcmAudio`. Его закрытие сохраняет WAV. Прежние декодированные временные PCM остаются собственными файлами и удаляются при закрытии. AGC, координаты окон и fingerprint голосовых профилей сохранены.
 
-x86_64 в APK есть, но на Apple Silicon не проверялся.
+## Проверяемые выходные данные и быстрые прогоны
+
+После завершения Android сам сохраняет `transcript.json` по четырёхпольному образцу презентации, `transcript.metadata.json` с эмоциями и `completion.json` schemaVersion2. RAW GigaAM/Whisper и точная выбранная копия остаются отдельными файлами. Отчёт различает покрытие аудио, подтверждённый выбор LLM и успешность всей связки: fallback и пропущенные фрагменты больше не считаются полным успехом.
+
+Прогресс приходит после каждого готового ASR/LLM фрагмента. Исправлены Unicode-пробелы и неверные/отсутствующие таймкоды при сборке, а также хвосты1–15samples у границы чанка. Время в миллисекундах ограничивается сверху округлением; исходные sample endpoints остаются точными.
+
+CI запускает Python-тесты, Android JVM-тесты, lint и проверочную сборку. Для PR в `main` и публикаций CI также собирает полный нативный APK. Инференс и оценку качества запускают отдельно с офлайн-пакетом моделей.
+
+Для SDK-пробы с полностью отключённой сетью (Python3.12+, установленный debug APK и офлайн-пакет):
+
+```sh
+python tools/benchmarks/probe_quality_apk.py --serial <device> --package <debug-application-id> --input <короткий-аудиофайл> --output-dir .agents/work/<новый-run>
+python tools/benchmarks/verify_quality_job.py --job-dir .agents/work/<run>/<job-id> --output .agents/work/<run>/verification.json
+```
+
+Проба принимает запись до40с, создаёт отдельный каталог, восстанавливает прежнее состояние сети и забирает артефакты SDK. Проверка SHA/полноты файла не выполняет инференс на компьютере. Реальная оценка точности ASR/диаризации проводится отдельно с эталоном; прохождение структурной проверки не является WER/DER.
+
+Для скорости повторная проверка3.3GBвесов кешируется только в памяти процесса, с точным манифестом и идентичностью/размером/временем изменения всех файлов. Первичная SHA256-проверка сохранена. DFT/mel таблицы Emo переиспользуются; Qwen не выполняет лишний стартовый warmup на каждом фрагменте. Эффект оценивается по `stageMs` и `modelVerificationReused` в отчёте, а не по размеру модели.
+
+Qwen получает оба полных ASR-варианта и возвращает только JSON-строку `"gigaam"` или `"whisper"`. SDK связывает этот ответ с текущим фрагментом и сохраняет трёхпольный `bound-tool-call.json`; ядро проверяет идентичность и SHA и копирует исходный вариант целиком. `scoped_source_v1` сохраняет отдельные SHA stdout и вызова. `verify_quality_job.py` проверяет оба; старые результаты `tool_json_v1` также поддерживаются. Лимит ответа уменьшен до16токенов; текст кандидатов не усекается.
+
+
+### WAV-фрагменты по требованию
+
+`ChunkPlan` хранит координаты и SHA точного WAV, но не создаёт полную дополнительную копию записи. Worker материализует один фрагмент перед GigaAM/Whisper и освобождает его после завершения вызова. Существовавший корректный фрагмент после аварийного завершения можно переиспользовать без перезаписи и сохранить для диагностики. Неподходящий путь, symlink или неверный SHA отклоняются.
+
+При успешно завершившейся обработке сохраняются исходный PCM WAV, ASR-копия и все исходные результаты моделей. Обычный пик WAV-хранилища снижается примерно с3копий до2копий плюс≤320044байт текущего чанка; в готовом job остаются2копии. `chunk-storage.json` позволяет независимо проверить SHA отсутствующих чанков по исходной ASR-копии, без повторного инференса. Аудио и текст не сокращаются, sample endpoints не меняются.
+
+
+Таймкоды экспортируемых реплик опираются на непрерывные интервалы Nemotron: привязанные слова ограничиваются выбранным интервалом, а раздельные интервалы одного говорящего не объединяются через паузу. Когда словарные времена ASR непригодны, оценочные метки распределяются только по участкам обнаруженной речи (по всему фрагменту, если таких участков нет). Непривязанные слова сохраняются под `speaker_unknown`, исходный текст и времена ASR остаются в артефактах. Строки JSON с одним спикером на реплику не заменяют исходные интервалы диаризации с перекрытиями.
+
+На 30-секундном Pears04 повторный импорт и экспорт через Android снизили DER строк JSON с 29,34% до 15,30% (без исключения границ, с учётом перекрытий). Исходный Nemotron: 11,15% в обоих прогонах. Экспортированный текст совпал посимвольно, WER остался 27,38%. Это сравнение одного размеченного фрагмента.

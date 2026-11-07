@@ -17,12 +17,12 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
+import com.vexto.engine.ReflectEngine;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.Collections;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -40,13 +40,13 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private ReflectTranscriptController transcripts;
     private SpeakerProfiles profiles;
     private SpeakerProfilesUi profilesUi;
+    private ReflectEngine.Task reviewWaveform;
     private File audio;
     private int duration;
     private MediaPlayer player;
     private AlertDialog recordingExit;
     private boolean importing;
-    private boolean designPreview;
-    private boolean previewSpeakersEmpty;
+    private boolean transcriptFromSpeaker;
     private final Runnable heartbeat = new Runnable() {
         @Override public void run() {
             if (view.screen() == RECORDING) {
@@ -61,37 +61,43 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        designPreview = BuildConfig.DEBUG && getIntent().getBooleanExtra("reflect_preview", false);
-        previewSpeakersEmpty = state != null && state.getBoolean("previewSpeakersEmpty");
         preferences = new ReflectPreferences(this);
-        view = new ReflectView(this, this, designPreview, preferences);
+        view = new ReflectView(this, this, preferences);
         transcriptStore = new ReflectTranscriptStore(getFilesDir());
         profiles = new SpeakerProfiles(this);
-        profilesUi = new SpeakerProfilesUi(this, view, profiles, imports, this::notice,
-                () -> { if (transcripts != null) transcripts.refreshSpeakerNames(); });
+        SpeakerDirectory speakerDirectory = new SpeakerDirectory(getFilesDir(), transcriptStore, profiles);
+        profilesUi = new SpeakerProfilesUi(this, view, profiles, speakerDirectory, imports, this::notice,
+                () -> {
+                    if (transcripts != null) transcripts.refreshSpeakerNames();
+                    refreshRecordings();
+                });
         transcripts = new ReflectTranscriptController(this, view, preferences, transcriptStore, imports,
                 this::notice, this::playFrom, this::play, this::refreshRecordings, profiles, profilesUi);
-        view.manageSpeakers(!designPreview);
         setContentView(view);
         fullscreen();
         refreshRecordings();
-        refreshSpeakers();
         if (state != null) {
             ReflectView.Screen tab = ReflectView.Screen.valueOf(state.getString("tab", HOME.name()));
             if (ReflectView.isTab(tab)) view.show(tab);
             String file = state.getString("transcriptAudio", state.getString("audio"));
-            String preview = state.getString("transcriptPreview");
-            if (designPreview && preview != null) {
-                transcripts.openPreview(preview);
+            String speakerProfile = state.getString("speakerProfile");
+            if (speakerProfile != null) {
+                profilesUi.openProfile(speakerProfile);
             } else if (file != null && new File(file).isFile()) {
                 try {
                     if (state.getBoolean("transcript")) {
                         openLocalDetail(new File(file), state.getString("transcriptTitle", "Запись"),
-                                state.getBoolean("recordingDetails"));
+                                state.getBoolean("recordingDetails"), state.getBoolean("transcriptProcessing"));
+                        String returnProfile = state.getString("transcriptReturnProfile");
+                        if (returnProfile != null) {
+                            profilesUi.selectProfile(returnProfile);
+                            transcriptFromSpeaker = true;
+                        }
                     } else review(new File(file));
                 }
                 catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
             } else if (state.getBoolean("ready")) view.show(READY);
+            transcripts.restoreExport(state);
         }
     }
 
@@ -100,7 +106,10 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         if (audio != null) state.putString("audio", audio.getAbsolutePath());
         state.putBoolean("ready", view.screen() == READY);
         state.putString("tab", view.tab().name());
-        state.putBoolean("previewSpeakersEmpty", previewSpeakersEmpty);
+        if (view.screen() == SPEAKER_PROFILE) state.putString("speakerProfile", profilesUi.profileId());
+        if (transcriptFromSpeaker && view.screen() == TRANSCRIPT) {
+            state.putString("transcriptReturnProfile", profilesUi.profileId());
+        }
         transcripts.saveState(state);
     }
 
@@ -212,12 +221,18 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     private void discardRecording() {
+        cancelReviewWaveform();
         handler.removeCallbacks(heartbeat);
         session.cancel();
         stopPlayer();
         discardDraft();
-        if (view.screen() == TRANSCRIPT) transcripts.close();
-        view.show(view.tab());
+        boolean processing = view.screen() == PROCESSING;
+        boolean transcript = view.screen() == TRANSCRIPT;
+        if (processing || transcript) transcripts.close();
+        String returnProfile = transcript && transcriptFromSpeaker ? profilesUi.profileId() : null;
+        transcriptFromSpeaker = false;
+        if (returnProfile != null) profilesUi.openProfile(returnProfile);
+        else view.show(processing ? HOME : view.tab());
     }
 
     @Override public void attach() {
@@ -263,10 +278,22 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private void review(File file) throws IOException { showReview(file, RecordingSession.duration(file)); }
 
     private void showReview(File file, int length) {
+        cancelReviewWaveform();
+        view.setReviewWave(null);
         audio = file;
         duration = length;
         view.updatePlayback(time(duration), false, 0);
         view.show(REVIEW);
+        reviewWaveform = ReflectEngine.previewWaveform(this, Uri.fromFile(file), length, bars -> {
+            if (file.equals(audio) && view.screen() == REVIEW && !isDestroyed()) view.setReviewWave(bars);
+        });
+    }
+
+    private void cancelReviewWaveform() {
+        if (reviewWaveform != null) {
+            reviewWaveform.cancel();
+            reviewWaveform = null;
+        }
     }
 
     @Override public void play() {
@@ -322,6 +349,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override public void transcribeReview() {
         if (view.screen() != REVIEW) return;
+        cancelReviewWaveform();
         File saved = saveAudio();
         if (saved == null) return;
         stopPlayer();
@@ -339,6 +367,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         try {
             Files.createDirectories(directory.toPath());
             Files.copy(audio.toPath(), saved.toPath());
+            cancelReviewWaveform();
             stopPlayer();
             discardDraft();
             audio = saved;
@@ -361,32 +390,24 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     private void openLocalDetail(ReflectCatalog.Recording recording, boolean recordingDetails) {
-        if (recording.file == null) {
-            if (designPreview) transcripts.openPreview(recording.title);
-            return;
-        }
-        try { openLocalDetail(recording.file, recording.title, recordingDetails); }
+        try { openLocalDetail(recording.file, recording.title, recordingDetails, false); }
         catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
     }
 
-    private void openLocalDetail(File file, String title, boolean recordingDetails) throws IOException {
+    private void openLocalDetail(File file, String title, boolean recordingDetails, boolean startImmediately)
+            throws IOException {
         int length = RecordingSession.duration(file);
         stopPlayer();
         discardDraft();
         audio = file;
         duration = length;
-        transcripts.open(file, title, time(length), length, recordingDetails);
+        transcripts.open(file, title, time(length), length, recordingDetails, startImmediately);
     }
 
     private void refreshRecordings() {
-        if (designPreview) {
-            view.setRecordings(ReflectDesignPreview.recordings());
-            view.setConversations(ReflectDesignPreview.conversations());
-            return;
-        }
         File directory = new File(getFilesDir(), "recordings");
         imports.execute(() -> {
-            var recordings = ReflectCatalog.localRecordings(directory, transcriptStore);
+            var recordings = ReflectCatalog.localRecordings(directory, transcriptStore, profiles);
             runOnUiThread(() -> {
                 if (!isDestroyed()) {
                     view.setRecordings(recordings);
@@ -397,13 +418,15 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     @Override public void openConversation(ReflectCatalog.Conversation conversation) {
-        if (conversation.recording != null) {
-            openLocalDetail(conversation.recording, false);
-        } else if (designPreview) transcripts.openPreview(conversation.title);
+        openLocalDetail(conversation.recording, false);
     }
 
     @Override public void closeTranscript() { closeRecorder(); }
     @Override public void openExportOptions() { transcripts.exportOptions(); }
+    @Override public void closeExport() { transcripts.closeExport(); }
+    @Override public void selectExport(RecordingExport format) { transcripts.selectExport(format); }
+    @Override public void shareExport() { transcripts.shareExport(); }
+    @Override public void saveExport() { transcripts.saveExport(); }
     @Override public void importTranscript() { transcripts.pick(); }
     @Override public void transcribeRecording() { transcripts.transcribe(); }
     @Override public void cancelTranscription() { transcripts.cancelTranscription(); }
@@ -412,20 +435,23 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override public void playTranscriptAudio() { play(); }
     @Override public void openTranscriptLine(ReflectTranscript.Line line) { transcripts.lineOptions(line); }
 
-    @Override public void toggleSpeakerPreview() {
-        if (!designPreview) return;
-        previewSpeakersEmpty = !previewSpeakersEmpty;
-        refreshSpeakers();
-    }
-
-    @Override public void refreshSpeakers() {
-        if (designPreview) {
-            view.setSpeakers(previewSpeakersEmpty ? Collections.emptyList() : ReflectDesignPreview.speakers());
-        } else profilesUi.refreshSpeakers();
-    }
+    @Override public void refreshSpeakers() { profilesUi.refreshSpeakers(); }
 
     @Override public void addSpeaker() { profilesUi.addSpeaker(); }
-    @Override public void openSpeaker(ReflectCatalog.Speaker speaker) { profilesUi.manageSpeaker(speaker); }
+    @Override public void openSpeaker(ReflectCatalog.Speaker speaker) { profilesUi.openProfile(speaker.id); }
+    @Override public void closeSpeakerProfile() { profilesUi.closeProfile(); }
+    @Override public void openSpeakerMenu() { profilesUi.openMenu(); }
+
+    @Override public void openSpeakerUtterance(SpeakerDirectory.Utterance utterance) {
+        if (view.screen() != SPEAKER_PROFILE || profilesUi.profileId() == null) return;
+        try {
+            openLocalDetail(utterance.recording(), utterance.title(), false, false);
+            transcriptFromSpeaker = true;
+            playFrom(utterance.startMs());
+        } catch (IOException | RuntimeException error) {
+            notice("Не удалось открыть запись");
+        }
+    }
 
     @Override public void openMicrophoneSettings() {
         startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -454,7 +480,9 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private void notice(String message) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show(); }
 
     @Override public void onBackPressed() {
-        if (view.screen() == MENU) toggleMenu();
+        if (view.screen() == EXPORT) transcripts.closeExport();
+        else if (view.screen() == MENU) toggleMenu();
+        else if (view.screen() == SPEAKER_PROFILE) closeSpeakerProfile();
         else if (ReflectView.isTab(view.screen()) && view.screen() != HOME) view.show(HOME);
         else if (view.screen() != HOME) closeRecorder();
         else super.onBackPressed();
@@ -468,7 +496,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override protected void onResume() {
         super.onResume();
-        if (!designPreview) { refreshSpeakers(); transcripts.refreshSpeakerNames(); }
+        refreshSpeakers();
+        transcripts.refreshSpeakerNames();
     }
 
     @Override public void onTrimMemory(int level) {
@@ -477,6 +506,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     @Override protected void onDestroy() {
+        cancelReviewWaveform();
         session.cancel();
         if (isFinishing()) discardDraft();
         transcripts.destroy();

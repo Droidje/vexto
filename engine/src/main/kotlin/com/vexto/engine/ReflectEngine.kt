@@ -2,6 +2,7 @@ package com.vexto.engine
 
 import android.content.Context
 import android.net.Uri
+import com.vexto.engine.audio.AudioDecoder
 import com.vexto.engine.model.ProcessingStats
 import com.vexto.engine.model.Stage
 import com.vexto.engine.model.Transcript
@@ -13,6 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.function.Consumer
 
 /** Фасад для Java-кода UI: колбэки приходят в главном потоке. */
 object ReflectEngine {
@@ -28,6 +31,10 @@ object ReflectEngine {
         fun onError(error: Throwable)
     }
 
+    interface DetailedListener : Listener {
+        fun onCoreReady(transcript: Transcript, artifactDirectory: String)
+    }
+
     /** Запущенная расшифровка. После [cancel] колбэки больше не приходят. */
     class Task internal constructor(private val job: Job) {
         fun cancel() = job.cancel()
@@ -36,6 +43,23 @@ object ReflectEngine {
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** Preview only: decode bounded audio off the UI thread; an empty envelope means progress-only. */
+    @JvmStatic
+    fun previewWaveform(context: Context, audio: Uri, durationMs: Int, result: Consumer<IntArray>): Task =
+        Task(scope.launch {
+            val bars = withContext(Dispatchers.IO) {
+                if (durationMs !in 1..AudioDecoder.PreviewLimitMs) intArrayOf()
+                else try {
+                    AudioDecoder.previewWaveform(context.applicationContext, audio)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    intArrayOf()
+                }
+            }
+            result.accept(bars)
+        })
 
     @JvmStatic
     @JvmOverloads
@@ -51,6 +75,7 @@ object ReflectEngine {
                     when (event) {
                         is TranscriptionEvent.Progress -> listener.onProgress(event.stage, event.fraction)
                         is TranscriptionEvent.Partial -> listener.onPartial(event.transcript)
+                        is TranscriptionEvent.CoreReady -> (listener as? DetailedListener)?.onCoreReady(event.transcript, event.artifactDirectory)
                         is TranscriptionEvent.Done -> listener.onDone(event.transcript, event.stats)
                     }
                 }

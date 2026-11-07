@@ -8,17 +8,25 @@ import java.io.FileOutputStream
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * Декодированная запись: моно PCM16 16 кГц во временном файле. В памяти держится только
+ * Моно PCM16 16 кГц: собственный временный PCM или заимствованное аудио внутри WAV.
+ * В памяти держится только
  * энергия по кадрам 10 мс, из неё строится медленная АРУ для тихих голосов.
  */
-class PcmAudio internal constructor(
+class PcmAudio private constructor(
     val file: File,
     val sampleCount: Long,
     private val frameEnergy: FloatArray,
+    private val dataOffset: Long,
+    private val deleteOnClose: Boolean,
 ) : Closeable {
+
+    /** Existing decoder/writer ownership: raw PCM starts at zero and is deleted on close. */
+    internal constructor(file: File, sampleCount: Long, frameEnergy: FloatArray) :
+        this(file, sampleCount, frameEnergy, dataOffset = 0, deleteOnClose = true)
 
     val durationMs: Long get() = sampleCount * 1000 / SampleRate
 
@@ -31,7 +39,7 @@ class PcmAudio internal constructor(
         val n = (end - start).toInt()
         val bytes = ByteArray(n * 2)
         RandomAccessFile(file, "r").use {
-            it.seek(start * 2)
+            it.seek(dataOffset + start * 2)
             it.readFully(bytes)
         }
         val shorts = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
@@ -71,11 +79,31 @@ class PcmAudio internal constructor(
         }
     }
 
+    /** RMS envelope for the 32 playback bars; the quietest sections retain the dot baseline. */
+    internal fun previewWaveform(): IntArray {
+        if (frameEnergy.isEmpty()) return intArrayOf()
+        val bins = FloatArray(32)
+        frameEnergy.forEachIndexed { i, energy ->
+            val bin = i * bins.size / frameEnergy.size
+            bins[bin] = maxOf(bins[bin], energy)
+        }
+        val max = bins.max()
+        return IntArray(bins.size) { i ->
+            if (max > 0f) 2 + (20 * sqrt(bins[i] / max)).roundToInt() else 2
+        }
+    }
+
     override fun close() {
-        file.delete()
+        if (deleteOnClose) file.delete()
     }
 
     companion object {
+        /** Read-only view: callers retain ownership of the original WAV. */
+        internal fun borrowedWav(file: File, sampleCount: Long, frameEnergy: FloatArray, dataOffset: Long): PcmAudio {
+            require(dataOffset >= 0 && sampleCount >= 0)
+            return PcmAudio(file, sampleCount, frameEnergy, dataOffset, deleteOnClose = false)
+        }
+
         const val FrameSize = SampleRate / 100
         private const val AgcWindowFrames = 50
         private const val AgcTarget = 0.1

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ final class ReflectTranscript {
         final int startMs;
         final int endMs;
         final String text;
+        final String speakerName;
         final EmotionProbabilities emotionProbabilities;
 
         Line(String speakerId, int startMs, int endMs, String text) {
@@ -40,6 +42,11 @@ final class ReflectTranscript {
         }
 
         Line(String speakerId, int startMs, int endMs, String text, EmotionProbabilities emotionProbabilities) {
+            this(speakerId, startMs, endMs, text, emotionProbabilities, null);
+        }
+
+        Line(String speakerId, int startMs, int endMs, String text, EmotionProbabilities emotionProbabilities,
+             String speakerName) {
             this.speakerId = checkedText(speakerId, MAX_SPEAKER_LENGTH);
             if (startMs < 0 || endMs <= startMs) {
                 throw new IllegalArgumentException("Invalid transcript time range");
@@ -48,6 +55,7 @@ final class ReflectTranscript {
             this.endMs = endMs;
             this.text = checkedText(text, MAX_TEXT_LENGTH);
             this.emotionProbabilities = emotionProbabilities;
+            this.speakerName = speakerName == null ? null : checkedText(speakerName, MAX_SPEAKER_LENGTH);
         }
     }
 
@@ -67,6 +75,7 @@ final class ReflectTranscript {
             Line first = lines.get(i), second = other.lines.get(i);
             if (first.startMs != second.startMs || first.endMs != second.endMs
                     || !first.speakerId.equals(second.speakerId) || !first.text.equals(second.text)
+                    || !Objects.equals(first.speakerName, second.speakerName)
                     || !Objects.equals(first.emotionProbabilities, second.emotionProbabilities)) return false;
         }
         return true;
@@ -97,7 +106,7 @@ final class ReflectTranscript {
     }
 
     private static Line readLine(JsonReader json) throws IOException {
-        String speaker = null, text = null;
+        String speaker = null, text = null, speakerName = null;
         int start = -1, end = -1;
         EmotionProbabilities emotions = null;
         json.beginObject();
@@ -120,6 +129,10 @@ final class ReflectTranscript {
                     if (text != null) throw new IOException("Duplicate text");
                     text = readString(json);
                     break;
+                case "speaker_name":
+                    if (speakerName != null) throw new IOException("Duplicate speaker_name");
+                    speakerName = readString(json);
+                    break;
                 case "emotion_probabilities":
                     if (emotions != null) throw new IOException("Duplicate emotion_probabilities");
                     json.beginArray();
@@ -135,7 +148,7 @@ final class ReflectTranscript {
         if (speaker == null || text == null || start < 0 || end < 0) {
             throw new IOException("Incomplete transcript line");
         }
-        return new Line(speaker, start, end, text, emotions);
+        return new Line(speaker, start, end, text, emotions, speakerName);
     }
 
     private static String readString(JsonReader json) throws IOException {
@@ -160,27 +173,49 @@ final class ReflectTranscript {
     }
 
     byte[] encode() throws IOException {
+        return encode(true);
+    }
+
+    byte[] encodeSpeakerRevision() throws IOException {
+        return encode(false);
+    }
+
+    private byte[] encode(boolean includeDetails) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-        try (JsonWriter json = new JsonWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8))) {
-            json.beginObject().name("transcript").beginArray();
-            for (Line line : lines) {
-                json.beginObject()
-                        .name("speaker_id").value(line.speakerId)
-                        .name("start_ms").value(line.startMs)
-                        .name("end_ms").value(line.endMs)
-                        .name("text").value(line.text);
-                if (line.emotionProbabilities != null) {
-                    json.name("emotion_probabilities").beginArray();
-                    for (Double probability : line.emotionProbabilities.ordered()) json.value(probability);
-                    json.endArray();
-                }
-                json.endObject();
-                json.flush();
-                if (output.size() > MAX_BYTES - 2) throw new IOException("Transcript is too large");
-            }
-            json.endArray().endObject();
-        }
+        writeJson(output, false, output, includeDetails);
         return output.toByteArray();
+    }
+
+    /** Export every line, even when presentation whitespace/names exceed the import budget. */
+    void writeSubmission(OutputStream output) throws IOException {
+        writeJson(output, true, null, false);
+    }
+
+    private void writeJson(OutputStream output, boolean pretty,
+                           ByteArrayOutputStream bounded, boolean includeDetails) throws IOException {
+        JsonWriter json = new JsonWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
+        if (pretty) json.setIndent("  ");
+        json.beginObject().name("transcript").beginArray();
+        for (Line line : lines) {
+            json.beginObject()
+                    .name("speaker_id").value(line.speakerId)
+                    .name("start_ms").value(line.startMs)
+                    .name("end_ms").value(line.endMs)
+                    .name("text").value(line.text);
+            if (includeDetails && line.speakerName != null) json.name("speaker_name").value(line.speakerName);
+            if (includeDetails && line.emotionProbabilities != null) {
+                json.name("emotion_probabilities").beginArray();
+                for (Double probability : line.emotionProbabilities.ordered()) json.value(probability);
+                json.endArray();
+            }
+            json.endObject();
+            if (bounded != null) {
+                json.flush();
+                if (bounded.size() > MAX_BYTES - 2) throw new IOException("Transcript is too large");
+            }
+        }
+        json.endArray().endObject();
+        json.flush();
     }
 
     static String checkedText(String value, int maxLength) {

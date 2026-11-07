@@ -43,12 +43,13 @@ final class ReflectTranscriptController {
     private final SpeakerProfiles profiles;
     private final SpeakerProfilesUi profilesUi;
     private final ReflectLocalTranscription local;
+    private final ReflectExportController exports;
+    private RecordingExport restoreExport;
     private File file;
     private final Set<File> importing = new HashSet<>();
     private ReflectTranscript transcript;
     private RecordingMetadata metadata;
     private String title, length, issue;
-    private String previewKey;
     private boolean loading, recordingDetails;
     private int generation, transcriptRequest, durationMs;
 
@@ -67,12 +68,9 @@ final class ReflectTranscriptController {
         this.refreshCatalog = refreshCatalog;
         this.profiles = profiles;
         this.profilesUi = profilesUi;
+        exports = new ReflectExportController(activity, view, io, profiles, notice);
         local = new ReflectLocalTranscription(activity, store, profiles, io, this::processingChanged,
                 this::transcriptionFinished);
-    }
-
-    void open(File recording, String fallback, String length, int durationMs, boolean recordingDetails) {
-        open(recording, fallback, length, durationMs, recordingDetails, false);
     }
 
     void open(File recording, String fallback, String length, int durationMs, boolean recordingDetails,
@@ -85,18 +83,27 @@ final class ReflectTranscriptController {
         this.recordingDetails = recordingDetails;
         transcript = null;
         metadata = null;
-        previewKey = null;
         loading = true;
         issue = null;
         view.transcriptView().speakerNames(Collections.emptyMap());
         render();
-        view.show(ReflectView.Screen.TRANSCRIPT);
+        if (startImmediately) view.processingView().content(length, null);
+        view.show(startImmediately ? ReflectView.Screen.PROCESSING : ReflectView.Screen.TRANSCRIPT);
         io.execute(() -> {
             String resolvedTitle = store.title(recording, fallback);
             RecordingMetadata properties = RecordingMetadata.read(recording);
             try {
                 ReflectTranscript loaded = store.load(recording);
-                deliver(current, () -> {
+                activity.runOnUiThread(() -> {
+                    if (activity.isDestroyed()) return;
+                    if (current != generation) {
+                        // The user can send processing to the background before metadata is loaded.
+                        if (startImmediately && loaded == null && !importing.contains(recording)) {
+                            if (local.busy()) notice.accept("Дождитесь завершения текущей обработки.");
+                            else local.start(recording);
+                        }
+                        return;
+                    }
                     title = resolvedTitle;
                     metadata = properties;
                     transcript = loaded;
@@ -104,34 +111,26 @@ final class ReflectTranscriptController {
                     render();
                     refreshSpeakerNames(current, recording);
                     if (startImmediately && loaded == null) transcribe();
+                    else showTranscriptAfterProcessing();
                 });
             } catch (IOException | RuntimeException invalid) {
-                deliver(current, () -> {
+                String readIssue = "Не удалось прочитать сохранённый транскрипт. Можно импортировать другой JSON.";
+                activity.runOnUiThread(() -> {
+                    if (activity.isDestroyed()) return;
+                    if (current != generation) {
+                        if (startImmediately) notice.accept(readIssue);
+                        return;
+                    }
                     title = resolvedTitle;
                     metadata = properties;
-                    issue = "Не удалось прочитать сохранённый транскрипт. Можно импортировать другой JSON.";
+                    issue = readIssue;
                     loading = false;
                     render();
+                    showTranscriptAfterProcessing();
                     refreshSpeakerNames(current, recording);
                 });
             }
         });
-    }
-
-    void openPreview(String key) {
-        ++generation;
-        file = null;
-        previewKey = key;
-        title = ReflectDesignPreview.transcriptTitle(key);
-        transcript = ReflectDesignPreview.transcript(key);
-        recordingDetails = false;
-        metadata = null;
-        length = "";
-        loading = false;
-        issue = null;
-        view.transcriptView().speakerNames(Collections.emptyMap());
-        render();
-        view.show(ReflectView.Screen.TRANSCRIPT);
     }
 
     void close() {
@@ -139,7 +138,6 @@ final class ReflectTranscriptController {
         file = null;
         transcript = null;
         metadata = null;
-        previewKey = null;
         view.transcriptView().clear();
     }
 
@@ -148,7 +146,10 @@ final class ReflectTranscriptController {
     void transcribe() {
         if (file == null || loading || recordingDetails || transcript != null) return;
         if (local.busy() || importing.contains(file)) {
-            if (local.progress(file) == null) notice.accept("Дождитесь завершения текущей обработки.");
+            if (local.progress(file) == null) {
+                showTranscriptAfterProcessing();
+                notice.accept("Дождитесь завершения текущей обработки.");
+            }
             return;
         }
         issue = null;
@@ -159,19 +160,18 @@ final class ReflectTranscriptController {
     void cancelTranscription() { local.cancel(file); }
 
     void saveState(Bundle state) {
-        if (view.screen() != ReflectView.Screen.TRANSCRIPT) return;
+        if (view.screen() != ReflectView.Screen.TRANSCRIPT && view.screen() != ReflectView.Screen.PROCESSING
+                && view.screen() != ReflectView.Screen.EXPORT) return;
+        if (view.screen() == ReflectView.Screen.EXPORT) exports.saveState(state);
         state.putBoolean("transcript", true);
+        state.putBoolean("transcriptProcessing", view.screen() == ReflectView.Screen.PROCESSING);
         state.putBoolean("recordingDetails", recordingDetails);
         state.putString("transcriptTitle", title);
-        state.putString("transcriptPreview", previewKey);
         if (file != null) state.putString("transcriptAudio", file.getAbsolutePath());
     }
 
     void pick() {
-        if (file == null || loading) {
-            if (previewKey != null) notice.accept("Откройте локальную запись, чтобы импортировать транскрипт");
-            return;
-        }
+        if (file == null || loading) return;
         if (local.progress(file) != null || importing.contains(file)) {
             notice.accept("Дождитесь завершения текущей обработки.");
             return;
@@ -184,21 +184,28 @@ final class ReflectTranscriptController {
 
     void exportOptions() {
         if (file == null || loading) {
-            notice.accept(previewKey != null ? "Это пример из макета" : "Данные записи ещё загружаются");
+            notice.accept("Данные записи ещё загружаются");
             return;
         }
-        Sheet menu = sheet("Экспорт записи");
-        if (transcript != null && !transcript.lines.isEmpty()) {
-            menu.exportOption(RecordingExport.JSON);
-            menu.exportOption(RecordingExport.MARKDOWN);
-        }
-        menu.exportOption(RecordingExport.AUDIO);
-        menu.show();
+        exports.open(file, transcript, metadata, title, length, RecordingExport.JSON);
     }
 
-    private void export(RecordingExport format) {
-        if (file == null) return;
-        activity.startActivityForResult(format.createDocument(metadata, title), format.request);
+    void closeExport() { exports.close(); }
+    void selectExport(RecordingExport format) { exports.select(format); }
+    void shareExport() { exports.share(); }
+    void saveExport() { exports.save(); }
+
+    void restoreExport(Bundle state) {
+        if (!state.containsKey("exportFormat")) return;
+        restoreExport = ReflectExportController.restoredFormat(state);
+        restoreExportIfReady();
+    }
+
+    private void restoreExportIfReady() {
+        if (restoreExport == null || loading || file == null) return;
+        RecordingExport format = restoreExport;
+        restoreExport = null;
+        exports.open(file, transcript, metadata, title, length, format);
     }
 
     boolean onActivityResult(int request, int result, Intent data) {
@@ -224,6 +231,15 @@ final class ReflectTranscriptController {
                         imported = ReflectTranscript.parse(input);
                     }
                     store.save(recording, imported);
+                    String message = "Транскрипт импортирован";
+                    try { profiles.assign(recording, imported); }
+                    catch (IOException | RuntimeException indexFailure) {
+                        message = "Транскрипт импортирован. Не удалось обновить список спикеров.";
+                    }
+                    String resultMessage = message;
+                    activity.runOnUiThread(() -> {
+                        if (!activity.isDestroyed()) refreshCatalog.run();
+                    });
                     deliver(current, () -> {
                         transcript = imported;
                         loading = false;
@@ -231,7 +247,7 @@ final class ReflectTranscriptController {
                         view.transcriptView().speakerNames(Collections.emptyMap());
                         render();
                         refreshSpeakerNames(current, recording);
-                        notice.accept("Транскрипт импортирован");
+                        notice.accept(resultMessage);
                     });
                 } else {
                     ReflectTranscript source = snapshot;
@@ -241,7 +257,7 @@ final class ReflectTranscriptController {
                     try (OutputStream stream = activity.getContentResolver().openOutputStream(uri, "wt")) {
                         if (stream == null) throw new IOException("No export output");
                         format.write(stream, recording, source, exportTitle,
-                                format != RecordingExport.MARKDOWN || source == null ? Collections.emptyMap() : profiles.names(recording, source));
+                                format == RecordingExport.MARKDOWN && source != null ? profiles.exportNames(recording, source) : Collections.emptyMap());
                     }
                     deliver(current, () -> notice.accept("Файл экспортирован"));
                 }
@@ -354,10 +370,14 @@ final class ReflectTranscriptController {
     private void render() {
         view.transcriptView().content(title, length, transcript, file != null,
                 loading, issue, recordingDetails, metadata, local.progress(file));
+        restoreExportIfReady();
     }
 
     private void processingChanged(File recording) {
-        if (recording.equals(file) && !recordingDetails) view.transcriptView().transcription(local.progress(file));
+        if (!recording.equals(file) || recordingDetails) return;
+        var progress = local.progress(file);
+        if (view.screen() == ReflectView.Screen.PROCESSING) view.processingView().content(length, progress);
+        else view.transcriptView().transcription(progress);
     }
 
     private void transcriptionFinished(ReflectLocalTranscription.Result result) {
@@ -368,10 +388,17 @@ final class ReflectTranscriptController {
                 if (transcript != null) refreshSpeakerNames(generation, file);
             }
             render();
+            showTranscriptAfterProcessing();
         }
         if (result.transcript() != null || !result.recording().equals(file)) {
             notice.accept(result.message() == null ? "Расшифровка готова" : result.message());
         }
+        refreshCatalog.run();
+        if (result.transcript() != null && view.screen() == ReflectView.Screen.SPEAKERS) profilesUi.refreshSpeakers();
+    }
+
+    private void showTranscriptAfterProcessing() {
+        if (view.screen() == ReflectView.Screen.PROCESSING) view.show(ReflectView.Screen.TRANSCRIPT);
     }
 
     void refreshSpeakerNames() {
@@ -409,10 +436,6 @@ final class ReflectTranscriptController {
 
         void option(String title, Runnable action) {
             option(title, null, action);
-        }
-
-        void exportOption(RecordingExport format) {
-            option(format.label, format.icon, () -> export(format));
         }
 
         private void option(String title, String icon, Runnable action) {

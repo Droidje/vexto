@@ -1,0 +1,238 @@
+{
+  "schema_version": 1,
+  "status": "scored",
+  "fixture_id": "pears04-301-331",
+  "runtime": "production Android APK retained artifacts; host scoring only; no host model inference",
+  "audio_seconds": 30.0,
+  "decode_transformation": {
+    "byte_identical": false,
+    "source_samples": 480000,
+    "decoded_samples": 480000,
+    "max_abs_difference_lsb": 324,
+    "mean_abs_difference_lsb": 5.394008333333334,
+    "rms_difference_lsb": 12.82324760607338,
+    "source_binding": "source hash pinned by fixture and parent Android-run provenance; decoded WAV hashed separately",
+    "transformation": "Android AudioDecoder always uses Blackman-windowed sinc Resampler (cutoff .95, even 16k-to-16k), then float-to-PCM16 quantization; not bit-identical copy",
+    "timing_note": "Equal sample count; decoder resampler defines output n at source sample n for equal rates; no fitted time shift"
+  },
+  "hypothesis_source": "native RTTM, not transcript rows or ASR text",
+  "pipeline_complete": true,
+  "full_profile_completed": true,
+  "timings_ms": {
+    "diarization": 2779,
+    "pipeline": 80685
+  },
+  "memory": {
+    "diarization_peak_rss_bytes": 707788800,
+    "pipeline_peak_rss_bytes": 1795551232,
+    "reserve_bytes": 134217728,
+    "budget_bytes": 2000000000,
+    "note": "Observed sampled app RSS; not a hard allocation cap; OS excluded"
+  },
+  "counts": {
+    "reference_rows": 80,
+    "hypothesis_rows": 9,
+    "reference_speakers": 3,
+    "hypothesis_speakers": 3
+  },
+  "hashes": {
+    "decoded_audio_sha256": "a125cfb1d507bb0ff21420b5adcacef83bfb3d97da8b39b4459d64c332e0fe33",
+    "source_audio_sha256": "a38e06480bad82f0344ad208fa2cf12b4ed06e0b4d05e474a0a8a0ad0ad864e8",
+    "run_provenance_sha256": "86e94de33ed74c7fb1d0a052aaba65a6463d55648593eaa1c233a6b4c1f43786",
+    "reference_rttm_sha256": "bed5db83ed0ebc1786f48f175cb7ddb89ade05b14d493d67b01ffdb52fcc5304",
+    "hypothesis_rttm_sha256": "3a99e3d650e2348a9f77318c5e4e0a49640476e3200e4b048006909f4af22054",
+    "fixture_manifest_sha256": "a1dd270e2655bcf9be8fc94383e5bbf1100e46fc1accb97138e86bb695f16c60",
+    "request_sha256": "8d92c7d435f3d2815f186fd2996604af02379d0adaf66d8e5a0d744916c48ba3",
+    "worker_result_sha256": "7f86a77780a16da7663bd42197092c75c7c5a2c5751ad2a92efa7ef675395e83",
+    "completion_sha256": "35098e9999979687d53fc43a2a71d2bab727cf8e829824f2eee02a7f0932a9df",
+    "speaker_map_sha256": "3cd9c73e7de06685058c04eb0388d27b846642d6b63ea1daf7be84d1a5619001",
+    "model_manifest_sha256": "9aa5d757d529041b964757722dabd7fd3b3963c1fe8b0468973624ff2578b094",
+    "scorer_sha256": "88fbd77f5ee0d6812c0e86f66b974fa29e45db51b1cda22d11af4791a68af7fa"
+  },
+  "protocol": {
+    "collars_seconds": [
+      0,
+      0.25
+    ],
+    "skip_overlap": false,
+    "uem": [
+      0,
+      30.0
+    ],
+    "collar_definition": "total width centered on each reference segment start/end; .25 means +/- .125s",
+    "collar_definition_source": "https://github.com/pyannote/pyannote-metrics/blob/develop/src/pyannote/metrics/utils.py",
+    "label_mapping": "exact global one-to-one, independently optimized for each scored UEM"
+  },
+  "scores": {
+    "0": {
+      "status": "scored",
+      "der": 0.11150668886902045,
+      "der_percent": 11.150668886902045,
+      "miss_speaker_seconds": 0.3672099070000012,
+      "false_alarm_speaker_seconds": 2.5218563220000294,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 2.8890662290000306,
+      "reference_speaker_seconds": 25.909353584999966,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "N",
+        "speaker_2": "R",
+        "speaker_3": "C"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "C",
+        "N",
+        "R"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2",
+        "speaker_3"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 30.0
+      },
+      "protocol": "single-recording exact global one-to-one active-set DER; reference-boundary collar; overlap scored",
+      "collar_half_width_seconds": 0.0,
+      "skip_overlap": false,
+      "evaluated_uem_seconds": 30.0,
+      "excluded_collar_seconds": 0.0,
+      "evaluated_uem_regions": 1
+    },
+    "0.25": {
+      "status": "scored",
+      "der": 0.07660968788792888,
+      "der_percent": 7.6609687887928875,
+      "miss_speaker_seconds": 0.01199861999999996,
+      "false_alarm_speaker_seconds": 0.6592939870000016,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.6712926070000016,
+      "reference_speaker_seconds": 8.76250283099998,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "N",
+        "speaker_2": "R",
+        "speaker_3": "C"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "C",
+        "N",
+        "R"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2",
+        "speaker_3"
+      ],
+      "collar_seconds": 0.25,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 30.0
+      },
+      "protocol": "single-recording exact global one-to-one active-set DER; reference-boundary collar; overlap scored",
+      "collar_half_width_seconds": 0.125,
+      "skip_overlap": false,
+      "evaluated_uem_seconds": 12.218125548999986,
+      "excluded_collar_seconds": 17.781874451000014,
+      "evaluated_uem_regions": 44
+    }
+  },
+  "reference_caveats": {
+    "reference_protocol": "Manual Words tier: words and filled pauses; empty intervals, explicit {nonverbal} and (ɥ) inhalations excluded. No pause filling or collar; overlaps retained.",
+    "completeness": "Only three primary participant TextGrids are published. Listener is not annotated. Early windows selected to avoid later Listener/retelling stage; extra-voice absence not independently listened/verified.",
+    "listen_validation": "pending independent listening; no listening or model-derived reference claimed",
+    "license": "No explicit open redistribution license located; publicly offered research demo; local research cache only"
+  },
+  "limitations": [
+    "Single preselected 30-second clip; not a general accuracy estimate.",
+    "Manual Words activity excludes silence, explicit nonverbal events and inhalations.",
+    "Dense word boundaries can exclude much of UEM at collar .25; inspect retained duration and denominator.",
+    "Only annotated primary participants are in the reference; Listener absence has not been independently audited.",
+    "No transcript text is included in this metrics artifact; cached source audio/text must not be redistributed."
+  ],
+  "asr_diagnostic": {
+    "status": "diagnostic_scored_with_reference_caveats",
+    "normalization": "lowercase, ё→е, non-alphanumeric Unicode characters replaced by spaces",
+    "alignment": "exact Levenshtein; ties prefer match, substitution, deletion, insertion",
+    "reference_event_count": 80,
+    "boundary_clipped_reference_events": 1,
+    "cross_speaker_overlapping_event_pairs": 9,
+    "selected_source_chunks": {
+      "gigaam": 2,
+      "whisper": 2
+    },
+    "scores": {
+      "gigaam": {
+        "reference_words": 84,
+        "hypothesis_words": 68,
+        "edit_distance": 22,
+        "wer": 0.2619047619047619,
+        "wer_percent": 26.19047619047619,
+        "correct": 62,
+        "substitutions": 6,
+        "deletions": 16,
+        "insertions": 0
+      },
+      "whisper": {
+        "reference_words": 84,
+        "hypothesis_words": 74,
+        "edit_distance": 33,
+        "wer": 0.39285714285714285,
+        "wer_percent": 39.285714285714285,
+        "correct": 58,
+        "substitutions": 9,
+        "deletions": 17,
+        "insertions": 7
+      },
+      "selected": {
+        "reference_words": 84,
+        "hypothesis_words": 69,
+        "edit_distance": 23,
+        "wer": 0.27380952380952384,
+        "wer_percent": 27.38095238095238,
+        "correct": 61,
+        "substitutions": 8,
+        "deletions": 15,
+        "insertions": 0
+      }
+    },
+    "hashes": {
+      "private_manual_word_reference_sha256": "6b5387888ef175b22d6cb7682fa9905492fe47211c2b1ef8f551e8b32f2d7c9a",
+      "source_audio_sha256": "a38e06480bad82f0344ad208fa2cf12b4ed06e0b4d05e474a0a8a0ad0ad864e8",
+      "reference_rttm_sha256": "bed5db83ed0ebc1786f48f175cb7ddb89ade05b14d493d67b01ffdb52fcc5304",
+      "source_annotation_sha256": {
+        "pears04N-voc.TextGrid": "708aed85f90d6d017163d2577d197b37de822c1677a92b5d7ebf7fbec83aca0f",
+        "pears04C-voc.TextGrid": "c075d59b78db5f5a716f788806d20f14e8aaf0212faabfba951c5a92d1abfcd8",
+        "pears04R-voc.TextGrid": "4b4cd48f666851452231d2f1c50ed7fe42880f703526d5db0790475f521232a0"
+      },
+      "raw_candidate_sha256": {
+        "gigaam": {
+          "chunk_000000": "0aaf32503da9421a417ac433698a7c1246aff87b4d11178c1a3c4213462f8dbf",
+          "chunk_000001": "5dcf35d99290fb6ca3ed4885042bf5504b50a334870ac0861b4b8d7cbf29d04f",
+          "chunk_000002": "ade3f66ff37e4946cb94d00d19ae0b24e1d7ac10e1caa1ee5d357db4cce24334",
+          "chunk_000003": "d797d954f38199d7a16655b95a1a684a4c9c490fc44d9fcd1c311f437dc76eea"
+        },
+        "whisper": {
+          "chunk_000000": "64c9dc43380fbf99b10f6d3072fddc224beccdb2b9592a0936a231805149ccfa",
+          "chunk_000001": "bf349791fbccf2b92073e3544ed22b29f9dfb9cd3a6d8ac1c7d1478f875383f5",
+          "chunk_000002": "729abb22d9697994d9120d16a4f8d24b3021650321dba5d4b15c361f6973130f",
+          "chunk_000003": "f50aaac0c6e80237e50e0d8e3e351fead54dc2c290f1fd8582d88ec7c270083c"
+        }
+      },
+      "selection_journal_sha256": "fbf536c2cfa86237286307c5d14c3a4b8cf446f92c9a1ae93e0b26205b20b04d",
+      "script_sha256": "bd8a5b653fb685fea99c8f18f5f4083f91209269a606ceb24c58da7c9b60b402"
+    },
+    "caveats": [
+      "Manual Words labels, including filled pauses; explicit nonverbal events/inhalations excluded exactly as the pinned RTTM.",
+      "Words crossing the clip edges retain their full annotated label although the clip contains only part of it.",
+      "Simultaneous speakers have no unique flat word ordering; reference uses start-time order and retains all participants.",
+      "Raw manual label conventions are not editorially corrected; these are diagnostic WER values, not an adjudicated corpus score.",
+      "Reference covers only three annotated primary participants; Listener absence not independently audited.",
+      "Reference and hypothesis texts remain local/private; this report contains only metrics and hashes."
+    ]
+  }
+}
