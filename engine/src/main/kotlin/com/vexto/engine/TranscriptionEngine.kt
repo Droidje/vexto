@@ -303,5 +303,5 @@ class TranscriptionEngine(context: Context) {
         }.toMap()
     }
 
-    private companion object { val lock = Mutex() }
+    internal companion object { val lock = Mutex() }
 }

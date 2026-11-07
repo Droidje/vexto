@@ -8,6 +8,7 @@ import com.vexto.engine.model.Stage
 import com.vexto.engine.model.Transcript
 import com.vexto.engine.model.TranscriptionEvent
 import com.vexto.engine.model.TranscriptionOptions
+import com.vexto.engine.review.LocalConversationSummary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +37,14 @@ object ReflectEngine {
         fun onCoreReady(transcript: Transcript, artifactDirectory: String)
     }
 
-    /** Запущенная расшифровка. После [cancel] колбэки больше не приходят. */
+    interface SummaryListener {
+        /** Remaining time is unknown (−1) until the first model response. */
+        fun onProgress(done: Int, total: Int, remainingMs: Long)
+        fun onDone(summary: String)
+        fun onError(error: Throwable)
+    }
+
+    /** Запущенная локальная задача. После [cancel] колбэки больше не приходят. */
     class Task internal constructor(private val job: Job) {
         fun cancel() = job.cancel()
 
@@ -80,6 +88,22 @@ object ReflectEngine {
         jobId: String,
         listener: DetailedListener,
     ): Task = listen(TranscriptionEngine(context).transcribeResumable(audio, options, jobId), listener)
+
+    @JvmStatic
+    fun summarize(context: Context, transcript: String, listener: SummaryListener): Task = Task(scope.launch {
+        try {
+            val summary = withContext(Dispatchers.IO) {
+                LocalConversationSummary(context.applicationContext).run(transcript) { done, total, remaining ->
+                    withContext(Dispatchers.Main) { listener.onProgress(done, total, remaining) }
+                }
+            }
+            listener.onDone(summary)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            listener.onError(error)
+        }
+    })
 
     private fun listen(events: Flow<TranscriptionEvent>, listener: Listener): Task = Task(
         scope.launch {

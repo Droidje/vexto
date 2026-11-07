@@ -35,6 +35,7 @@ class OfflineModelPackException(message: String, cause: IOException? = null) : I
 /** Offline packs are resolved consistently in the application and each inference worker. */
 object QualityModelStore {
     private val verificationCache = ModelVerificationCache()
+    private val summaryVerificationCache = ModelVerificationCache()
 
     private fun readManifest(context: Context): Pair<QualityManifest, String> {
         val bytes = context.assets.open("quality/manifest.json").use { it.readBytes() }
@@ -53,10 +54,20 @@ object QualityModelStore {
     suspend fun prepare(context: Context, progress: (Float) -> Unit): QualityModels = prepare(context, false, progress)
 
     /** Both profiles ship in the APK; extract and verify only the profile this job will use. */
-    suspend fun prepare(context: Context, fast: Boolean, progress: (Float) -> Unit): QualityModels {
+    suspend fun prepare(context: Context, fast: Boolean, progress: (Float) -> Unit): QualityModels =
+        prepare(context, if (fast) QualityManifest.FastRequired else QualityManifest.Required, progress = progress)
+
+    internal suspend fun prepareSummary(context: Context): QualityModels =
+        prepare(context, setOf("qwen"), summaryVerificationCache) {}
+
+    private suspend fun prepare(
+        context: Context,
+        required: Set<String>,
+        cache: ModelVerificationCache = verificationCache,
+        progress: (Float) -> Unit,
+    ): QualityModels {
         val (manifest, manifestDigest) = readManifest(context)
         val root = root(context, manifest)
-        val required = if (fast) QualityManifest.FastRequired else QualityManifest.Required
         if (!manifest.artifacts.keys.containsAll(required)) {
             throw OfflineModelPackException("В установленном APK отсутствуют модели выбранного режима. Установите полный офлайн-комплект.")
         }
@@ -69,12 +80,12 @@ object QualityModelStore {
         coroutine.ensureActive()
         if (BundledModelPack.installed(context)) {
             val hit = BundledModelPack.prepare(
-                context, manifestDigest, entries.map { it.value }, files, verificationCache, progress,
+                context, manifestDigest, entries.map { it.value }, files, cache, progress,
             )
             return QualityModels(root, manifest, verificationReused = hit)
         }
         val hit = try {
-            verificationCache.verify(manifestDigest, files) {
+            cache.verify(manifestDigest, files) {
                 entries.forEachIndexed { i, (id, artifact) ->
                     coroutine.ensureActive()
                     val file = files[i]
