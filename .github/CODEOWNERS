@@ -1,0 +1,34 @@
+# Default ownership and repository operations.
+* @mgg789
+/.github/ @mgg789
+/gradle/ @mgg789
+/gradle.properties @mgg789
+/gradlew @mgg789
+/gradlew.bat @mgg789
+/build.gradle @mgg789
+/settings.gradle @mgg789
+/scripts/ @mgg789 @ArSerebr
+
+# Android interface, designs, and local data.
+/app/ @mgg789
+/app/src/main/res/ @mgg789 @IlyaPum
+/app/src/main/assets/ @mgg789 @IlyaPum
+/app/src/main/java/com/vexto/reflect/ReflectCatalog.java @ArSerebr @mgg789
+/app/src/main/java/com/vexto/reflect/ReflectTranscriptStore.java @ArSerebr @mgg789
+/app/src/main/java/com/vexto/reflect/ReflectLocalTranscription.java @ArSerebr @mgg789
+/app/src/main/java/com/vexto/reflect/SpeakerProfiles*.java @ArSerebr @mgg789
+
+# Offline engine, model artifacts, and evaluation.
+/engine/ @ArSerebr
+/llm/ @ArSerebr
+/tools/native/ @ArSerebr
+/tools/model-notices/ @ArSerebr
+/tools/benchmarks/ @ArSerebr
+/tools/eval/ @s1rne
+/docs/research/ @ArSerebr
+
+# Product scope and design.
+/docs/product.md @IlyaPum @s1rne
+/docs/hackathon-2026-11.md @IlyaPum
+/docs/releases/ @IlyaPum @mgg789
+/README.md @mgg789 @IlyaPum
