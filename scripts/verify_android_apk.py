@@ -8,7 +8,7 @@ from zipfile import ZipFile
 LIBRARIES = (
     "libvexto_nemotron_exec.so", "libvexto_whisper_exec.so", "libvexto_llama_exec.so",
     "libnemo_speech_asr.so", "libnemo_speech_asr_c.so",
-    "libvexto_cpu.so", "libvexto_punct.so", "libvexto_emotion.so", "libvexto_emotion_jni.so", "libonnxruntime.so",
+    "libvexto_cpu.so", "libvexto_resampler.so", "libvexto_punct.so", "libvexto_emotion.so", "libvexto_emotion_jni.so", "libonnxruntime.so",
     "libsherpa-onnx-jni.so", "libsherpa-onnx-c-api.so", "libsherpa-onnx-cxx-api.so",
 )
 

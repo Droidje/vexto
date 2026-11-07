@@ -5,3 +5,5 @@
 -keepclasseswithmembernames class com.vexto.engine.emotion.GigaAmOrt { native <methods>; }
 
 -keep class com.vexto.engine.punctuation.RuPunctOrt { *; }
+
+-keep class com.vexto.engine.audio.NativeResampler { native <methods>; }

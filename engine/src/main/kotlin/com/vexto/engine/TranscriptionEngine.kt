@@ -82,7 +82,7 @@ class TranscriptionEngine(context: Context) {
                 ?.forEach { Files.deleteIfExists(it.toPath()) }
             val decoded = File(job, "decoded.wav.pending")
             try {
-                AudioDecoder.decode(context, uri, job, progress).use { PcmWave.fromPcm(it.file, decoded, it.sampleCount) }
+                AudioDecoder.decodeToWave(context, uri, decoded) { progress(it * 0.98f) }
                 Files.move(decoded.toPath(), original.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
                 checkpoint?.checkpointDecoded(original).orEmpty()
             } finally { decoded.delete() }

@@ -112,7 +112,7 @@ class PcmAudio private constructor(
 }
 
 /** Пишет float-отсчёты 16 кГц в PCM16 и попутно считает энергию кадров. */
-internal class PcmWriter(private val file: File) : Closeable {
+internal class PcmWriter(private val file: File) : DecodedSampleSink {
     private val out = BufferedOutputStream(FileOutputStream(file), 1 shl 16)
     private val bytes = ByteBuffer.allocate(2 * 1024).order(ByteOrder.LITTLE_ENDIAN)
     private var energy = FloatArray(1024)
@@ -120,10 +120,10 @@ internal class PcmWriter(private val file: File) : Closeable {
     private var frameSum = 0.0
     private var frameFill = 0
     private var closed = false
-    var sampleCount = 0L
+    override var sampleCount = 0L
         private set
 
-    fun write(samples: FloatArray, count: Int) {
+    override fun write(samples: FloatArray, count: Int) {
         for (i in 0 until count) {
             val s = samples[i].coerceIn(-1f, 1f)
             bytes.putShort((s * 32767f).toInt().toShort())
