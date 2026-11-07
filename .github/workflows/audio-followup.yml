@@ -56,13 +56,32 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BASE_RUN: ${{ inputs.native_base_run }}
         run: python3 tools/benchmarks/validate_native_reuse.py "$BASE_RUN"
-      - name: Prepare pinned models and current native code
+      - name: Prepare pinned conversion inputs
         env:
           VEXTO_NEMOTRON_ONLY: '1'
         run: |
           bash scripts/prepare_release_models.sh "$RUNNER_TEMP/audio-followup"
+      - uses: actions/cache/restore@v5
+        id: native-cache
+        with:
+          path: |
+            ${{ runner.temp }}/audio-followup/current-native
+            ${{ runner.temp }}/audio-followup/current-avx2
+          key: audio-native-ubuntu24-ndk28-cmake3316-${{ hashFiles('tools/native/*.cpp', 'tools/native/*.h', 'tools/native/*.cmake', 'tools/native/CMakeLists.txt', 'tools/native/sources.json', 'scripts/build_native_runtime.py', 'tools/benchmarks/prepare_followup_runtime.sh') }}-${{ github.run_id }}
+          restore-keys: audio-native-ubuntu24-ndk28-cmake3316-${{ hashFiles('tools/native/*.cpp', 'tools/native/*.h', 'tools/native/*.cmake', 'tools/native/CMakeLists.txt', 'tools/native/sources.json', 'scripts/build_native_runtime.py', 'tools/benchmarks/prepare_followup_runtime.sh') }}-
+      - name: Compile current native code and stage models
+        id: compile
+        run: |
           bash tools/benchmarks/prepare_followup_runtime.sh "$ANDROID_HOME/ndk/28.2.13676358" "$RUNNER_TEMP/audio-followup" unsigned/app-release-unsigned.apk
           bash gradlew --no-daemon --max-workers=2 -PvextoSkipNative :app:assembleDebug
+      - uses: actions/cache/save@v5
+        if: always() && steps.native-cache.outcome == 'success' && steps.compile.outcome != 'skipped'
+        continue-on-error: true
+        with:
+          path: |
+            ${{ runner.temp }}/audio-followup/current-native
+            ${{ runner.temp }}/audio-followup/current-avx2
+          key: ${{ steps.native-cache.outputs.cache-primary-key }}
       - name: Retain provenance and release build dependencies
         run: |
           sudo install -d -m 0755 -o "$(id -u)" -g "$(id -g)" /mnt/vexto-audio-followup
