@@ -17,7 +17,8 @@ internal object ConversationTitle {
                 else SummaryPlan.prefix(excerpt, bytesPerExcerpt)).trim()
             }
         }
-        return content
+        val question = if (plan.language.usesCyrillic) "Название разговора:" else "Conversation title:"
+        return "$content\n\n$question"
     }
 
     fun normalize(output: String): String {

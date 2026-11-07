@@ -20,7 +20,7 @@ final class ReflectConversationStore extends SQLiteOpenHelper {
     }
 
     ReflectConversationStore(Context context) {
-        super(context, "conversations.db", null, 2);
+        super(context, "conversations.db", null, 3);
     }
 
     @Override public void onCreate(SQLiteDatabase database) {
@@ -29,9 +29,14 @@ final class ReflectConversationStore extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion) {
-        if (oldVersion != 1 || newVersion != 2) throw new IllegalStateException("Unknown conversation migration");
-        database.execSQL("ALTER TABLE conversations ADD COLUMN title TEXT");
-        database.execSQL("ALTER TABLE conversations ADD COLUMN title_state INTEGER NOT NULL DEFAULT 0");
+        if (oldVersion < 1 || oldVersion > 2 || newVersion != 3) throw new IllegalStateException("Unknown conversation migration");
+        if (oldVersion == 1) {
+            database.execSQL("ALTER TABLE conversations ADD COLUMN title TEXT");
+            database.execSQL("ALTER TABLE conversations ADD COLUMN title_state INTEGER NOT NULL DEFAULT 0");
+        }
+        // v2 consumed even failed inference as AUTOMATIC with no title. No manual,
+        // deleted or successfully named conversation is eligible for this repair.
+        database.execSQL("UPDATE conversations SET title_state = 0 WHERE title_state = 1 AND title IS NULL");
     }
 
     Map<String, Entry> assign(List<ReflectCatalog.Recording> recordings) {
@@ -84,8 +89,9 @@ final class ReflectConversationStore extends SQLiteOpenHelper {
         return update(recording, title, MANUAL, "title_state != ?", DELETED);
     }
 
-    /** A null title records a completed attempt that produced no usable name. */
+    /** Only a usable generated title completes the one-time automatic assignment. */
     boolean completeTitle(File recording, String title) {
+        if (title == null || title.isBlank()) return false;
         return update(recording, title, AUTOMATIC, "title_state = ?", PENDING);
     }
 

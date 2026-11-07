@@ -6,6 +6,9 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import org.junit.Test;
 
 public class ReflectSummarySourceTest {
@@ -30,6 +33,14 @@ public class ReflectSummarySourceTest {
         var corrected = source(new ReflectTranscript.Line("global-a", 0, 10, "Решение не принято."));
         assertEquals(initial, enriched);
         assertNotEquals(initial.fingerprint(), corrected.fingerprint());
+    }
+
+    @Test public void previousPromptCacheIsInvalidatedWithoutChangingTranscriptText() throws Exception {
+        var value = source(new ReflectTranscript.Line("global-a", 0, 10, "Решение принято."));
+        String oldFingerprint = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(value.text().getBytes(StandardCharsets.UTF_8)));
+        assertNotEquals(oldFingerprint, value.fingerprint());
+        assertEquals("Участник 1: Решение принято.\n", value.text());
     }
 
     private static ReflectSummaryController.Source source(ReflectTranscript.Line line) {

@@ -3,6 +3,8 @@ package com.vexto.reflect;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
+import android.util.Log;
 import com.vexto.engine.ReflectEngine;
 import com.vexto.engine.models.OfflineModelPackException;
 import java.io.File;
@@ -22,9 +24,11 @@ final class ReflectConversationTitles {
     private final Consumer<File> updated;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable pump = this::runNext;
+    private final TitleRetryPolicy retries = new TitleRetryPolicy();
     private List<ReflectCatalog.Conversation> catalog = List.of();
     private ReflectEngine.Task task;
     private boolean scheduled, preparing, summaryActive, deferred, destroyed;
+    private long scheduledAt;
     private volatile boolean foreground, backendBusy;
     private int attempt;
 
@@ -39,10 +43,16 @@ final class ReflectConversationTitles {
 
     void catalog(List<ReflectCatalog.Conversation> value) {
         catalog = value;
+        // A newly completed conversation must not wait behind another source's backoff.
+        if (scheduled && scheduledAt > SystemClock.uptimeMillis() + IDLE_DELAY_MS) {
+            handler.removeCallbacks(pump);
+            scheduled = false;
+        }
         schedule();
     }
 
     void foreground(boolean value) {
+        if (value && !foreground) retries.resumed();
         foreground = value;
         if (value) {
             deferred = false;
@@ -76,7 +86,9 @@ final class ReflectConversationTitles {
     }
 
     void acceptWarm(File recording, String fingerprint, String title) {
-        if (!destroyed) persist(recording, fingerprint, title);
+        if (destroyed) return;
+        if (title == null) failed(recording, fingerprint);
+        else persist(recording, fingerprint, title);
     }
 
     private void interrupt() {
@@ -93,10 +105,15 @@ final class ReflectConversationTitles {
     private boolean canWork() { return foreground && !backendBusy; }
 
     private void schedule() {
+        schedule(IDLE_DELAY_MS);
+    }
+
+    private void schedule(long delay) {
         if (!canWork() || summaryActive || deferred || preparing || task != null || destroyed || scheduled) return;
         if (catalog.stream().noneMatch(item -> item.needsTitle)) return;
         scheduled = true;
-        handler.postDelayed(pump, IDLE_DELAY_MS);
+        scheduledAt = SystemClock.uptimeMillis() + delay;
+        handler.postDelayed(pump, delay);
     }
 
     private void runNext() {
@@ -107,6 +124,7 @@ final class ReflectConversationTitles {
         var candidates = catalog;
         io.execute(() -> {
             Candidate candidate = null;
+            long retryAfter = Long.MAX_VALUE;
             for (var item : candidates) {
                 if (!item.needsTitle) continue;
                 File recording = item.recording.file;
@@ -114,17 +132,25 @@ final class ReflectConversationTitles {
                     if (!conversations.needsTitle(recording)) continue;
                     ReflectTranscript transcript = transcripts.load(recording);
                     if (transcript == null || transcript.lines.isEmpty()) continue;
-                    candidate = new Candidate(recording, ReflectSummaryController.sourceOf(transcript));
+                    var source = ReflectSummaryController.sourceOf(transcript);
+                    long delay = retries.delay(recording.getName(), source.fingerprint(), SystemClock.uptimeMillis());
+                    if (delay > 0) {
+                        retryAfter = Math.min(retryAfter, delay);
+                        continue;
+                    }
+                    candidate = new Candidate(recording, source);
                     break;
                 } catch (IOException | RuntimeException ignored) {
                     // An unreadable conversation must not block the rest of the catalog.
                 }
             }
             Candidate next = candidate;
+            long wait = retryAfter;
             handler.post(() -> {
                 if (destroyed || current != attempt) return;
                 preparing = false;
                 if (next != null && canWork()) start(next, current);
+                else if (wait != Long.MAX_VALUE) schedule(wait);
             });
         });
     }
@@ -148,7 +174,7 @@ final class ReflectConversationTitles {
                         if (current != attempt) return;
                         task = null;
                         if (failure instanceof OfflineModelPackException) deferred = true;
-                        else persist(candidate.recording, candidate.source.fingerprint(), null);
+                        else failed(candidate.recording, candidate.source.fingerprint());
                     }
                 });
     }
@@ -156,13 +182,21 @@ final class ReflectConversationTitles {
     private void persist(File recording, String fingerprint, String title) {
         io.execute(() -> {
             try {
-                transcripts.withCurrentText(recording, fingerprint, () -> conversations.completeTitle(recording, title));
+                if (transcripts.withCurrentText(recording, fingerprint, () -> conversations.completeTitle(recording, title))) {
+                    retries.succeeded(recording.getName());
+                }
             } catch (IOException | RuntimeException failure) {
                 // Keep the numbered title and defer a storage failure until the app is resumed again.
                 handler.post(() -> deferred = true);
             }
             handler.post(() -> { if (!destroyed) updated.accept(recording); });
         });
+    }
+
+    private void failed(File recording, String fingerprint) {
+        retries.failed(recording.getName(), fingerprint, SystemClock.uptimeMillis());
+        Log.w("VextoTitle", "Title generation deferred after an unsuccessful attempt");
+        schedule();
     }
 
     private record Candidate(File recording, ReflectSummaryController.Source source) {}

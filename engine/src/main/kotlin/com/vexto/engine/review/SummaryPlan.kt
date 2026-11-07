@@ -11,18 +11,16 @@ internal class SummaryPlan(transcript: String) {
         val question = if (language.usesCyrillic) "Краткий смысл всей истории:"
             else "What is the central event or topic and its outcome?"
         var level = chunks.map { summarize("$it\n\n$question") }
-        // Preserve the opening context when later excerpts discuss only specific details.
-        val opening = prefix(chunks.first(), 240).trimEnd()
-        val context = if (language.usesCyrillic) "Начало разговора:\n$opening\n\nСодержание частей:"
-            else "Conversation opening:\n$opening\n\nSummaries of its parts:"
-        val mergeQuestion = if (language.usesCyrillic) "Какова общая тема и что выяснилось?"
-            else "What was the common topic and what did the conversation establish?"
+        val mergeQuestion = if (language.usesCyrillic) "Итог с учётом поздних исправлений:"
+            else "Summarize the whole; later corrections supersede earlier plans."
         while (level.size > 1) {
             level = level.chunked(2).map { pair ->
                 if (pair.size == 1) pair.single()
                 else {
-                    val combined = pair.joinToString("\n\n") { prefix(it, 500).trimEnd() }
-                    summarize("$context\n$combined\n\n$mergeQuestion")
+                    // Both complete bounded responses fit. Cutting their tails used to
+                    // discard outcomes; repeating the raw opening then restored stale plans.
+                    val combined = pair.mapIndexed { index, text -> "${index + 1}:\n$text" }.joinToString("\n\n")
+                    summarize("$combined\n\n$mergeQuestion")
                 }
             }
         }

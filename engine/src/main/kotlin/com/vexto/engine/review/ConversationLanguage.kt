@@ -21,8 +21,8 @@ internal enum class ConversationLanguage(val output: String) {
     }
 
     fun titlePrompt(): String = if (usesCyrillic) {
-        "$output Назови тему как короткий заголовок статьи. Только 2–6 слов. " +
-            "Пример: Подготовка к школьному концерту."
+        "$output Дай короткое название по главной теме диалога: 2–6 слов. " +
+            "Не повторяй реплики и имена, не добавляй факты. Только название без кавычек, пояснений и точки."
     } else {
         "Name this conversation in its own language. Output only a specific title of 2–6 words " +
             "naming the central topic or event. Avoid incidental names, quotes, punctuation and generic labels " +

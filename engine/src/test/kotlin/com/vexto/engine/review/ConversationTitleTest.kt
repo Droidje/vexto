@@ -7,7 +7,7 @@ import org.junit.Test
 class ConversationTitleTest {
     @Test fun `short dialogue reaches the model in full`() {
         val dialogue = "Подготовим выставку фотографий\nЗал уже забронировали."
-        assertEquals(dialogue, ConversationTitle.input(SummaryPlan(dialogue)))
+        assertEquals("$dialogue\n\nНазвание разговора:", ConversationTitle.input(SummaryPlan(dialogue)))
     }
 
     @Test fun `long dialogue samples beginning middle and ending within native prompt limit`() {

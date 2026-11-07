@@ -17,6 +17,7 @@ import java.util.function.Consumer;
 
 /** Owns one local generation, while the conversation view may come and go. */
 final class ReflectSummaryController {
+    private static final String SUMMARY_DOMAIN = "vexto-summary-gist-v3\n";
     private final Activity activity;
     private final ReflectTranscriptStore store;
     private final ReflectConversationTitles titles;
@@ -245,7 +246,8 @@ final class ReflectSummaryController {
         }
         String input = text.toString();
         try {
-            byte[] hash = MessageDigest.getInstance("SHA-256").digest(input.getBytes(StandardCharsets.UTF_8));
+            byte[] hash = MessageDigest.getInstance("SHA-256")
+                    .digest((SUMMARY_DOMAIN + input).getBytes(StandardCharsets.UTF_8));
             char[] hex = new char[hash.length * 2];
             for (int i = 0; i < hash.length; i++) {
                 hex[i * 2] = Character.forDigit((hash[i] >>> 4) & 15, 16);
