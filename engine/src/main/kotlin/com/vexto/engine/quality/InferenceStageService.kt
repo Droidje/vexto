@@ -7,7 +7,7 @@ import kotlinx.coroutines.*
 import java.io.File
 
 /** Fresh same-UID process per ML stage. No PCM tensors or model text through Binder. */
-class InferenceStageService : Service() {
+open class InferenceStageService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val main = Handler(Looper.getMainLooper())
     private var busy = false
@@ -94,3 +94,8 @@ class InferenceStageService : Service() {
 
     companion object { const val Run = 1; const val Done = 2; const val Cancel = 3; const val Shutdown = 4; const val Progress = 5 }
 }
+
+class InferenceSlot0 : InferenceStageService()
+class InferenceSlot1 : InferenceStageService()
+class InferenceSlot2 : InferenceStageService()
+class InferenceSlot3 : InferenceStageService()

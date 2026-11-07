@@ -36,13 +36,14 @@ class NativeProcessRunner(
     init { require(budgetBytes > 0 && reserveBytes in 0 until budgetBytes) }
 
     suspend fun run(executableName: String, args: List<String>, workDir: File,
-                    stdout: File, stderr: File, timeoutMs: Long): NativeProcessResult = withContext(Dispatchers.IO) {
+                    stdout: File, stderr: File, timeoutMs: Long,
+                    onTick: (() -> Unit)? = null): NativeProcessResult = withContext(Dispatchers.IO) {
         require(executableName in Executables) { "Unknown packaged native executable" }
         require(timeoutMs > 0 && args.none { it.contains('\u0000') })
         require(stdout.canonicalFile != stderr.canonicalFile)
         lock.withLock {
             cleanupOrphans()
-            val executable = File(nativeDir, executableName)
+            val executable = NativeCpuDispatch.executable(nativeDir, executableName)
             if (!executable.isFile || !executable.canExecute()) {
                 throw NativeProcessException(NativeProcessException.Reason.IO,
                     "Native executable is not installer-extracted: $executableName")
@@ -59,6 +60,7 @@ class NativeProcessRunner(
                 ProcessBuilder(listOf(executable.absolutePath) + args).directory(workDir)
                     .redirectOutput(stdout).redirectError(stderr).apply {
                         environment()["LD_LIBRARY_PATH"] = nativeDir.absolutePath
+                        environment()["VEXTO_NEMOTRON_THREADS"] = "2"
                         environment()["OMP_NUM_THREADS"] = "4"
                         environment()["OPENBLAS_NUM_THREADS"] = "4"
                         environment()["HF_HUB_OFFLINE"] = "1"
@@ -68,12 +70,14 @@ class NativeProcessRunner(
                 throw NativeProcessException(NativeProcessException.Reason.IO,
                     "Cannot start packaged native executable: $executableName", cause = error)
             }
+            val registeredPids = mutableSetOf<Pair<Int, String>>()
             try {
                 while (true) {
                     coroutineContext.ensureActive()
+                    onTick?.invoke()
                     val observed = snapshot()
                     observed.filter { it.pid !in existingPids && it.parentPid == AndroidProcess.myPid() && it.nativeExecutable }
-                        .forEach { register(it) }
+                        .forEach { if (registeredPids.add(it.pid to it.startTicks)) register(it) }
                     peak = maxOf(peak, observed.sumOf { it.rss })
                     rejectMemory(peak)
                     if (SystemClock.elapsedRealtime() - started > timeoutMs) {
@@ -112,6 +116,8 @@ class NativeProcessRunner(
             if (pid in activeSessionPids) return@forEach
             val saved = runCatching { record.readLines() }.getOrDefault(emptyList())
             val process = live[pid]
+            // A sibling inference slot owns its live children. PDEATHSIG handles dead owners.
+            if (process != null && process.parentPid != AndroidProcess.myPid() && process.parentPid in live) return@forEach
             if (process != null && process.nativeExecutable && saved.size == 2 &&
                 saved[0] == process.startTicks && saved[1] == process.command) {
                 AndroidProcess.killProcess(pid)
@@ -143,7 +149,7 @@ class NativeProcessRunner(
                     .toString(Charsets.UTF_8) }.getOrDefault("")
                 val command = arguments.substringBefore('\u0000')
                 val native = command.startsWith(nativeDir.absolutePath + File.separator) &&
-                    File(command).name in Executables
+                    (File(command).name in Executables || File(command).name.replace("_avx2_exec.so", "_exec.so") in Executables)
                 val stat = File(directory, "stat").readText().substringAfterLast(')').trim().split(Regex("\\s+"))
                 result += Proc(pid, (number("PPid:") ?: 0L).toInt(), rss, native, command, stat[19], arguments)
             } catch (_: IOException) { /* Process exited or /proc hides a different UID. */ }

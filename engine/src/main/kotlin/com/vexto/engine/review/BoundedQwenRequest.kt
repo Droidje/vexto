@@ -14,7 +14,7 @@ internal object BoundedQwenRequest {
         return listOf(
             "-m", model.absolutePath, "--jinja", "--chat-template-file", template.absolutePath,
             "--reasoning", "off", "-cnv", "--single-turn", "--simple-io", "--no-display-prompt",
-            "--no-context-shift", "-c", "1024", "-t", "2", "--threads-batch", "2",
+            "--no-context-shift", "-c", "1024", "-t", "4", "--threads-batch", "4",
             "-b", "128", "-ub", "64", "-ngl", "0", "--no-repack", "--no-warmup",
             "--cache-type-k", "f16", "--cache-type-v", "f16", "--seed", "42",
             "--temp", "0", "--repeat-penalty", "1.0", "-n", "16",

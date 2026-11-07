@@ -15,9 +15,7 @@ internal object SpeakerNamingInput {
                 it.verifyIdentity(chunk.id, chunk.inputSha256, AsrSource.entries.single { source -> source.wireName == ref.source })
             }
         }.getOrNull()
-        val giga = refs.filter { it.source == AsrSource.GIGAAM.wireName }.mapNotNull(::load).associateBy { it.chunkId }
-        val display = if (giga.size == plan.chunks.size && giga.isNotEmpty()) giga
-            else choices.mapNotNull { load(it.candidate) }.associateBy { it.chunkId }
+        val display = choices.mapNotNull { load(it.candidate) }.associateBy { it.chunkId }
         val turns = JobFiles.load<List<PipelineTurn>>(File(job, "turns.json"))
         return AcousticTurnTranscript.place(CandidateTranscriptAssembler().assemble(plan, display, turns).transcript, turns)
     }

@@ -16,9 +16,21 @@ class QwenAsrSelectorTest {
     @get:Rule val temp = TemporaryFolder()
     private fun pair(id: String, text: String = "Тестовая реплика."): AsrCandidatePair {
         val dir = temp.root.resolve(id).apply { mkdirs() }
-        fun candidate(source: AsrSource) = ImmutableAsrCandidate.create(id, source, "a".repeat(64), text,
+        fun candidate(source: AsrSource) = ImmutableAsrCandidate.create(id, source, "a".repeat(64), if (source == AsrSource.GIGAAM) text else "$text Другой вариант.",
             emptyList(), emptyList(), dir.resolve(source.wireName + ".json"))
         return AsrCandidatePair(id, "a".repeat(64), candidate(AsrSource.GIGAAM), candidate(AsrSource.WHISPER))
+    }
+
+    @Test fun identicalTextsBypassTheModelWithoutClaimingAnLlmDecision() = runBlocking {
+        val base = pair("same")
+        val whisper = ImmutableAsrCandidate.create(base.chunkId, AsrSource.WHISPER, base.inputSha256,
+            base.gigaam!!.text, emptyList(), emptyList(), temp.root.resolve("equal-whisper.json"))
+        val noModel = LocalNativeExecutor { _, _, _, _, _, _ -> error("LLM must not run") }
+        val result = QwenAsrSelector(noModel, temp.newFile("equal-model.gguf"))
+            .selectAll(listOf(base.copy(whisper = whisper)), temp.root.resolve("equal-selection")).single()
+        assertEquals(AsrSelectionStatus.EQUIVALENT, result.status)
+        assertFalse(result.audit.selectedByLlm)
+        assertEquals(base.gigaam!!.text, result.displayCandidate.text)
     }
 
     @Test fun `every chunk receives its own local tool call and failures do not cut the review list`() = runBlocking {

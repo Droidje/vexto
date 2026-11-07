@@ -28,6 +28,8 @@ rmdir "${nemotron[0]}llama.cpp"
 mv "${llama[0]%/}" "${nemotron[0]}llama.cpp"
 patch --directory="${nemotron[0]}" -p1 < tools/benchmarks/patches/nemotron-android-liblog.patch
 
+python3 tools/native/patch_diar_threads.py "${nemotron[0]}"
+
 bash scripts/fetch_models.sh --aar-only
 python3 scripts/prepare_emotion_runtime.py
 python3 scripts/prepare_punctuation_models.py
@@ -35,3 +37,10 @@ python3 scripts/build_native_runtime.py --ndk "$ndk" \
     --nemotron-source "${nemotron[0]}" --sentencepiece-source "${sentencepiece[0]}" \
     --whisper-source "${whisper[0]}" --build-dir "$build" \
     --output-dir engine/src/main/jniLibs --jobs "${VEXTO_NATIVE_JOBS:-2}"
+
+# Keep the generic x86_64 path, with CPUID-selected AVX2 companions for capable emulators.
+python3 scripts/build_native_runtime.py --ndk "$ndk" \
+    --nemotron-source "${nemotron[0]}" --sentencepiece-source "${sentencepiece[0]}" \
+    --whisper-source "${whisper[0]}" --build-dir "$build/avx2" \
+    --output-dir engine/src/main/jniLibs --jobs "${VEXTO_NATIVE_JOBS:-2}" \
+    --abi x86_64 --avx2 --variant-suffix avx2

@@ -41,13 +41,14 @@ data class ChunkPlan(val sampleCount: Long, val chunks: List<AudioChunk>, val om
         /** GigaAM accepts 30s. A 10s cut raised WER on the 30s Russian clips from 32.5% to 36.4%. */
         const val MaxSamples = 30 * 16000L
         /** Null turns retain legacy full coverage; an explicitly empty successful diarization skips silence. */
-        suspend fun create(input: File, jobDir: File, turns: List<PipelineTurn>? = null): ChunkPlan {
+        suspend fun create(input: File, jobDir: File, turns: List<PipelineTurn>? = null,
+                           sourceSha256: String? = null, reuse: List<AudioChunk> = emptyList(), publish: Boolean = true): ChunkPlan {
             val count = PcmWave.inspect(input).sampleCount
             val job = jobDir.canonicalFile
             val source = input.canonicalFile
             val inputWav = source.relativeTo(job).invariantSeparatorsPath
             require(JobFiles.inside(job, inputWav) == source && !inputWav.startsWith("chunks/"))
-            val storage = ChunkStorage(inputWav = inputWav, inputSha256 = JobFiles.sha256(source))
+            val storage = ChunkStorage(inputWav = inputWav, inputSha256 = sourceSha256 ?: JobFiles.sha256(source))
             val result = mutableListOf<AudioChunk>()
             val regions = speechRegions(count, turns)
             val omitted = mutableListOf<SampleRange>()
@@ -78,7 +79,8 @@ data class ChunkPlan(val sampleCount: Long, val chunks: List<AudioChunk>, val om
                     }
                     val id = "chunk_%06d".format(result.size)
                     val relative = "chunks/$id.wav"
-                    result += AudioChunk(id, from, to, relative, PcmWave.cropSha256(source, from, to))
+                    result += AudioChunk(id, from, to, relative, reuse.getOrNull(result.size)?.takeIf { it.fromSample == from && it.toSample == to }?.inputSha256
+                        ?: PcmWave.cropSha256(source, from, to))
                     from = to
                 }
                 cursor = region.toSample
@@ -86,8 +88,10 @@ data class ChunkPlan(val sampleCount: Long, val chunks: List<AudioChunk>, val om
             if (cursor < count) omitted += SampleRange(cursor, count)
             return ChunkPlan(count, result, omitted).also {
                 it.validate()
-                JobFiles.save(File(job, "chunk-storage.json"), storage)
-                JobFiles.save(File(job, "chunks.json"), it)
+                if (publish) {
+                    JobFiles.save(File(job, "chunk-storage.json"), storage)
+                    JobFiles.save(File(job, "chunks.json"), it)
+                }
             }
         }
 

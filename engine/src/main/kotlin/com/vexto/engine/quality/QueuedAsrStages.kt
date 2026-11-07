@@ -9,12 +9,13 @@ import com.vexto.engine.review.ImmutableAsrCandidate
 import com.vexto.engine.review.LocalNativeExecutor
 import com.vexto.engine.review.AsrSource
 import com.vexto.engine.runtime.NativeProcessRunner
+import kotlinx.coroutines.flow.asFlow
 import java.io.Closeable
 import java.io.File
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicLong
 
-/** ASR stages remain sequential; bounded workers inside one stage share only immutable input metadata. */
+/** Each stage owns persistent models; global admission bounds concurrent stages. */
 internal object QueuedAsrStages {
     private class Recognizer(
         val generate: suspend (ComparisonChunk, File) -> ImmutableAsrCandidate,
@@ -31,18 +32,21 @@ internal object QueuedAsrStages {
         runner: NativeProcessRunner,
         onProgress: (Float) -> Unit,
     ): WorkerResult {
-        require(request.stage == WorkerStage.GIGAAM || request.stage == WorkerStage.WHISPER)
+        require(request.stage in setOf(WorkerStage.GIGAAM, WorkerStage.WHISPER, WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE))
         val profile = ProcessingProfile.read(job)
-        val plan = JobFiles.load<ChunkPlan>(File(job, "chunks.json")).also { it.validate() }
+        val plan = (if (request.streaming) JobFiles.load<StreamingChunks>(File(job, "streaming-chunks.json")).plan
+            else JobFiles.load<ChunkPlan>(File(job, "chunks.json"))).also { it.validate() }
         val warnings = ConcurrentLinkedQueue<String>()
         val saved = if (request.resumeKey == null) null else
             JobFiles.load<WorkerResult>(request.stage.resultFile(job)).takeIf {
                 it.requestId == request.requestId && it.stage == request.stage
             }
-        val giga = request.stage == WorkerStage.GIGAAM
-        val workers = if (giga) profile.gigaWorkers else profile.whisperWorkers
+        val giga = request.stage in setOf(WorkerStage.GIGAAM, WorkerStage.GIGAAM_REFINE)
+        val refine = request.stage in setOf(WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE)
+        val light = profile.fast && !refine
+        val raw = if (refine) "raw/refined" else "raw"
         val source = if (giga) "gigaam" else "whisper"
-        val chunks = plan.chunks.associateBy { it.id }
+        val chunks = java.util.concurrent.ConcurrentHashMap(plan.chunks.associateBy { it.id })
         val expectedSource = if (giga) AsrSource.GIGAAM else AsrSource.WHISPER
         // Recheck artifacts at the worker boundary; a resume never trusts a path alone.
         val references = saved?.candidates.orEmpty().distinctBy { it.chunkId }.filter { ref ->
@@ -53,7 +57,13 @@ internal object QueuedAsrStages {
             }.isSuccess
         }.toMutableList()
         val known = references.mapTo(mutableSetOf()) { it.chunkId }
-        val pending = plan.chunks.filter { it.id !in known }
+        val expected = java.util.concurrent.ConcurrentHashMap.newKeySet<String>().also { it.addAll(request.chunkIds?.toSet() ?: chunks.keys) }
+        require(expected.all { chunks.containsKey(it) } && request.chunkIds?.distinct()?.size == request.chunkIds?.size)
+        val pending = plan.chunks.filter { it.id in expected && it.id !in known }
+        val desiredWorkers = if (light) 1 else if (giga) profile.gigaWorkers else 1 // Never duplicate Large.
+        val workers = minOf(desiredWorkers, pending.size.coerceAtLeast(1))
+        val gigaThreads = if (!light && workers == 1) minOf(4, profile.gigaWorkers * profile.gigaThreads)
+            else profile.gigaThreads
         var completed = known.size
         val peak = AtomicLong(saved?.peakCombinedRssBytes ?: 0L)
 
@@ -61,12 +71,16 @@ internal object QueuedAsrStages {
             candidates = references.sortedBy { it.chunkId }, warnings = warnings.toList(),
             peakCombinedRssBytes = peak.get())
 
-        if (completed > 0) onProgress(completed.toFloat() / plan.chunks.size.coerceAtLeast(1))
-        if (pending.isEmpty()) {
+        if (completed > 0) onProgress(completed.toFloat() / expected.size.coerceAtLeast(1))
+        if (pending.isEmpty() && !request.streaming) {
             onProgress(1f)
             return result()
         }
-        val waves = ChunkWaveMaterializer(job, plan, input) { warnings.add(it) }
+        val slavic = JobFiles.load<RecordingLanguage>(File(job, "language.json")).route == RecordingLanguage.SLAVIC
+        val readers = if (refine) listOfNotNull(WorkerStage.GIGAAM_REFINE.takeIf { slavic }, WorkerStage.WHISPER_REFINE)
+            else listOfNotNull(WorkerStage.GIGAAM.takeIf { slavic }, WorkerStage.WHISPER)
+        val waves = ChunkWaveMaterializer(job, plan, input, readers) { warnings.add(it) }
+        val cadence = CheckpointCadence()
         val language = runCatching { JobFiles.load<RecordingLanguage>(File(job, "language.json")) }
             .getOrNull()?.whisperLanguage ?: "ru"
         fun prepareOutput(output: File): File {
@@ -74,13 +88,18 @@ internal object QueuedAsrStages {
             return output
         }
 
-        StageTaskQueue.run(pending, workers, stopOnFailure = !giga, open = { index ->
+        val tasks = if (request.streaming) StreamingRecognition.tasks(job, plan, known) { update ->
+            waves.include(update)
+            chunks.putAll(update.chunks.associateBy { it.id })
+            expected.addAll(update.chunks.map { it.id })
+        } else pending.asFlow()
+        StageTaskQueue.runStream(tasks, workers, stopOnFailure = !giga, open = { index ->
             if (giga) {
-                val files = if (profile.fast) GigaAmCandidateProvider.Models.ctc(
+                val files = if (light) GigaAmCandidateProvider.Models.ctc(
                     models.file("giga_fast_model"), models.file("giga_fast_tokens"))
                 else GigaAmCandidateProvider.Models(models.file("giga_encoder"), models.file("giga_decoder"),
                     models.file("giga_joiner"), models.file("giga_tokens"))
-                val provider = GigaAmCandidateProvider(files, threads = profile.gigaThreads)
+                val provider = GigaAmCandidateProvider(files, threads = gigaThreads)
                 Recognizer(provider::generate, provider)
             } else {
                 val session = runner.persistentExecutor(File(job, "workers/whisper-$index"))
@@ -89,15 +108,15 @@ internal object QueuedAsrStages {
                         peak.updateAndGet { previous -> maxOf(previous, it.peakCombinedRssBytes) }
                     }
                 }
-                val provider = WhisperComparisonProvider(metered, models.file(profile.whisperModelId),
-                    threads = profile.whisperThreads, audioContext = 512, language = language)
+                val provider = WhisperComparisonProvider(metered, models.file(if (light) "whisper_fast" else "whisper"),
+                    threads = if (light) 2 else 4, audioContext = 512, language = language)
                 Recognizer(provider::generate, session)
             }
         }, process = { recognizer, chunk ->
             val output = if (giga) {
-                prepareOutput(File(job, "raw/gigaam/${chunk.id}.native.json"))
-                prepareOutput(File(job, "raw/gigaam/${chunk.id}.json"))
-            } else File(prepareOutput(File(job, "raw/whisper/${chunk.id}")), "whisper.json")
+                prepareOutput(File(job, "$raw/gigaam/${chunk.id}.native.json"))
+                prepareOutput(File(job, "$raw/gigaam/${chunk.id}.json"))
+            } else File(prepareOutput(File(job, "$raw/whisper/${chunk.id}")), "whisper.json")
             waves.withChunk(chunk) { recognizer.generate(it, output) }
         }, collect = { chunk, attempt ->
             attempt.fold(onSuccess = { candidate ->
@@ -107,10 +126,15 @@ internal object QueuedAsrStages {
                 warnings.add("${source.uppercase()}_FAILED:${chunk.id}:${failure.javaClass.simpleName}")
             })
             // This collector is the sole writer even when native completion order differs from input order.
-            JobFiles.save(request.stage.resultFile(job), result())
             completed++
-            onProgress(completed.toFloat() / plan.chunks.size.coerceAtLeast(1))
+            if (cadence.due(completed, expected.size)) {
+                JobFiles.save(request.stage.resultFile(job), result())
+                waves.releaseCompleted(references.mapNotNull { chunks[it.chunkId] })
+            }
+            onProgress(completed.toFloat() / expected.size.coerceAtLeast(1))
         })
+        JobFiles.save(request.stage.resultFile(job), result())
+        waves.releaseCompleted(references.mapNotNull { chunks[it.chunkId] })
         onProgress(1f)
         return result()
     }

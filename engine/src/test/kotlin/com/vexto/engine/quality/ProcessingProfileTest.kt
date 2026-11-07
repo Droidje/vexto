@@ -17,6 +17,6 @@ class ProcessingProfileTest {
 
         val quality = ProcessingProfile.resolve(ProcessingMode.AUTO, 300_000)
         assertTrue(quality.speakerAnnotations)
-        assertEquals(WorkerStage.entries.toSet(), quality.expectedStages(slavic = true))
+        assertEquals(WorkerStage.entries.toSet() - setOf(WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE), quality.expectedStages(slavic = true))
     }
 }

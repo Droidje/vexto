@@ -83,19 +83,20 @@ internal class JobCheckpoint private constructor(val directory: File) {
         inputSha256: String,
         dependencies: List<String>,
         plan: ChunkPlan?,
+        chunkIds: List<String>? = null,
     ): Pair<WorkerRequest, WorkerResult?> {
         val key = sha256((listOf(stage.name, inputWav, inputSha256) + dependencies).joinToString("\n").toByteArray())
-        val new = WorkerRequest(stage, directory.absolutePath, inputWav, resumeKey = key)
+        val new = WorkerRequest(stage, directory.absolutePath, inputWav, resumeKey = key, chunkIds = chunkIds)
         val old = runCatching { JobFiles.load<WorkerRequest>(stage.requestFile(directory)) }.getOrNull()
         if (old == null || old.resumeKey != key || old.inputWav != inputWav || old.stage != stage ||
-            old.jobDir != directory.absolutePath) return new to null
+            old.jobDir != directory.absolutePath || old.chunkIds != chunkIds) return new to null
         val result = runCatching { JobFiles.load<WorkerResult>(stage.resultFile(directory)) }.getOrNull()
         if (result == null || result.requestId != old.requestId || result.stage != stage) return new to null
-        val verified = verify(result, inputWav, plan)
+        val verified = verify(result, inputWav, plan, chunkIds)
         return if (verified == null) new to null else old to verified
     }
 
-    private fun verify(result: WorkerResult, inputWav: String, plan: ChunkPlan?): WorkerResult? = runCatching {
+    private fun verify(result: WorkerResult, inputWav: String, plan: ChunkPlan?, chunkIds: List<String>?): WorkerResult? = runCatching {
         val completed = result.completed && result.error == null
         when (result.stage) {
             WorkerStage.DENOISE -> {
@@ -112,9 +113,9 @@ internal class JobCheckpoint private constructor(val directory: File) {
                 result
             }
             WorkerStage.VOICEPRINT -> result.takeIf { completed && it.voices.keys.all { id -> id >= 0 } }
-            WorkerStage.GIGAAM, WorkerStage.WHISPER -> {
-                val chunks = requireNotNull(plan).chunks.associateBy { it.id }
-                val source = if (result.stage == WorkerStage.GIGAAM) AsrSource.GIGAAM else AsrSource.WHISPER
+            WorkerStage.GIGAAM, WorkerStage.WHISPER, WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE -> {
+                val chunks = requireNotNull(plan).chunks.filter { chunkIds == null || it.id in chunkIds }.associateBy { it.id }
+                val source = if (result.stage in setOf(WorkerStage.GIGAAM, WorkerStage.GIGAAM_REFINE)) AsrSource.GIGAAM else AsrSource.WHISPER
                 val refs = result.candidates.distinctBy { it.chunkId }.filter { ref ->
                     ref.source == source.wireName && chunks[ref.chunkId]?.let { verifyCandidate(ref, it) } == true
                 }
