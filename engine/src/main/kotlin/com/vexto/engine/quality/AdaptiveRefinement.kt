@@ -57,9 +57,10 @@ internal object AdaptiveRefinement {
 /** Heavy outputs supersede only the same source/chunk. All light originals remain on disk. */
 internal object CandidateSources {
     fun read(job: java.io.File, slavic: Boolean): List<CandidateRef> {
+        val fast = ProcessingProfile.read(job).fast
         val chunks = JobFiles.load<ChunkPlan>(java.io.File(job, "chunks.json")).chunks.associateBy { it.id }
         return listOfNotNull(WorkerStage.GIGAAM.takeIf { slavic }, WorkerStage.WHISPER,
-            WorkerStage.GIGAAM_REFINE.takeIf { slavic }, WorkerStage.WHISPER_REFINE).flatMap { stage ->
+            WorkerStage.GIGAAM_REFINE.takeIf { slavic && !fast }, WorkerStage.WHISPER_REFINE.takeIf { !fast }).flatMap { stage ->
             runCatching { JobFiles.load<WorkerResult>(stage.resultFile(job)).candidates }.getOrDefault(emptyList())
         }.filter { ref -> runCatching {
             val chunk = requireNotNull(chunks[ref.chunkId])

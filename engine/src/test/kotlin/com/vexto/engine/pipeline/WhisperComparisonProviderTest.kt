@@ -111,6 +111,7 @@ class WhisperComparisonProviderTest {
         val chunk = ComparisonChunk("english", wav, sha256(wav.readBytes()), 1000)
         val executor = LocalNativeExecutor { _, args, _, _, _, _ ->
             assertEquals("en", args[args.indexOf("-l") + 1])
+            assertFalse(args.contains("--no-temperature-fallback"))
             File(args[args.indexOf("-of") + 1] + ".json").writeText(nativeJson)
             LocalNativeResult(10, 100)
         }
@@ -125,14 +126,20 @@ class WhisperComparisonProviderTest {
         PcmWave.Writer(wav).use { it.write(FloatArray(16_000 * 20)) }
         val chunk = ComparisonChunk("long", wav, sha256(wav.readBytes()), 20_000)
         var calls = 0
+        val progress = mutableListOf<Float>()
         val executor = LocalNativeExecutor { _, args, _, _, _, _ ->
             calls++
+            assertTrue(args.contains("--no-temperature-fallback"))
             File(args[args.indexOf("-of") + 1] + ".json").writeText(nativeJson)
             LocalNativeResult(10, 100)
         }
-        val candidate = WhisperComparisonProvider(executor, temp.newFile("model.bin"), audioContext = 512)
-            .generate(chunk, temp.root.resolve("out/whisper.json"))
+        val candidate = WhisperComparisonProvider(executor, temp.newFile("model.bin"), audioContext = 512,
+            fastDecoding = true).generate(chunk, temp.root.resolve("out/whisper.json")) { progress += it }
         assertEquals(2, calls)
+        assertEquals(listOf(0.5f, 1f), progress)
+        val profile = Json.parseToJsonElement(temp.root.resolve("out/whisper-windows/w0.profile-audit.json").readText()).jsonObject
+        assertEquals("true", profile.getValue("fast_decoding").jsonPrimitive.content)
+        assertEquals("false", profile.getValue("temperature_fallback").jsonPrimitive.content)
         assertEquals(" Привет,  мир! Привет,  мир!", candidate.text)
         assertEquals(chunk.inputSha256, candidate.inputSha256)
         assertEquals(10_000L, candidate.words[2].startMs)

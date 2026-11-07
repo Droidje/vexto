@@ -58,10 +58,10 @@ class TranscriptionEngine(context: Context) {
         val times = java.util.concurrent.ConcurrentHashMap<Stage, Long>()
         val warnings = java.util.Collections.synchronizedList(mutableListOf<String>())
         var peak = 0L
-        suspend fun <T> stage(name: Stage, block: suspend ((Float) -> Unit) -> T): T {
+        suspend fun <T> stage(name: Stage, announce: Boolean = true, block: suspend ((Float) -> Unit) -> T): T {
             val t0 = SystemClock.elapsedRealtime()
             val progress: (Float) -> Unit = { trySend(TranscriptionEvent.Progress(name, it.coerceIn(0f, 1f))); Unit }
-            progress(0f)
+            if (announce) progress(0f)
             val value = block(progress)
             progress(1f)
             times.compute(name) { _, value -> (value ?: 0L) + SystemClock.elapsedRealtime() - t0 }
@@ -98,12 +98,15 @@ class TranscriptionEngine(context: Context) {
         }
         val audioMs = PcmWave.inspect(original).sampleCount * 1000 / 16000
         // Resolve AUTO from decoded samples, never from an untrusted container duration estimate.
-        val profile = ProcessingProfile.resolve(options.processingMode, audioMs)
+        val requestedProfile = ProcessingProfile.resolve(options.processingMode, audioMs)
         val profileFile = File(job, "processing-profile.json")
         val freshPlan = !profileFile.exists()
-        if (checkpoint != null && profileFile.isFile) require(ProcessingProfile.read(job) == profile) {
-            "Processing profile changed since this transcription was started"
-        }
+        val profile = if (checkpoint != null && profileFile.isFile) ProcessingProfile.read(job).also {
+            // Thread/worker tuning may evolve across APK updates; preserve this job's binding.
+            require(it.requestedMode == requestedProfile.requestedMode && it.mode == requestedProfile.mode) {
+                "Processing mode changed since this transcription was started"
+            }
+        } else requestedProfile
         JobFiles.save(profileFile, profile)
         val profileKey = sha256(JobFiles.json.encodeToString(profile).toByteArray(Charsets.UTF_8))
         val models = stage(Stage.Preparing) { QualityModelStore.prepare(context, profile.fast, it) }
@@ -148,7 +151,7 @@ class TranscriptionEngine(context: Context) {
             val result = if (full) {
                 times[name] = requireNotNull(saved).elapsedMs
                 saved
-            } else stage(name) { progress ->
+            } else stage(name, announce = false) { progress ->
                 var first = client.run(request, saved, progress).also(::observeResult)
                 if (!first.completed && first.error.orEmpty().contains("MEMORY")) {
                     InferenceResources.serialOnly = true
@@ -269,18 +272,10 @@ class TranscriptionEngine(context: Context) {
             }
             first to whisper.await()
         }
-        val refinement = if (profile.fast) {
-            val lightWhisper = loadCandidates(job, plan, whisper.candidates, warnings)
-            AdaptiveRefinement.plan(plan, gigaCandidates, lightWhisper, turns, slavic)
-        } else RefinementPlan(emptyMap())
+        // FAST is a single light pass. Disagreement is resolved by Qwen over both immutable
+        // candidates, never by silently restarting RNNT/Large under the same progress label.
+        val refinement = RefinementPlan(emptyMap())
         JobFiles.save(File(job, "refinement-plan.json"), refinement)
-        if (refinement.ids.isNotEmpty()) {
-            stage(Stage.Preparing) { progress -> QualityModelStore.prepareRefinement(context, slavic, progress) }
-            val dependencies = listOf(planHash, JobFiles.sha256(File(job, "refinement-plan.json")))
-            if (slavic) worker(WorkerStage.GIGAAM_REFINE, Stage.Recognition, view, viewHash,
-                dependencies, plan, refinement.ids)
-            worker(WorkerStage.WHISPER_REFINE, Stage.Comparison, view, viewHash, dependencies, plan, refinement.ids)
-        }
         val effectiveRefs = CandidateSources.read(job, slavic)
         val review = worker(WorkerStage.SELECT, Stage.Selection, view, viewHash,
             listOf(planHash, JobFiles.json.encodeToString(giga?.candidates.orEmpty()),

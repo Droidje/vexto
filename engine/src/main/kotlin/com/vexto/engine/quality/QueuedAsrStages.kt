@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
 /** Each stage owns persistent models; global admission bounds concurrent stages. */
 internal object QueuedAsrStages {
     private class Recognizer(
-        val generate: suspend (ComparisonChunk, File) -> ImmutableAsrCandidate,
+        val generate: suspend (ComparisonChunk, File, (Float) -> Unit) -> ImmutableAsrCandidate,
         private val resource: Closeable,
     ) : Closeable {
         override fun close() = resource.close()
@@ -56,7 +56,7 @@ internal object QueuedAsrStages {
                     .verifyIdentity(chunk.id, chunk.inputSha256, expectedSource)
             }.isSuccess
         }.toMutableList()
-        val known = references.mapTo(mutableSetOf()) { it.chunkId }
+        val known = java.util.concurrent.ConcurrentHashMap.newKeySet<String>().also { set -> references.forEach { set.add(it.chunkId) } }
         val expected = java.util.concurrent.ConcurrentHashMap.newKeySet<String>().also { it.addAll(request.chunkIds?.toSet() ?: chunks.keys) }
         require(expected.all { chunks.containsKey(it) } && request.chunkIds?.distinct()?.size == request.chunkIds?.size)
         val pending = plan.chunks.filter { it.id in expected && it.id !in known }
@@ -65,13 +65,26 @@ internal object QueuedAsrStages {
         val gigaThreads = if (!light && workers == 1) minOf(4, profile.gigaWorkers * profile.gigaThreads)
             else profile.gigaThreads
         var completed = known.size
+        val partialProgress = java.util.concurrent.ConcurrentHashMap<String, Float>()
+        var lastProgress = 0f
+        fun reportProgress() = synchronized(partialProgress) {
+            // A growing streaming plan must not jump to 100% for its first published chunk.
+            val fraction = if (request.streaming) {
+                val samples = chunks.values.sumOf { chunk ->
+                    (chunk.toSample - chunk.fromSample) * (partialProgress[chunk.id] ?: if (chunk.id in known) 1f else 0f).toDouble()
+                }
+                (samples / plan.sampleCount.coerceAtLeast(1)).toFloat().coerceAtMost(0.99f)
+            } else (completed + partialProgress.values.sumOf { it.toDouble() }.toFloat()) / expected.size.coerceAtLeast(1)
+            lastProgress = maxOf(lastProgress, fraction.coerceIn(0f, 0.99f))
+            onProgress(lastProgress)
+        }
         val peak = AtomicLong(saved?.peakCombinedRssBytes ?: 0L)
 
         fun result() = WorkerResult(request.stage, requestId = request.requestId,
             candidates = references.sortedBy { it.chunkId }, warnings = warnings.toList(),
             peakCombinedRssBytes = peak.get())
 
-        if (completed > 0) onProgress(completed.toFloat() / expected.size.coerceAtLeast(1))
+        if (completed > 0) reportProgress()
         if (pending.isEmpty() && !request.streaming) {
             onProgress(1f)
             return result()
@@ -100,7 +113,7 @@ internal object QueuedAsrStages {
                 else GigaAmCandidateProvider.Models(models.file("giga_encoder"), models.file("giga_decoder"),
                     models.file("giga_joiner"), models.file("giga_tokens"))
                 val provider = GigaAmCandidateProvider(files, threads = gigaThreads)
-                Recognizer(provider::generate, provider)
+                Recognizer({ chunk, output, _ -> provider.generate(chunk, output) }, provider)
             } else {
                 val session = runner.persistentExecutor(File(job, "workers/whisper-$index"))
                 val metered = LocalNativeExecutor { executable, args, dir, stdout, stderr, timeout ->
@@ -109,7 +122,7 @@ internal object QueuedAsrStages {
                     }
                 }
                 val provider = WhisperComparisonProvider(metered, models.file(if (light) "whisper_fast" else "whisper"),
-                    threads = if (light) 2 else 4, audioContext = 512, language = language)
+                    threads = 4, audioContext = 512, language = language, fastDecoding = light)
                 Recognizer(provider::generate, session)
             }
         }, process = { recognizer, chunk ->
@@ -117,7 +130,12 @@ internal object QueuedAsrStages {
                 prepareOutput(File(job, "$raw/gigaam/${chunk.id}.native.json"))
                 prepareOutput(File(job, "$raw/gigaam/${chunk.id}.json"))
             } else File(prepareOutput(File(job, "$raw/whisper/${chunk.id}")), "whisper.json")
-            waves.withChunk(chunk) { recognizer.generate(it, output) }
+            waves.withChunk(chunk) { audio ->
+                recognizer.generate(audio, output) { fraction ->
+                    partialProgress[chunk.id] = fraction.coerceIn(0f, 1f)
+                    reportProgress()
+                }
+            }
         }, collect = { chunk, attempt ->
             attempt.fold(onSuccess = { candidate ->
                 references += CandidateRef(candidate.chunkId, candidate.source.wireName,
@@ -126,12 +144,16 @@ internal object QueuedAsrStages {
                 warnings.add("${source.uppercase()}_FAILED:${chunk.id}:${failure.javaClass.simpleName}")
             })
             // This collector is the sole writer even when native completion order differs from input order.
-            completed++
+            synchronized(partialProgress) {
+                completed++
+                known.add(chunk.id)
+                if (request.streaming) partialProgress[chunk.id] = 1f else partialProgress.remove(chunk.id)
+            }
             if (cadence.due(completed, expected.size)) {
                 JobFiles.save(request.stage.resultFile(job), result())
                 waves.releaseCompleted(references.mapNotNull { chunks[it.chunkId] })
             }
-            onProgress(completed.toFloat() / expected.size.coerceAtLeast(1))
+            reportProgress()
         })
         JobFiles.save(request.stage.resultFile(job), result())
         waves.releaseCompleted(references.mapNotNull { chunks[it.chunkId] })
