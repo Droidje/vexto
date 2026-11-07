@@ -91,6 +91,7 @@ class TranscriptionEngine(context: Context) {
         // Resolve AUTO from decoded samples, never from an untrusted container duration estimate.
         val profile = ProcessingProfile.resolve(options.processingMode, audioMs)
         val profileFile = File(job, "processing-profile.json")
+        val freshPlan = !profileFile.exists()
         if (checkpoint != null && profileFile.isFile) require(ProcessingProfile.read(job) == profile) {
             "Processing profile changed since this transcription was started"
         }
@@ -102,6 +103,7 @@ class TranscriptionEngine(context: Context) {
             "memory_budget_bytes" to AppRss.BudgetBytes.toString(), "reserve_bytes" to AppRss.ReserveBytes.toString()))
         JobFiles.save(File(job, "models.json"), models.manifest)
         val client = StageClient(context)
+        val earlyAsr = java.util.concurrent.ConcurrentHashMap<WorkerStage, WorkerResult>()
         val results = java.util.Collections.synchronizedList(mutableListOf<WorkerResult>())
         suspend fun worker(
             kind: WorkerStage,
@@ -111,11 +113,23 @@ class TranscriptionEngine(context: Context) {
             dependencies: List<String> = emptyList(),
             plan: ChunkPlan? = null,
             chunkIds: List<String>? = null,
+            streaming: Boolean = false,
+            record: Boolean = true,
         ): WorkerResult {
-            val (request, saved) = checkpoint?.worker(kind, input, inputHash, listOf(profileKey, AdaptiveRefinement.Version) + dependencies, plan, chunkIds)
+            // ASR snapshots are verified against the final chunk geometry on resume. The stable key
+            // allows a streaming prefix to finish under the same request after the complete plan arrives.
+            val bound = if (kind in setOf(WorkerStage.GIGAAM, WorkerStage.WHISPER)) dependencies.drop(1) else dependencies
+            val (baseRequest, stored) = checkpoint?.worker(kind, input, inputHash,
+                listOf(profileKey, AdaptiveRefinement.Version) + bound, plan, chunkIds)
                 ?: (WorkerRequest(kind, job.absolutePath, input, chunkIds = chunkIds) to null)
-            val result = if (saved?.completed == true) {
-                times[name] = saved.elapsedMs
+            val live = if (streaming) null else earlyAsr.remove(kind)
+            val request = baseRequest.copy(streaming = streaming, requestId = live?.requestId ?: baseRequest.requestId,
+                resumeKey = baseRequest.resumeKey ?: AdaptiveRefinement.Version)
+            val saved = live ?: stored
+            val full = saved?.completed == true && saved.error == null && (live == null || plan == null ||
+                loadCandidates(job, plan, live.candidates, mutableListOf()).size == plan.chunks.size)
+            val result = if (full) {
+                times[name] = requireNotNull(saved).elapsedMs
                 saved
             } else stage(name) { progress ->
                 var first = client.run(request, saved, progress)
@@ -134,16 +148,19 @@ class TranscriptionEngine(context: Context) {
                     client.run(retry, partial, progress)
                 }
             }
-            results += result
-            synchronized(results) { peak = maxOf(peak, result.peakCombinedRssBytes) }
-            warnings += result.warnings
-            if (!result.completed) warnings += "${kind.name}: ${result.error ?: "incomplete"}"
+            if (record) {
+                results += result
+                synchronized(results) { peak = maxOf(peak, result.peakCombinedRssBytes) }
+                warnings += result.warnings
+                if (!result.completed) warnings += "${kind.name}: ${result.error ?: "incomplete"}"
+            }
             return result
         }
         val languageFile = File(job, "language.json")
         val (denoise, diarization, languageResult) = coroutineScope {
             val cleaned = async { if (profile.denoise) worker(WorkerStage.DENOISE, Stage.Denoising, "original.wav") else null }
-            val diarized = async { worker(WorkerStage.DIARIZE, Stage.Diarization, "original.wav") }
+            val live = freshPlan && profile.fast && audioMs > 300_000
+            val diarized = async { worker(WorkerStage.DIARIZE, Stage.Diarization, "original.wav", streaming = live) }
             val identified = async {
                 val t0 = SystemClock.elapsedRealtime()
                 val languageSlot = InferenceResources.acquire(InferenceResources.Cost(2, 120_000_000))
@@ -161,7 +178,17 @@ class TranscriptionEngine(context: Context) {
                 detected to (SystemClock.elapsedRealtime() - t0)
                 } finally { kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { InferenceResources.release(languageSlot) } }
             }
-            Triple(cleaned.await(), diarized.await(), identified.await())
+            val clean = cleaned.await()
+            val detected = identified.await()
+            JobFiles.save(languageFile, detected.first)
+            if (live) earlyAsr.putAll(StreamingRecognition.run(job, original, diarized,
+                detected.first.route == RecordingLanguage.SLAVIC) { kind, initial ->
+                worker(kind, if (kind == WorkerStage.GIGAAM) Stage.Recognition else Stage.Comparison,
+                    "original.wav", originalHash,
+                    if (kind == WorkerStage.WHISPER) listOf("", detected.first.whisperLanguage) else listOf(""),
+                    initial, streaming = true, record = false)
+            })
+            Triple(clean, diarized.await(), detected)
         }
         val view = if (denoise != null) {
             val cleaned = File(job, "denoised.wav")
@@ -203,21 +230,22 @@ class TranscriptionEngine(context: Context) {
         val planHash = if (checkpoint != null) JobFiles.sha256(File(job, "chunks.json")) else ""
         val assembler = CandidateTranscriptAssembler()
         if (!slavic) warnings += "ASR_ROUTE:whisper_only:${recordingLanguage.code}"
+        var gigaCandidates: Map<String, ImmutableAsrCandidate> = emptyMap()
         val (giga, whisper) = coroutineScope {
             val giga = async { if (slavic) worker(WorkerStage.GIGAAM, Stage.Recognition, view, viewHash, listOf(planHash), plan) else null }
             val whisper = async { worker(WorkerStage.WHISPER, Stage.Comparison, view, viewHash,
             listOf(planHash, recordingLanguage.whisperLanguage), plan) }
-            giga.await() to whisper.await()
-        }
-        val gigaCandidates: Map<String, ImmutableAsrCandidate> = if (giga == null) emptyMap()
-            else loadCandidates(job, plan, giga.candidates, warnings)
-        if (slavic && gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
+            val first = giga.await()
+            gigaCandidates = first?.let { loadCandidates(job, plan, it.candidates, warnings) }.orEmpty()
+            if (slavic && gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
             val core = attachVoices(AcousticTurnTranscript.place(
                 assembler.assemble(plan, gigaCandidates, turns).transcript, turns))
             // Originals are already durable before this callback. Refinement never destroys this checkpoint.
             JobFiles.write(File(job, "core.txt"), plan.chunks.joinToString("\n") { gigaCandidates.getValue(it.id).text }.toByteArray())
             JobFiles.write(File(job, "core.json"), TranscriptExport.json(core).toByteArray(Charsets.UTF_8))
-            send(TranscriptionEvent.CoreReady(core, job.absolutePath))
+                send(TranscriptionEvent.CoreReady(core, job.absolutePath))
+            }
+            first to whisper.await()
         }
         val refinement = if (profile.fast) {
             val lightWhisper = loadCandidates(job, plan, whisper.candidates, warnings)
@@ -302,7 +330,8 @@ class TranscriptionEngine(context: Context) {
             else setOfNotNull(WorkerStage.GIGAAM_REFINE.takeIf { slavic }, WorkerStage.WHISPER_REFINE)
         val allStagesSucceeded = results.map { it.stage }.toSet() == expectedStages &&
             results.all { it.completed && it.error == null }
-        val fullProfile = coverage.fullProfileCompleted(allStagesSucceeded, warnings, withinBudget)
+        val localLlmUsed = coverage.llmSelectedChunks > 0 || review.speakerNames?.status == "resolved"
+        val fullProfile = coverage.fullProfileCompleted(allStagesSucceeded, warnings, withinBudget, localLlmUsed)
         val export = File(job, "transcript.json")
         val metadata = File(job, "transcript.metadata.json")
         JobFiles.write(export, TranscriptExport.submissionJson(transcript).toByteArray(Charsets.UTF_8))
@@ -322,7 +351,7 @@ class TranscriptionEngine(context: Context) {
             stageMs = times.mapKeys { it.key.name }, stages = results.toList(),
             transcriptSha256 = JobFiles.sha256(export), metadataSha256 = JobFiles.sha256(metadata), warnings = stats.warnings,
             modelVerificationReused = models.verificationReused, processingProfile = profile,
-            skippedSilenceMs = plan.skippedSamples / 16))
+            skippedSilenceMs = plan.skippedSamples / 16, localLlmUsed = localLlmUsed))
         checkpoint?.saveFinished(transcript, stats)
         send(TranscriptionEvent.Done(transcript, stats))
     }

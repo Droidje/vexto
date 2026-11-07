@@ -25,12 +25,26 @@ object RttmParser {
 
 object NativeDiarizationProvider {
     suspend fun run(model: File, inputWav: File, outRttm: File, workDir: File,
-                    runner: NativeProcessRunner): NativeDiarizationResult {
+                    runner: NativeProcessRunner,
+                    onStable: ((Long, List<NativeSpeakerTurn>) -> Unit)? = null): NativeDiarizationResult {
         require(model.isFile && inputWav.isFile)
         require(!outRttm.exists()) { "Refusing stale RTTM output" }
-        val result = runner.run("libvexto_nemotron_exec.so", listOf(model.absolutePath, inputWav.absolutePath,
-            "--gpu", "-1", "--preset", "v3-offline", "--rttm", "recording"), workDir,
-            outRttm, File(workDir, "nemotron.stderr.log"), 30 * 60 * 1000L)
+        val progress = File(workDir, "stable-prefix.rttm")
+        var frontier = -1L
+        val args = listOf(model.absolutePath, inputWav.absolutePath,
+            "--gpu", "-1", "--preset", "v3-offline", "--rttm", "recording") +
+            if (onStable == null) emptyList() else listOf("--progress", progress.absolutePath)
+        val result = runner.run("libvexto_nemotron_exec.so", args, workDir,
+            outRttm, File(workDir, "nemotron.stderr.log"), 30 * 60 * 1000L) {
+            if (onStable != null && progress.isFile && progress.length() <= 4_000_000) runCatching {
+                val text = progress.readText()
+                val next = text.substringBefore('\n').removePrefix("# stable_ms=").toLong()
+                if (next > frontier) {
+                    onStable(next, RttmParser.parse(text.substringAfter('\n')))
+                    frontier = next
+                }
+            }
+        }
         return NativeDiarizationResult(RttmParser.parse(outRttm.readText(Charsets.UTF_8)), result)
     }
 }

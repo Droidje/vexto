@@ -15,9 +15,11 @@ import com.vexto.engine.pipeline.UtteranceEmotionEvidence
     val resumeKey: String? = null,
     val allowNpu: Boolean = true,
     val chunkIds: List<String>? = null,
+    val streaming: Boolean = false,
 )
 @Serializable data class CandidateRef(val chunkId: String, val source: String, val file: String, val sha256: String)
 @Serializable data class ChoiceRef(val chunkId: String, val candidate: CandidateRef, val status: String, val reason: String)
+@Serializable data class DiarizationProgress(val stableMs: Long, val turns: List<PipelineTurn>)
 @Serializable data class PipelineTurn(val speaker: Int, val startMs: Long, val endMs: Long)
 @Serializable data class WorkerResult(
     val stage: WorkerStage,

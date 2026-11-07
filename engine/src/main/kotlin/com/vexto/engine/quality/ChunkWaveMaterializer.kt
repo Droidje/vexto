@@ -8,6 +8,10 @@ import kotlinx.serialization.Serializable
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
+import java.io.RandomAccessFile
+import java.nio.channels.FileChannel
+import java.nio.channels.FileLock
+import java.nio.channels.OverlappingFileLockException
 
 @Serializable data class ChunkStorage(
     val schemaVersion: Int = 1,
@@ -25,7 +29,7 @@ internal class ChunkWaveMaterializer(
     private val warning: (String) -> Unit,
 ) {
     private val job = jobDir.canonicalFile
-    private val chunks = plan.chunks.associateBy { it.id }
+    private val chunks = java.util.concurrent.ConcurrentHashMap(plan.chunks.associateBy { it.id })
     private val input: File
 
     init {
@@ -39,6 +43,15 @@ internal class ChunkWaveMaterializer(
         require(JobFiles.sha256(input) == storage.inputSha256) { "Chunk source hash changed" }
     }
 
+    fun include(plan: ChunkPlan) {
+        plan.validate()
+        require(plan.sampleCount == PcmWave.inspect(input).sampleCount)
+        plan.chunks.forEach { chunk ->
+            val old = chunks.putIfAbsent(chunk.id, chunk)
+            require(old == null || old == chunk) { "Published PCM chunk changed" }
+        }
+    }
+
     suspend fun <T> withChunk(chunk: AudioChunk, block: suspend (ComparisonChunk) -> T): T {
         require(chunks[chunk.id] == chunk) { "Chunk is not part of this plan" }
         currentCoroutineContext().ensureActive()
@@ -46,44 +59,75 @@ internal class ChunkWaveMaterializer(
         var created = false
         file.parentFile?.mkdirs()
         val lock = File(file.parentFile, ".${chunk.id}.lock")
-        // File locks synchronize independent Android processes, not just coroutine consumers.
-        java.io.RandomAccessFile(lock, "rw").use { owner -> owner.channel.lock().use {
-            if (Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
-                require(Files.isRegularFile(file.toPath(), NOFOLLOW_LINKS) && !Files.isSymbolicLink(file.toPath()))
-                if (JobFiles.sha256(file) != chunk.inputSha256) JobCheckpoint.archiveRetryOutput(job, file)
-            }
-            if (!Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
-                Files.createFile(file.toPath())
-                created = true
-                PcmWave.crop(input, file, chunk.fromSample, chunk.toSample)
-            }
-        } }
-        try {
-            currentCoroutineContext().ensureActive()
-            return block(ComparisonChunk(chunk.id, file, chunk.inputSha256, chunk.durationMs))
-        } finally {
-            if (readers.isEmpty() && created) Files.deleteIfExists(file.toPath())
-        }
-    }
-
-    /** A published candidate proves that consumer finished reading and verifying this WAV. */
-    fun releaseCompleted(chunk: AudioChunk) {
-        if (readers.isEmpty() || !readers.all { stage -> runCatching {
-                JobFiles.load<WorkerResult>(stage.resultFile(job)).candidates.any {
-                    it.chunkId == chunk.id && it.sha256.matches(Regex("[a-f0-9]{64}"))
+        // Hold a shared read lease through inference. Creation/eviction needs an exclusive
+        // lease, so another process cannot remove an input while a native child reads it.
+        try { RandomAccessFile(lock, "rw").use { owner ->
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                owner.channel.lock(0, Long.MAX_VALUE, true).use {
+                    if (Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
+                        require(Files.isRegularFile(file.toPath(), NOFOLLOW_LINKS) && !Files.isSymbolicLink(file.toPath()))
+                        if (JobFiles.sha256(file) == chunk.inputSha256) {
+                            try { return block(ComparisonChunk(chunk.id, file, chunk.inputSha256, chunk.durationMs)) }
+                            finally { file.setLastModified(System.currentTimeMillis()) }
+                        }
+                    }
                 }
-            }.getOrDefault(false) }) return
-        val file = checkedPath(chunk)
-        try {
-            java.io.RandomAccessFile(File(file.parentFile, ".${chunk.id}.lock"), "rw").use { owner ->
                 owner.channel.lock().use {
                     if (Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
                         require(Files.isRegularFile(file.toPath(), NOFOLLOW_LINKS) && !Files.isSymbolicLink(file.toPath()))
-                        Files.delete(file.toPath())
+                        if (JobFiles.sha256(file) != chunk.inputSha256) JobCheckpoint.archiveRetryOutput(job, file)
+                    }
+                    if (!Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
+                        Files.createFile(file.toPath())
+                        created = true
+                        PcmWave.crop(input, file, chunk.fromSample, chunk.toSample)
                     }
                 }
             }
-        } catch (failure: Exception) { warning("CHUNK_CLEANUP_FAILED:${chunk.id}:${failure.javaClass.simpleName}") }
+        } } finally { if (readers.isEmpty() && created) evict(file) }
+    }
+
+    /** A published candidate proves that consumer finished reading and verifying this WAV. */
+    fun releaseCompleted(completed: Iterable<AudioChunk>) {
+        if (readers.isNotEmpty()) {
+            val durable = readers.map { stage -> runCatching {
+                JobFiles.load<WorkerResult>(stage.resultFile(job)).candidates.filter {
+                    it.sha256.matches(Regex("[a-f0-9]{64}"))
+                }.mapTo(mutableSetOf()) { it.chunkId }
+            }.getOrDefault(emptySet()) }.reduce { a, b -> a.intersect(b) }
+            completed.filter { it.id in durable }.forEach { evict(checkedPath(it)) }
+        }
+        // Re-creatable PCM cache is bounded even when one recognizer gets far ahead.
+        val files = File(job, "chunks").listFiles().orEmpty().filter {
+            it.name.matches(Regex("chunk_[0-9]{6}\\.wav")) && Files.isRegularFile(it.toPath(), NOFOLLOW_LINKS)
+        }.sortedBy { it.lastModified() }
+        var bytes = files.sumOf { it.length() }
+        for (file in files) {
+            if (bytes <= 64L * 1024 * 1024) break
+            val length = file.length()
+            if (evict(file)) bytes -= length
+        }
+    }
+
+    private fun tryExclusive(channel: FileChannel): FileLock? = try { channel.tryLock() }
+        catch (_: OverlappingFileLockException) { null }
+
+    private fun evict(file: File): Boolean {
+        if (!Files.exists(file.toPath(), NOFOLLOW_LINKS)) return false
+        try {
+            RandomAccessFile(File(file.parentFile, ".${file.nameWithoutExtension}.lock"), "rw").use { owner ->
+                val lease = tryExclusive(owner.channel) ?: return false
+                lease.use {
+                    if (Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
+                        require(Files.isRegularFile(file.toPath(), NOFOLLOW_LINKS) && !Files.isSymbolicLink(file.toPath()))
+                        Files.delete(file.toPath())
+                        return true
+                    }
+                }
+            }
+        } catch (failure: Exception) { warning("CHUNK_CLEANUP_FAILED:${file.name}:${failure.javaClass.simpleName}") }
+        return false
     }
 
     private fun checkedPath(chunk: AudioChunk): File {

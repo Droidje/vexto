@@ -13,19 +13,17 @@ internal class StageClient(private val context: Context) {
     suspend fun run(request: WorkerRequest, checkpoint: WorkerResult? = null,
                     onProgress: (Float) -> Unit = {}): WorkerResult {
         val slot = InferenceResources.acquire(InferenceResources.cost(request, ProcessingProfile.read(File(request.jobDir))))
-        var releaseSlot = true
-        try { return runInSlot(request, checkpoint, slot, onProgress) }
-        catch (error: IOException) {
-            // Never admit a replacement while an old native heap may still be alive.
-            if (error.message?.contains("TERMINATION_UNCONFIRMED") == true) releaseSlot = false
-            throw error
-        } finally {
-            if (releaseSlot) withContext(NonCancellable) { InferenceResources.release(slot) }
+        var owned: Lease? = null
+        try { return runInSlot(request, checkpoint, slot, onProgress) { owned = it } }
+        finally {
+            val lease = owned
+            if (lease == null || lease.dead.isCompleted) withContext(NonCancellable) { InferenceResources.release(slot) }
+            else InferenceResources.releaseAfterDeath(slot, lease.dead)
         }
     }
 
     private suspend fun runInSlot(request: WorkerRequest, checkpoint: WorkerResult?, slot: Int,
-                                  onProgress: (Float) -> Unit): WorkerResult {
+                                  onProgress: (Float) -> Unit, own: (Lease) -> Unit): WorkerResult {
         withContext(Dispatchers.Main) {
             blockedLease?.let {
                 if (!it.dead.isCompleted) throw IOException("PREVIOUS_WORKER_TERMINATION_UNCONFIRMED")
@@ -46,9 +44,10 @@ internal class StageClient(private val context: Context) {
         val plan = runCatching { JobFiles.load<ChunkPlan>(File(job, "chunks.json")) }.getOrNull()
         val audioMs = com.vexto.engine.audio.PcmWave.inspect(JobFiles.inside(job, request.inputWav)).sampleCount / 16
         val speakers = runCatching { JobFiles.load<List<PipelineTurn>>(File(job, "turns.json")).map { it.speaker }.distinct().size }.getOrDefault(1)
-        val timeout = StageTimeoutPolicy.milliseconds(request.stage, audioMs, plan?.chunks?.size ?: 1, speakers)
+        val timeout = StageTimeoutPolicy.milliseconds(request.stage, audioMs, maxOf(plan?.chunks?.size ?: 1, ((audioMs + 29_999) / 30_000).toInt()), speakers)
         val started = SystemClock.elapsedRealtime()
         val lease = Lease(context, request, path, slot, onProgress)
+        own(lease)
         var failure: Throwable? = null
         val result = try {
             // Only this deadline becomes null. Cancellation of the caller, including an outer

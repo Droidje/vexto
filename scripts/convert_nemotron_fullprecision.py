@@ -73,7 +73,7 @@ def main() -> int:
         raise FileExistsError("refusing existing conversion output or partial")
     output.parent.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
-    diarization.convert(checkpoint, partial, args.precision)
+    diarization.convert(checkpoint, partial, "fp16" if args.precision == "f16" else "f32")
     reader = gguf.GGUFReader(str(partial))
     tally: dict[str, int] = {}
     names = []

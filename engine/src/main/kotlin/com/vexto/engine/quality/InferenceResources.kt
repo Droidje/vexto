@@ -1,6 +1,11 @@
 package com.vexto.engine.quality
 
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
@@ -10,6 +15,7 @@ import kotlinx.coroutines.sync.withLock
 internal object InferenceResources {
     data class Cost(val threads: Int, val bytes: Long)
     private val mutex = Mutex()
+    private val reaper = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     @Volatile var serialOnly = false
     private val active = mutableMapOf<Int, Cost>()
     private const val NativeBudget = 1_650_000_000L // Leaves room for UI, services and the RSS reserve.
@@ -29,6 +35,9 @@ internal object InferenceResources {
         }
     }
     suspend fun release(slot: Int) { mutex.withLock { check(active.remove(slot) != null) } }
+    fun releaseAfterDeath(slot: Int, dead: Deferred<Unit>) {
+        reaper.launch { dead.await(); release(slot) }
+    }
 
     fun cost(request: WorkerRequest, profile: ProcessingProfile): Cost = when (request.stage) {
         WorkerStage.DENOISE -> Cost(2, 160_000_000)

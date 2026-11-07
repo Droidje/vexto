@@ -36,7 +36,8 @@ class NativeProcessRunner(
     init { require(budgetBytes > 0 && reserveBytes in 0 until budgetBytes) }
 
     suspend fun run(executableName: String, args: List<String>, workDir: File,
-                    stdout: File, stderr: File, timeoutMs: Long): NativeProcessResult = withContext(Dispatchers.IO) {
+                    stdout: File, stderr: File, timeoutMs: Long,
+                    onTick: (() -> Unit)? = null): NativeProcessResult = withContext(Dispatchers.IO) {
         require(executableName in Executables) { "Unknown packaged native executable" }
         require(timeoutMs > 0 && args.none { it.contains('\u0000') })
         require(stdout.canonicalFile != stderr.canonicalFile)
@@ -72,6 +73,7 @@ class NativeProcessRunner(
             try {
                 while (true) {
                     coroutineContext.ensureActive()
+                    onTick?.invoke()
                     val observed = snapshot()
                     observed.filter { it.pid !in existingPids && it.parentPid == AndroidProcess.myPid() && it.nativeExecutable }
                         .forEach { register(it) }

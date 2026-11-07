@@ -21,8 +21,9 @@ data class PipelineCoverage(
     }
     val complete: Boolean get() = selectedChunks == expectedChunks
     val selectionResolved: Boolean get() = complete && unresolvedChunks == 0
-    fun fullProfileCompleted(stagesSucceeded: Boolean, warnings: List<String>, withinBudget: Boolean): Boolean =
-        expectedChunks > 0 && complete && selectionResolved && gigaamChunks == expectedChunks &&
+    fun fullProfileCompleted(stagesSucceeded: Boolean, warnings: List<String>, withinBudget: Boolean,
+                             localLlmUsed: Boolean = llmSelectedChunks > 0): Boolean =
+        expectedChunks > 0 && localLlmUsed && complete && selectionResolved && gigaamChunks == expectedChunks &&
             whisperChunks == expectedChunks && llmSelectedChunks + equivalentChunks == expectedChunks && stagesSucceeded && withinBudget &&
             warnings.none { it.contains("_FAILED:") || it.startsWith("ASR_MISSING:") || it.startsWith("INVALID_") }
 }
@@ -48,4 +49,5 @@ data class PipelineReport(
     val modelVerificationReused: Boolean = false,
     val processingProfile: ProcessingProfile? = null,
     val skippedSilenceMs: Long = 0,
+    val localLlmUsed: Boolean = false,
 )

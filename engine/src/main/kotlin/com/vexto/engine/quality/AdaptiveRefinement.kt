@@ -11,7 +11,7 @@ internal data class RefinementPlan(val chunks: Map<String, List<String>>) {
 
 /** Acoustic boundaries stay fixed. This policy only schedules additional independent ASR candidates. */
 internal object AdaptiveRefinement {
-    const val Version = "dual-asr-cascade-v1"
+    const val Version = "dual-asr-cascade-v2-stream"
     private val lexical = Regex("[\\p{L}\\p{N}]+")
     fun plan(plan: ChunkPlan, giga: Map<String, ImmutableAsrCandidate>,
              whisper: Map<String, ImmutableAsrCandidate>, turns: List<PipelineTurn>, slavic: Boolean): RefinementPlan {

@@ -11,6 +11,10 @@ on:
         description: Build native variants and run short public audio on an isolated 4GB AVD
         type: boolean
         default: false
+      native_base_run:
+        description: Optional previous successful native APK job; rebuild only the current Nemotron frontend for probes
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -62,7 +66,7 @@ jobs:
 
   apk:
     name: Full Android APK (ARM64 and x86_64)
-    if: github.ref == 'refs/heads/main' || github.base_ref == 'main' || inputs.optimization_probe
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main' || (inputs.optimization_probe && inputs.native_base_run == '')
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     steps:
@@ -175,8 +179,11 @@ jobs:
 
   optimization-probe:
     name: Short Nemotron precision probe (Android 4GB)
-    if: inputs.optimization_probe
+    if: always() && inputs.optimization_probe && (needs.apk.result == 'success' || inputs.native_base_run != '')
     needs: apk
+    permissions:
+      contents: read
+      actions: read
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -190,10 +197,20 @@ jobs:
         with:
           name: unsigned-apk
           path: unsigned
+          run-id: ${{ inputs.native_base_run || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: Validate reused native dependencies
+        if: inputs.native_base_run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_RUN: ${{ inputs.native_base_run }}
+        run: python3 tools/benchmarks/validate_native_reuse.py "$BASE_RUN"
       - name: Prepare pinned precision variants
         env:
           VEXTO_NEMOTRON_ONLY: '1'
         run: bash scripts/prepare_release_models.sh "$RUNNER_TEMP/precision"
+      - name: Install pinned frontend compiler
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.2.13676358"'
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -208,7 +225,7 @@ jobs:
           ram-size: 4096M
           cores: 4
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 4096
-          script: python3 tools/benchmarks/probe_nemotron_precision.py --apk unsigned/app-release-unsigned.apk --models "${{ runner.temp }}/precision/converted/nemotron" --output .agents/work/precision-results
+          script: python3 tools/benchmarks/probe_nemotron_precision.py --apk unsigned/app-release-unsigned.apk --models "${{ runner.temp }}/precision/converted/nemotron" --output .agents/work/precision-results --rebuild-frontend
       - uses: actions/upload-artifact@v7
         if: always()
         with:
