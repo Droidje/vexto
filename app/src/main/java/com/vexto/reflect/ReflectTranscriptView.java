@@ -80,6 +80,10 @@ final class ReflectTranscriptView extends FrameLayout {
     private ReflectPlaybackTimeline timeline = new ReflectPlaybackTimeline(lines);
     private TextView progressText;
     private ProgressBar progressBar;
+    private boolean failedTranscription;
+
+    void failedTranscription(boolean failed) { failedTranscription = failed; }
+
     private ReflectLocalTranscription.Progress transcription;
     private Map<Integer, String> corrections = Collections.emptyMap();
     private ListView list;
@@ -397,7 +401,8 @@ final class ReflectTranscriptView extends FrameLayout {
                     : "Импортируйте JSON с репликами, спикерами и таймкодами.";
             style.append(card, style.text(message, 15, ReflectPageStyle.MUTED, artwork.regular), 0, 12);
             if (hasAudio && !hasTranscript) {
-                style.append(card, button("Расшифровать на устройстве", actions::transcribeRecording), 0, 8);
+                style.append(card, button(failedTranscription ? "Расшифровать ещё раз" : "Расшифровать на устройстве",
+                        actions::transcribeRecording), 0, 8);
             }
             if (hasAudio) style.append(card, button("Импортировать JSON", actions::importTranscript), 0, 0);
         }

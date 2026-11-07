@@ -1,7 +1,7 @@
 package com.vexto.reflect;
 
 import android.animation.ValueAnimator;
-import android.app.AlertDialog;
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
@@ -123,16 +123,17 @@ final class ReflectSettingsView extends ScrollView {
         choice.setOnClickListener(view -> {
             ProcessingMode[] modes = {ProcessingMode.AUTO, ProcessingMode.FAST, ProcessingMode.QUALITY};
             String[] labels = {"Авто", "Быстрый", "Качественный"};
-            int selected = java.util.Arrays.asList(modes).indexOf(preferences.processingMode());
-            new AlertDialog.Builder(getContext())
-                    .setTitle("Режим обработки")
-                    .setSingleChoiceItems(labels, selected, (dialog, index) -> {
-                        preferences.setProcessingMode(modes[index]);
-                        refresh.run();
-                        dialog.dismiss();
-                    })
-                    .setNegativeButton("Отмена", null)
-                    .show();
+            ReflectActionSheet menu = new ReflectActionSheet((Activity) getContext(), style, preferences,
+                    "Режим обработки");
+            for (int index = 0; index < modes.length; index++) {
+                ProcessingMode mode = modes[index];
+                menu.option((mode == preferences.processingMode() ? "✓  " : "") + labels[index], () -> {
+                    preferences.setProcessingMode(mode);
+                    refresh.run();
+                });
+            }
+            menu.option("Отмена", () -> {});
+            menu.show();
         });
         refresh.run();
         style.append(processing, choice, 0, 8);

@@ -302,6 +302,7 @@ public final class ReflectTranscriptionService extends Service {
 
     private void complete(Job started, ReflectTranscript transcript, String message) {
         if (job != started) return;
+        new ReflectTranscriptionOutcomes(this).finish(started.request.recording(), transcript != null, message);
         job = null;
         ReflectLocalTranscription.forget(this, started.request);
         stopForegroundAndSelf();

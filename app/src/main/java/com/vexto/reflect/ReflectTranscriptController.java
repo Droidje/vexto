@@ -49,6 +49,7 @@ final class ReflectTranscriptController {
     private final ReflectSummaryController summaries;
     private final ExecutorService correctionIo = Executors.newSingleThreadExecutor();
     private final DialogueCorrector corrector;
+    private final ReflectTranscriptionOutcomes outcomes;
     private volatile int correctionSerial;
     private RecordingExport restoreExport;
     private File file;
@@ -78,6 +79,7 @@ final class ReflectTranscriptController {
         this.profiles = profiles;
         this.profilesUi = profilesUi;
         corrector = new DialogueCorrector(activity);
+        outcomes = new ReflectTranscriptionOutcomes(activity);
         summaries = new ReflectSummaryController(activity, store, titles, io, view.transcriptView()::summary);
         exports = new ReflectExportController(activity, view, io, profiles, notice);
         local = new ReflectLocalTranscription(activity, this::processingChanged, this::transcriptionFinished);
@@ -95,7 +97,7 @@ final class ReflectTranscriptController {
         metadata = null;
         view.transcriptView().corrections(Collections.emptyMap());
         loading = true;
-        issue = null;
+        issue = outcomes.failure(recording);
         view.transcriptView().waveform(null);
         view.transcriptView().speakerNames(Collections.emptyMap());
         render();
@@ -471,6 +473,7 @@ final class ReflectTranscriptController {
     }
 
     private void render() {
+        view.transcriptView().failedTranscription(file != null && outcomes.failure(file) != null);
         view.transcriptView().content(title, length, durationMs, transcript, file != null,
                 loading, issue, recordingDetails, metadata, local.progress(file));
         summaries.content(recordingDetails ? null : file, transcript);
