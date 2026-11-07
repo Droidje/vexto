@@ -70,7 +70,7 @@ internal object StageDispatcher {
             WorkerStage.SELECT -> {
                 val slavic = JobFiles.load<RecordingLanguage>(File(job, "language.json")).route == RecordingLanguage.SLAVIC
                 val refs = CandidateSources.read(job, slavic)
-                val choices = saved?.choices.orEmpty().toMutableList()
+                val choices = saved?.choices.orEmpty().filter { it.status != AsrSelectionStatus.UNRESOLVED.name }.toMutableList()
                 val known = choices.mapTo(mutableSetOf()) { it.chunkId }
                 val warnings = mutableListOf<String>()
                 val tasks = chunkPlan().chunks
@@ -120,7 +120,7 @@ internal object StageDispatcher {
                     // Keep the same Qwen model/context alive for one bounded naming request.
                     names = try {
                         val namingInput = SpeakerNamingInput.create(job, chunkPlan(), refs, choices)
-                        names?.takeIf { it.sourceSha256 == SpeakerNamePlan.sourceHash(namingInput) }
+                        names?.takeIf { it.reusable && it.sourceSha256 == SpeakerNamePlan.sourceHash(namingInput) }
                             ?: QwenSpeakerNames(metered, models.file("qwen")).infer(namingInput,
                                 prepareOutput(File(job, "speaker-names")))
                     } catch (cancel: CancellationException) {

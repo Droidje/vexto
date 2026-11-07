@@ -16,6 +16,8 @@ data class SpeakerNamesArtifact(
     val names: List<ContextSpeakerName> = emptyList(),
     val elapsedMs: Long = 0,
 ) {
+    val reusable: Boolean get() = status in setOf("resolved", "no_identity_cues")
+
     fun attach(transcript: Transcript): Transcript {
         if (sourceSha256 != SpeakerNamePlan.sourceHash(transcript)) return transcript
         val valid = names.filter { name ->
