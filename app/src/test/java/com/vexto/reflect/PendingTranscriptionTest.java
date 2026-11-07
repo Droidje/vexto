@@ -73,6 +73,45 @@ public class PendingTranscriptionTest {
         assertEquals("Готовый текст", retried.transcript().lines.get(0).text);
     }
 
+    @Test public void dialogueIsDurableBeforeEmotionsAndEnrichmentSurvivesResume() throws Exception {
+        var request = PendingTranscription.create(context, recording);
+        var store = new ReflectTranscriptStore(context.getFilesDir());
+        var dialogue = new ReflectTranscript(List.of(
+                new ReflectTranscript.Line("speaker_1", 10, 900, "Основной диалог.", null, "Анна")));
+        assertTrue(store.saveEngineFinal(recording, request.jobId(), dialogue).owned());
+        assertNull(store.load(recording).lines.get(0).emotionProbabilities);
+        File marker = new File(context.getFilesDir(), "inference/jobs/" + request.jobId() + "/dialogue-ready.json");
+        Files.write(marker.toPath(), "{}".getBytes(StandardCharsets.UTF_8));
+        request.write(context);
+        assertTrue(PendingTranscription.read(context).dialogueReady(context));
+        var scored = new ReflectTranscript(List.of(
+                new ReflectTranscript.Line("speaker_1", 10, 900, "Основной диалог.", new EmotionProbabilities(0, 1, 0, 0), "Другое имя")));
+        assertTrue(store.saveEngineEmotions(recording, request.jobId(), scored).owned());
+        var reopened = new ReflectTranscriptStore(context.getFilesDir());
+        var result = reopened.load(recording);
+        assertEquals("Анна", result.lines.get(0).speakerName);
+        assertEquals("Основной диалог.", result.lines.get(0).text);
+        assertEquals(scored.lines.get(0).emotionProbabilities, result.lines.get(0).emotionProbabilities);
+        assertTrue(java.util.Arrays.equals(dialogue.encodeSpeakerRevision(), result.encodeSpeakerRevision()));
+        assertEquals(result.lines.get(0).emotionProbabilities,
+                reopened.saveEngineFinal(recording, request.jobId(), dialogue).transcript().lines.get(0).emotionProbabilities);
+        // A restart between enrichment proof and target write can still retry against the immutable dialogue.
+        reopened.save(recording, dialogue);
+        assertTrue(reopened.saveEngineEmotions(recording, request.jobId(), scored).owned());
+    }
+
+    @Test public void emotionOnlyUpdateRejectsChangedTextAndLeavesImportedDialogueUntouched() throws Exception {
+        String id = PendingTranscription.create(context, recording).jobId();
+        var store = new ReflectTranscriptStore(context.getFilesDir());
+        var original = transcript("Исходные слова");
+        assertTrue(store.saveEngineFinal(recording, id, original).owned());
+        assertThrows(IOException.class, () -> store.saveEngineEmotions(recording, id, transcript("Потеря слов")));
+        var imported = transcript("Ручной импорт");
+        store.save(recording, imported);
+        assertFalse(store.saveEngineEmotions(recording, id, original).owned());
+        assertTrue(imported.sameLines(store.load(recording)));
+    }
+
     @Test public void emptyDiarizationIntervalsDoNotBlockCoreOrFinalPublication() throws Exception {
         var emotions = new EmotionProbabilities(1, 0, 0, 0);
         var output = new Transcript(List.of(

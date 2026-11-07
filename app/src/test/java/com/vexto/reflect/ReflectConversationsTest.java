@@ -180,6 +180,34 @@ public class ReflectConversationsTest {
         assertEquals(1f / 30f, target.get(), .0001f);
     }
 
+    @Test public void backgroundEmotionsKeepTranscriptAndFooterUsableUntilCompletion() {
+        var actions = (ReflectTranscriptView.Actions) java.lang.reflect.Proxy.newProxyInstance(
+                getClass().getClassLoader(), new Class<?>[]{ReflectTranscriptView.Actions.class}, (proxy, method, args) -> null);
+        var page = new ReflectTranscriptView(context, new ReflectArtwork(context.getAssets()), new ReflectPreferences(context), actions);
+        var progress = ReflectLocalTranscription.WAITING.asBackgroundEmotions().advance(com.vexto.engine.model.Stage.Emotion, 30);
+        assertEquals(100, progress.overallPercent());
+        assertTrue(progress.backgroundEmotions());
+        var transcript = new ReflectTranscript(List.of(new ReflectTranscript.Line("speaker_1", 0, 1000, "Текст уже готов")));
+        page.content("Диалог", "0:01", 1000, transcript, false, false, null, false, null, progress);
+        page.measure(android.view.View.MeasureSpec.makeMeasureSpec(393, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(852, android.view.View.MeasureSpec.EXACTLY));
+        page.layout(0, 0, 393, 852);
+        android.widget.TextView footer = findEmotionFooter(page);
+        assertTrue(footer != null && footer.getVisibility() == android.view.View.VISIBLE);
+        assertTrue(footer.getTop() > 750);
+        page.transcription(null);
+        assertEquals(android.view.View.GONE, footer.getVisibility());
+    }
+
+    private static android.widget.TextView findEmotionFooter(android.view.View view) {
+        if (view instanceof android.widget.TextView text && "эмоции обрабатываются".contentEquals(text.getText())) return text;
+        if (view instanceof android.view.ViewGroup group) for (int i = 0; i < group.getChildCount(); i++) {
+            var found = findEmotionFooter(group.getChildAt(i));
+            if (found != null) return found;
+        }
+        return null;
+    }
+
     private static ReflectCatalog.Recording recording(File file, String title) {
         return new ReflectCatalog.Recording(file, title, "Сегодня", "12:00", "0:01", "Предпросмотр",
                 List.of("Анна"));

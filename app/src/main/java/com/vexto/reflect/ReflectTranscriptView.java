@@ -79,6 +79,7 @@ final class ReflectTranscriptView extends FrameLayout {
     private int[] audioWaveform;
     private ReflectPlaybackTimeline timeline = new ReflectPlaybackTimeline(lines);
     private TextView progressText;
+    private TextView emotionStatus;
     private ProgressBar progressBar;
     private boolean failedTranscription;
 
@@ -134,10 +135,12 @@ final class ReflectTranscriptView extends FrameLayout {
 
     void transcription(ReflectLocalTranscription.Progress value) {
         boolean rebuild = transcription == null || value == null
-                || transcription.cancellable() != value.cancellable();
+                || transcription.cancellable() != value.cancellable()
+                || transcription.backgroundEmotions() != value.backgroundEmotions();
         transcription = value;
         if (rebuild) refreshStyle();
         else updateProgress();
+        updateEmotionStatus();
     }
 
     void summary(ReflectSummaryState state) {
@@ -193,6 +196,7 @@ final class ReflectTranscriptView extends FrameLayout {
         scrollContent = null;
         toolsGlass = null;
         progressText = null;
+        emotionStatus = null;
         progressBar = null;
         summaryHeader = null;
         summaryPanel = null;
@@ -263,6 +267,7 @@ final class ReflectTranscriptView extends FrameLayout {
         removeAllViews();
         conversationPlayer = null;
         progressText = null;
+        emotionStatus = null;
         progressBar = null;
         summaryHeader = null;
         summaryPanel = null;
@@ -318,6 +323,11 @@ final class ReflectTranscriptView extends FrameLayout {
         icon("transcript_export", "Поделиться", 281, 60, 48, 48, false, actions::openExportOptions);
         icon("transcript_more", recordingDetails ? "Действия записи" : "Действия разговора",
                 329, 60, 48, 48, false, actions::openTranscriptOptions);
+        emotionStatus = style.text("эмоции обрабатываются", 12, ReflectPageStyle.MUTED, artwork.regular);
+        emotionStatus.setGravity(Gravity.CENTER);
+        emotionStatus.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
+        place(emotionStatus, 16, 5, 361, 18, true);
+        updateEmotionStatus();
         if (recordingDetails) return;
 
         pill(16, 28, 144, 48, true);
@@ -331,6 +341,11 @@ final class ReflectTranscriptView extends FrameLayout {
         place(summaryIcon, 16, 28, 48, 48, true);
         icon("transcript_style", "Настройки чтения", 64, 28, 48, 48, true, actions::openTranscriptStyle);
         icon("trash", "Удалить разговор", 112, 28, 48, 48, true, actions::requestDeleteConversation);
+    }
+
+    private void updateEmotionStatus() {
+        if (emotionStatus != null) emotionStatus.setVisibility(hasTranscriptLines && transcription != null
+                && transcription.backgroundEmotions() ? VISIBLE : GONE);
     }
 
     private TextView titleView() {
@@ -350,7 +365,7 @@ final class ReflectTranscriptView extends FrameLayout {
             addPlayer(header, "запись");
         }
         addInset(header, metadataCard(), 8, 12);
-        if (transcription != null) {
+        if (transcription != null && !transcription.backgroundEmotions()) {
             TextView processing = style.text("Выполняется…", 16, ReflectPageStyle.MUTED, artwork.medium);
             processing.setGravity(Gravity.CENTER);
             processing.setMinHeight(style.px(44));

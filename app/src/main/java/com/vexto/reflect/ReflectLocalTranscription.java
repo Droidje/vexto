@@ -13,21 +13,28 @@ import java.util.function.Consumer;
 
 /** Main-thread observer of the process-wide transcription service. */
 final class ReflectLocalTranscription {
-    record Progress(Stage stage, int percent, int speakers, int overallPercent) {
+    record Progress(Stage stage, int percent, int speakers, int overallPercent, boolean backgroundEmotions) {
+        Progress(Stage stage, int percent, int speakers, int overallPercent) {
+            this(stage, percent, speakers, overallPercent, false);
+        }
         Progress(Stage stage, int percent, int speakers) {
             this(stage, percent, speakers, ReflectPipelineProgress.overall(stage, percent));
         }
 
         Progress advance(Stage next, int nextPercent) {
             int overall = Math.max(overallPercent, ReflectPipelineProgress.overall(next, nextPercent));
-            return new Progress(next, nextPercent, speakers, overall);
+            return new Progress(next, nextPercent, speakers, backgroundEmotions ? 100 : overall, backgroundEmotions);
         }
 
-        Progress withSpeakers(int count) { return new Progress(stage, percent, count, overallPercent); }
+        Progress withSpeakers(int count) { return new Progress(stage, percent, count, overallPercent, backgroundEmotions); }
+        Progress asBackgroundEmotions() { return new Progress(Stage.Emotion, 0, speakers, 100, true); }
         boolean cancellable() { return stage != null; }
-        String title() { return cancellable() ? stage.getTitle() : "Сохраняю расшифровку"; }
+        String title() { return backgroundEmotions ? "эмоции обрабатываются"
+                : cancellable() ? stage.getTitle() : "Сохраняю расшифровку"; }
     }
-    record Result(File recording, ReflectTranscript transcript, String message) {}
+    record Result(File recording, ReflectTranscript transcript, String message, boolean metadataOnly) {
+        Result(File recording, ReflectTranscript transcript, String message) { this(recording, transcript, message, false); }
+    }
 
     static final Progress WAITING = new Progress(Stage.Preparing, 0, 0, 0);
     private static final String TAG = "VextoTranscription";
@@ -58,6 +65,8 @@ final class ReflectLocalTranscription {
     Progress progress(File recording) {
         File active = activeRecording();
         if (active == null || !active.equals(recording)) return null;
+        if (!ReflectTranscriptionService.isRunning() && pending(context).dialogueReady(context))
+            return WAITING.asBackgroundEmotions();
         return ReflectTranscriptionService.progress();
     }
 
