@@ -23,6 +23,8 @@ nemotron=("$sources"/nemotron/*/)
 sentencepiece=("$sources"/sentencepiece/*/)
 whisper=("$sources"/whisper/*/)
 llama=("$sources"/llama/*/)
+# The pinned NeMo archive includes an empty git submodule directory.
+rmdir "${nemotron[0]}llama.cpp"
 mv "${llama[0]%/}" "${nemotron[0]}llama.cpp"
 patch --directory="${nemotron[0]}" -p1 < tools/benchmarks/patches/nemotron-android-liblog.patch
 
