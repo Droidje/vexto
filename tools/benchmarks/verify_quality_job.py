@@ -100,7 +100,7 @@ def canonical_chunk_sha(source_path, start, end, joined):
 
 
 def processing_profile(root, report, audio_ms):
-    if report.get("schemaVersion") != 3:
+    if report.get("schemaVersion") not in (3, 4):
         return None
     value = document(root / "processing-profile.json")
     fields = {"requestedMode", "mode", "denoise", "gigaWorkers", "whisperWorkers", "gigaThreads", "whisperThreads"}
@@ -171,7 +171,7 @@ def verify_job(job_dir, allow_legacy=False):
         summary["audio_samples"] = frames
         summary["hashes"]["original_wav"] = sha(root / "original.wav")
         report = document(root / "completion.json")
-        modern = type(report.get("schemaVersion")) is int and report["schemaVersion"] in (2, 3)
+        modern = type(report.get("schemaVersion")) is int and report["schemaVersion"] in (2, 3, 4)
         check(modern or (allow_legacy and set(report) == {"complete", "warnings", "peak_rss_bytes"}
                          and all(isinstance(value, str) for value in report.values())), "legacy_report_requires_explicit_opt_in")
         summary["source_report_version"] = report["schemaVersion"] if modern else "legacy"
@@ -254,7 +254,12 @@ def verify_job(job_dir, allow_legacy=False):
         recorded = language_record(root)
         whisper_only = recorded is not None and recorded["route"] == "whisper_only"
         excluded = ({"GIGAAM", "SELECT"} if whisper_only else set()) | (
-            {"DENOISE", "VOICEPRINT", "EMOTION"} if fast else set())
+            {"DENOISE"} if fast else set())
+        if fast and report["schemaVersion"] < 4:
+            excluded.add("VOICEPRINT")  # Completed legacy FAST jobs intentionally omitted identity.
+            # v3 also exists both before and after background emotions were introduced.
+            if not any(stage.get("stage") == "EMOTION" for stage in report.get("stages", [])):
+                excluded.add("EMOTION")
         required_stages = tuple(name for name in STAGES if name not in excluded)
         if fast:
             check(not (root / "stages/DENOISE.result.json").exists() and view == "original.wav",

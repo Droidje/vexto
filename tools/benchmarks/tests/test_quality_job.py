@@ -87,6 +87,30 @@ class QualityJobTests(unittest.TestCase):
         self.assertEqual(report["counts"]["llm_selected_chunks"], 4)
         self.assertNotIn("gigaam-0. ", json.dumps(report))
 
+    def test_fast_v4_requires_voiceprints_while_legacy_v3_remains_readable(self):
+        profile = dict(requestedMode="FAST", mode="FAST", denoise=False, gigaWorkers=2,
+                       whisperWorkers=2, gigaThreads=2, whisperThreads=2)
+        self.put("processing-profile.json", profile)
+        voice = self.path("stages/VOICEPRINT.result.json").read_bytes()
+        emotion = self.path("stages/EMOTION.result.json").read_bytes()
+        for name in ("DENOISE", "EMOTION", "VOICEPRINT"):
+            self.path(f"stages/{name}.result.json").unlink()
+        self.report["stages"] = [s for s in self.report["stages"] if s["stage"] not in ("DENOISE", "EMOTION", "VOICEPRINT")]
+        self.report.update(schemaVersion=3, processingProfile=profile, skippedSilenceMs=0)
+        self.put("completion.json", self.report)
+        legacy = validator.verify_job(self.job)
+        self.assertTrue(legacy["valid"], legacy["errors"])
+        self.report["schemaVersion"] = 4
+        self.put("completion.json", self.report)
+        self.assertFalse(validator.verify_job(self.job)["valid"])
+        self.path("stages/VOICEPRINT.result.json").write_bytes(voice)
+        self.report["stages"].append(json.loads(voice))
+        self.path("stages/EMOTION.result.json").write_bytes(emotion)
+        self.report["stages"].append(json.loads(emotion))
+        self.put("completion.json", self.report)
+        current = validator.verify_job(self.job)
+        self.assertTrue(current["valid"], current["errors"])
+
     def test_tampered_selected_copy_is_rejected_even_when_its_reference_hash_is_updated(self):
         choices = json.loads(self.path("selection.json").read_text(encoding="utf-8"))
         ref = choices[0]["candidate"]

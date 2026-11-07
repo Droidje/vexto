@@ -17,12 +17,12 @@ data class ProcessingProfile(
 ) {
     val fast: Boolean get() = mode == ProcessingMode.FAST
     val whisperModelId: String get() = if (fast) "whisper_fast" else "whisper"
-    val voiceprints: Boolean get() = !fast
+    // Identity is required in every mode; FAST only defers emotions. See AGENTS.md.
+    val voiceprints: Boolean get() = true
     val backgroundEmotions: Boolean get() = fast
 
     fun expectedStages(slavic: Boolean): Set<WorkerStage> = WorkerStage.entries.toSet() - setOf(WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE) -
         (if (denoise) emptySet() else setOf(WorkerStage.DENOISE)) -
-        (if (voiceprints) emptySet() else setOf(WorkerStage.VOICEPRINT)) -
         (if (slavic) emptySet() else setOf(WorkerStage.GIGAAM))
 
     fun validate() {
