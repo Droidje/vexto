@@ -1,5 +1,8 @@
 # engine: локальный quality profile
 
+Для успешно определённого русского языка действует [маршрут GigaAM без Whisper](../docs/architecture/russian-gigaam-only.md).
+
+
 По умолчанию выбран **Авто**: после декодирования записи длиннее пяти минут получают быстрый профиль; остальные — качественный. Настройка фиксируется на всё задание.
 
 - **Качественный:** GTCRN → Nemotron 3 F32 → GigaAM v3 E2E RNNT INT8 → Whisper Large v3 Q5_0 → Qwen3-1.7B Q4_K_M → GigaAM-Emo.
