@@ -25,7 +25,9 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 python scripts/install_quality_pack.py --serial <device> --pack-dir .agents/work/quality-pack/quality-370552aab094
 ```
 
-`--source-dir` может содержать только готовые файлы (например, `nemotron/Nemotron-3-Diarization.f32.gguf`); при `--download` остальные веса берутся по закреплённым ссылкам. Определитель языка (`lid_encoder`, `lid_decoder`) ссылки не имеет: пара собирается `tools/benchmarks/distill_whisper_lid.py` из sherpa-экспорта Whisper tiny и передаётся через `--sources-json`. SHA256 закреплены в manifest.
+`--source-dir` может содержать только готовые файлы (например, `nemotron/Nemotron-3-Diarization.f32.gguf`); при `--download` остальные веса берутся по закреплённым ссылкам. Определитель языка (`lid_encoder`, `lid_decoder`) ссылки не имеет: `python scripts/prepare_lid_models.py --work-dir <кеш-tiny> --output-dir <готовые-модели>/lid` скачивает закреплённую пару Whisper tiny, проверяет её SHA256, выполняет срез через `tools/benchmarks/distill_whisper_lid.py` и сверяет оба результата с manifest. Для существующих исходников есть `--source-dir <пара-tiny>`, исключающий скачивание. Это преобразование весов, без инференса.
+
+На Linux x86_64 с CPython 3.12 `bash scripts/prepare_release_models.sh <новая-временная-папка>` готовит и Nemotron F32, и LID перед сборкой полного пакета. Зависимости установлены в отдельный venv и закреплены wheel-хэшами; файлы моделей не добавляются в Git. Происхождение LID записывается в `lid-preparation.json` рядом с преобразованными файлами.
 
 F32 Nemotron собирается из оригинального pinned `.nemo` через `scripts/convert_nemotron_fullprecision.py`; его нельзя скачать по выдуманной ссылке или восстановить из Q8. См. [рецепт конвертации](../docs/research/nemotron-android.md). `--sources-json` provisioner принимает локальный JSON `model_id → filename`, который следует хранить в `.agents/local/`. Все файлы проверяются по размерам и SHA256 до установки и при подготовке сессии. Сам инференс работает без сети.
 

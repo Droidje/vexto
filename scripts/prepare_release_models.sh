@@ -12,6 +12,9 @@ python="$work/venv/bin/python"
 cat > "$work/requirements.txt" <<'EOF'
 torch @ https://download-r2.pytorch.org/whl/cpu/torch-2.9.1%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl --hash=sha256:7417d8c565f219d3455654cb431c6d892a3eb40246055e14d645422de13b9ea1
 numpy==2.3.4 --hash=sha256:4121c5beb58a7f9e6dfdee612cb24f4df5cd4db6e8261d7f4d7450a997a65d6a
+onnx==1.18.0 --hash=sha256:99afac90b4cdb1471432203c3c1f74e16549c526df27056d39f41a9a47cfb4af
+protobuf==5.29.5 --hash=sha256:63848923da3325e1bf7e9003d680ce6e14b07e55d0473253a690c3a8b8fd6e61
+ml_dtypes==0.5.1 --hash=sha256:ad4953c5eb9c25a56d11a913c2011d7e580a435ef5145f804d98efa14477d390
 PyYAML==6.0.3 --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc
 filelock==3.20.0 --hash=sha256:339b4732ffda5cd79b13f4e2711a31b0365ce445d95d243bb996273d072546a2
 typing_extensions==4.15.0 --hash=sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548
@@ -55,6 +58,10 @@ checkpoint="$work/Nemotron-3-Diarization.nemo"
 download 'https://huggingface.co/nvidia/Nemotron-3-Diarization/resolve/f667ed73aee57d40cc39428eb768b4fd87a0a29e/Nemotron-3-Diarization.nemo' "$checkpoint"
 "$python" scripts/convert_nemotron_fullprecision.py --checkpoint "$checkpoint" \
     --nemo-source "${nemotron[0]}" --output "$work/converted/nemotron/Nemotron-3-Diarization.f32.gguf"
+
+# These two required assets intentionally have no manifest download URL: reproduce
+# the exact 99-language slice from the SHA256-pinned public Tiny checkpoint.
+"$python" scripts/prepare_lid_models.py --work-dir "$work/lid-source" --output-dir "$work/converted/lid"
 
 for attempt in 1 2 3; do
     if "$python" scripts/prepare_quality_models.py --source-dir "$work/converted" --download --output-dir "$work/pack"; then
