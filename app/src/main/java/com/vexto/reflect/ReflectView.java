@@ -21,6 +21,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.PathInterpolator;
 import android.view.accessibility.AccessibilityNodeInfo;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -151,6 +152,11 @@ final class ReflectView extends ViewGroup {
     void refreshSettings() { settings.refresh(); }
     void setRecordings(List<ReflectCatalog.Recording> recordings) { records.setRecordings(recordings); }
     void setSpeakers(List<ReflectCatalog.Speaker> entries) { speakers.setSpeakers(entries); }
+    void updateLibraryProgress(File recording, ReflectLocalTranscription.Progress progress) {
+        records.updateProgress(recording, progress);
+        conversations.updateProgress(recording, progress);
+    }
+
     void setConversations(List<ReflectCatalog.Conversation> entries) {
         boolean hadConversations = conversations.hasConversations();
         conversations.setConversations(entries);
@@ -163,6 +169,7 @@ final class ReflectView extends ViewGroup {
     void show(Screen next) {
         if (next == screen) return;
         if (animator != null) animator.cancel();
+        if (screen == Screen.HOME) conversations.dismissKeyboard();
         if (screen == Screen.RECORDS) records.dismissKeyboard();
         if (screen == Screen.SPEAKERS) speakers.dismissKeyboard();
         boolean withinNavigation = navigation(screen) && navigation(next);
@@ -235,7 +242,6 @@ final class ReflectView extends ViewGroup {
         this.duration = "+ " + duration;
         this.playing = playing;
         this.playProgress = progress;
-        transcript.playing(playing);
         if (screen == Screen.REVIEW) invalidate();
     }
 

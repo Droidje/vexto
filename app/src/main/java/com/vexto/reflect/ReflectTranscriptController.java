@@ -35,6 +35,7 @@ final class ReflectTranscriptController {
     private final ReflectView view;
     private final ReflectPreferences preferences;
     private final ReflectTranscriptStore store;
+    private final ReflectConversationStore conversations;
     private final ExecutorService io;
     private final Consumer<String> notice;
     private final IntConsumer playFrom;
@@ -54,13 +55,15 @@ final class ReflectTranscriptController {
     private int generation, transcriptRequest, durationMs;
 
     ReflectTranscriptController(Activity activity, ReflectView view, ReflectPreferences preferences,
-                                ReflectTranscriptStore store, ExecutorService io, Consumer<String> notice,
+                                ReflectTranscriptStore store, ReflectConversationStore conversations,
+                                ExecutorService io, Consumer<String> notice,
                                 IntConsumer playFrom, Runnable playAudio, Runnable refreshCatalog,
                                 SpeakerProfiles profiles, SpeakerProfilesUi profilesUi) {
         this.activity = activity;
         this.view = view;
         this.preferences = preferences;
         this.store = store;
+        this.conversations = conversations;
         this.io = io;
         this.notice = notice;
         this.playFrom = playFrom;
@@ -85,12 +88,13 @@ final class ReflectTranscriptController {
         metadata = null;
         loading = true;
         issue = null;
+        view.transcriptView().waveform(null);
         view.transcriptView().speakerNames(Collections.emptyMap());
         render();
         if (startImmediately) view.processingView().content(length, null);
         view.show(startImmediately ? ReflectView.Screen.PROCESSING : ReflectView.Screen.TRANSCRIPT);
         io.execute(() -> {
-            String resolvedTitle = store.title(recording, fallback);
+            String resolvedTitle = resolveTitle(recording, fallback, recordingDetails);
             RecordingMetadata properties = RecordingMetadata.read(recording);
             try {
                 ReflectTranscript loaded = store.load(recording);
@@ -133,6 +137,12 @@ final class ReflectTranscriptController {
         });
     }
 
+    private String resolveTitle(File recording, String fallback, boolean recordingDetails) {
+        if (recordingDetails) return store.title(recording, fallback);
+        try { return conversations.title(recording); }
+        catch (RuntimeException unavailable) { return fallback; }
+    }
+
     void close() {
         ++generation;
         file = null;
@@ -155,6 +165,18 @@ final class ReflectTranscriptController {
         issue = null;
         render();
         local.start(file);
+    }
+
+    boolean canStartBackground() {
+        if (!local.busy()) return true;
+        notice.accept("Дождитесь завершения текущей обработки.");
+        return false;
+    }
+
+    void startBackground(File recording) {
+        if (!canStartBackground() || importing.contains(recording)) return;
+        local.start(recording);
+        notice.accept("Расшифровка запущена в фоне");
     }
 
     void cancelTranscription() { local.cancel(file); }
@@ -277,7 +299,7 @@ final class ReflectTranscriptController {
             if (!recordingDetails && transcript != null && !transcript.lines.isEmpty()) {
                 menu.option(view.transcriptView().isPlaying() ? "Приостановить" : "Прослушать аудио", playAudio);
             }
-            menu.option("Переименовать", () -> rename());
+            if (recordingDetails) menu.option("Переименовать", this::rename);
             if (!recordingDetails) menu.option("Импортировать транскрипт", this::pick);
         }
         if (!recordingDetails) menu.option("Настройки чтения", this::styleOptions);
@@ -329,7 +351,7 @@ final class ReflectTranscriptController {
     private void rename() {
         File recording = file;
         if (recording == null) return;
-        Sheet editor = sheet(recordingDetails ? "Название записи" : "Название разговора");
+        Sheet editor = sheet("Название записи");
         EditText input = new EditText(activity);
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -344,7 +366,7 @@ final class ReflectTranscriptController {
         editor.option("Сохранить", () -> {
             String newTitle = input.getText().toString().trim();
             if (newTitle.isEmpty()) {
-                notice.accept("Введите название разговора");
+                notice.accept("Введите название записи");
                 return;
             }
             int current = generation;
@@ -368,12 +390,13 @@ final class ReflectTranscriptController {
     }
 
     private void render() {
-        view.transcriptView().content(title, length, transcript, file != null,
+        view.transcriptView().content(title, length, durationMs, transcript, file != null,
                 loading, issue, recordingDetails, metadata, local.progress(file));
         restoreExportIfReady();
     }
 
     private void processingChanged(File recording) {
+        view.updateLibraryProgress(recording, local.progress(recording));
         if (!recording.equals(file) || recordingDetails) return;
         var progress = local.progress(file);
         if (view.screen() == ReflectView.Screen.PROCESSING) view.processingView().content(length, progress);
@@ -381,6 +404,7 @@ final class ReflectTranscriptController {
     }
 
     private void transcriptionFinished(ReflectLocalTranscription.Result result) {
+        view.updateLibraryProgress(result.recording(), null);
         if (result.recording().equals(file)) {
             if (transcript == null) {
                 transcript = result.transcript();

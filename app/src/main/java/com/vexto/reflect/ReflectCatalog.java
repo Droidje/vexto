@@ -53,7 +53,7 @@ final class ReflectCatalog {
     }
 
     static final class Conversation {
-        final String title, time, preview;
+        final String title, time, preview, search;
         final Recording recording;
 
         Conversation(String title, String time, String preview, Recording recording) {
@@ -61,6 +61,7 @@ final class ReflectCatalog {
             this.time = time;
             this.preview = preview;
             this.recording = recording;
+            this.search = title + " " + recording.search;
         }
     }
 
@@ -147,13 +148,43 @@ final class ReflectCatalog {
         return true;
     }
 
-    static List<Conversation> localConversations(List<Recording> recordings) {
+    static List<Conversation> localConversations(List<Recording> recordings, ReflectConversationStore store) {
+        Map<String, Long> numbers;
+        try { numbers = store.assign(recordings); }
+        catch (RuntimeException unavailable) { numbers = Map.of(); }
         List<Conversation> conversations = new ArrayList<>(recordings.size());
         for (Recording recording : recordings) {
-            conversations.add(new Conversation(recording.title, recording.time,
+            conversations.add(new Conversation(ReflectConversationStore.title(numbers.get(recording.file.getName())), recording.time,
                     recording.hasTranscript() ? recording.preview : "Локальная аудиозапись · " + recording.length,
                     recording));
         }
         return Collections.unmodifiableList(conversations);
+    }
+
+    static List<Conversation> searchConversations(List<Conversation> conversations, String query,
+                                                   ReflectTranscriptStore transcripts) {
+        List<Conversation> results = new ArrayList<>();
+        String[] terms = normalized(query).trim().split("\\s+");
+        for (Conversation conversation : conversations) {
+            if (Thread.currentThread().isInterrupted()) break;
+            List<String> remaining = new ArrayList<>(Arrays.asList(terms));
+            remaining.removeIf(normalized(conversation.search)::contains);
+            if (!remaining.isEmpty() && conversation.recording.hasTranscript()) {
+                ReflectTranscript transcript = loadTranscript(transcripts, conversation.recording.file);
+                if (transcript != null) {
+                    for (ReflectTranscript.Line line : transcript.lines) {
+                        if (Thread.currentThread().isInterrupted()) return results;
+                        remaining.removeIf(normalized(line.text)::contains);
+                        if (remaining.isEmpty()) break;
+                    }
+                }
+            }
+            if (remaining.isEmpty()) results.add(conversation);
+        }
+        return results;
+    }
+
+    private static String normalized(String text) {
+        return text.toLowerCase(Locale.ROOT).replace('ё', 'е');
     }
 }
