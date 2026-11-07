@@ -4,14 +4,18 @@ import com.vexto.engine.model.EmotionProbabilities;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 /**
- * Замена реплик после повторного качественного прогона короткого окна.
- * Пустой, чужой или не покрывающий выбранную реплику результат не применяется.
+ * Замена выбранной реплики после качественного прогона окна вокруг неё.
+ * Соседние реплики не удаляются. Пустой результат и кусок, который нельзя
+ * отделить от соседа, не применяются.
  */
 final class UtteranceRecheck {
     static final int PAD_BEFORE_MS = 1_500;
     static final int PAD_AFTER_MS = 1_500;
+    /** Сколько миллисекунд края окна может задеть соседа, не забирая его реплику. */
+    private static final int EDGE_MS = 250;
 
     static final class Window {
         final int startMs;
@@ -29,12 +33,31 @@ final class UtteranceRecheck {
         final int endMs;
         final String text;
         final EmotionProbabilities emotion;
+        final List<TimedWord> words;
 
         Piece(int startMs, int endMs, String text, EmotionProbabilities emotion) {
+            this(startMs, endMs, text, emotion, List.of());
+        }
+
+        Piece(int startMs, int endMs, String text, EmotionProbabilities emotion, List<TimedWord> words) {
             this.startMs = startMs;
             this.endMs = endMs;
             this.text = text;
             this.emotion = emotion;
+            this.words = words == null ? List.of() : words;
+        }
+    }
+
+    /** Слово результата на шкале исходной записи. */
+    static final class TimedWord {
+        final int startMs;
+        final int endMs;
+        final String text;
+
+        TimedWord(int startMs, int endMs, String text) {
+            this.startMs = startMs;
+            this.endMs = endMs;
+            this.text = text;
         }
     }
 
@@ -58,12 +81,18 @@ final class UtteranceRecheck {
         if (overlap(selected.startMs, selected.endMs, windowStartMs, windowEndMs) <= 0) return null;
         List<Piece> usable = usablePieces(pieces, windowStartMs, windowEndMs);
         if (usable.isEmpty()) return null;
-        boolean[] replace = replacementSet(original, selectedIndex, windowStartMs, windowEndMs);
-        List<Piece> kept = piecesForReplacement(usable, original, replace);
+        boolean[] replace = new boolean[original.lines.size()];
+        replace[selectedIndex] = true;
+        List<ReflectTranscript.Line> neighbors = new ArrayList<>();
+        for (int index = 0; index < original.lines.size(); index++) {
+            if (!replace[index]) neighbors.add(original.lines.get(index));
+        }
+        List<Piece> kept = withoutLeadingDuplicates(piecesForReplacement(usable, original, selected, replace), neighbors);
         if (!coversSelected(selected, kept)) return null;
         List<ReflectTranscript.Line> next = new ArrayList<>(original.lines.size() + kept.size());
-        for (int index = 0; index < original.lines.size(); index++) {
-            if (!replace[index]) next.add(original.lines.get(index));
+        for (ReflectTranscript.Line neighbor : neighbors) {
+            ReflectTranscript.Line cleaned = withoutRepeatedFollowingWord(neighbor, kept);
+            if (cleaned != null) next.add(cleaned);
         }
         for (Piece piece : kept) {
             ReflectTranscript.Line donor = donor(original, replace, piece, selected);
@@ -82,46 +111,138 @@ final class UtteranceRecheck {
             int start = Math.max(windowStartMs, piece.startMs);
             int end = Math.min(windowEndMs, piece.endMs);
             if (end <= start) continue;
-            usable.add(new Piece(start, end, piece.text, piece.emotion));
+            usable.add(new Piece(start, end, piece.text, piece.emotion, piece.words));
         }
         usable.sort(Comparator.comparingInt((Piece piece) -> piece.startMs).thenComparingInt(piece -> piece.endMs));
         return usable;
     }
 
     /**
-     * Выбранная реплика заменяется всегда. Сосед — только если окно накрывает
-     * хотя бы половину его длительности. Короткий хвост длинной предыдущей реплики
-     * не стирает её целиком.
+     * Окно нужно модели как контекст. Переписывается только выбранная реплика.
+     * Кусок соседа отбрасывается. Общий кусок режется по словам; без слов он не применяется,
+     * если заходит в соседа дальше чем на {@link #EDGE_MS}.
      */
-    private static boolean[] replacementSet(ReflectTranscript original, int selectedIndex,
-                                            int windowStartMs, int windowEndMs) {
-        boolean[] replace = new boolean[original.lines.size()];
+    private static List<Piece> piecesForReplacement(List<Piece> usable, ReflectTranscript original,
+                                                    ReflectTranscript.Line selected, boolean[] replace) {
+        List<ReflectTranscript.Line> others = new ArrayList<>();
         for (int index = 0; index < original.lines.size(); index++) {
-            ReflectTranscript.Line line = original.lines.get(index);
-            int covered = overlap(line.startMs, line.endMs, windowStartMs, windowEndMs);
-            int duration = line.endMs - line.startMs;
-            replace[index] = index == selectedIndex || covered * 2 >= duration;
+            if (!replace[index]) others.add(original.lines.get(index));
         }
-        return replace;
-    }
-
-    /** Фрагмент, который лежит на непереписываемом соседе сильнее, чем на заменяемых репликах, отбрасывается. */
-    private static List<Piece> piecesForReplacement(List<Piece> usable, ReflectTranscript original, boolean[] replace) {
         List<Piece> kept = new ArrayList<>();
         for (Piece piece : usable) {
-            int inside = 0;
-            int outside = 0;
-            for (int index = 0; index < original.lines.size(); index++) {
-                ReflectTranscript.Line line = original.lines.get(index);
-                int covered = overlap(piece.startMs, piece.endMs, line.startMs, line.endMs);
-                if (replace[index]) inside += covered;
-                else outside += covered;
-            }
-            if (outside > inside && inside == 0) continue;
-            if (outside > inside) continue;
-            kept.add(piece);
+            Piece trimmed = trimToSelected(piece, selected, others);
+            if (trimmed != null) kept.add(trimmed);
         }
         return kept;
+    }
+
+    private static Piece trimToSelected(Piece piece, ReflectTranscript.Line selected,
+                                        List<ReflectTranscript.Line> others) {
+        if (!piece.words.isEmpty()) return trimByWords(piece, selected, others);
+        for (ReflectTranscript.Line other : others) {
+            if (overlap(piece.startMs, piece.endMs, other.startMs, other.endMs) > EDGE_MS) return null;
+        }
+        int start = Math.max(piece.startMs, selected.startMs - EDGE_MS);
+        int end = Math.min(piece.endMs, selected.endMs + EDGE_MS);
+        if (end <= start || overlap(start, end, selected.startMs, selected.endMs) <= 0) return null;
+        return new Piece(start, end, piece.text, piece.emotion);
+    }
+
+    private static Piece trimByWords(Piece piece, ReflectTranscript.Line selected,
+                                     List<ReflectTranscript.Line> others) {
+        List<TimedWord> kept = new ArrayList<>();
+        for (TimedWord word : piece.words) {
+            if (word == null || word.text == null || word.text.isBlank() || word.endMs <= word.startMs) continue;
+            if (belongsToSelected(word.startMs, word.endMs, selected, others)) kept.add(word);
+        }
+        if (kept.isEmpty()) return null;
+        int start = kept.get(0).startMs;
+        int end = kept.get(kept.size() - 1).endMs;
+        if (end <= start) return null;
+        StringBuilder text = new StringBuilder();
+        for (TimedWord word : kept) {
+            if (text.length() > 0) text.append(' ');
+            text.append(word.text.trim());
+        }
+        if (text.length() == 0) return null;
+        return new Piece(start, end, text.toString(), piece.emotion);
+    }
+
+    private static boolean belongsToSelected(int startMs, int endMs, ReflectTranscript.Line selected,
+                                             List<ReflectTranscript.Line> others) {
+        int onSelected = overlap(startMs, endMs, selected.startMs, selected.endMs);
+        int onOther = 0;
+        for (ReflectTranscript.Line other : others) {
+            onOther = Math.max(onOther, overlap(startMs, endMs, other.startMs, other.endMs));
+        }
+        if (onOther > onSelected) return false;
+        if (onSelected > 0) return true;
+        int center = startMs + (endMs - startMs) / 2;
+        return center >= selected.startMs - EDGE_MS && center <= selected.endMs + EDGE_MS;
+    }
+
+    /** Повтор слова предыдущей реплики в начале нового текста убирается из нового текста. */
+    private static List<Piece> withoutLeadingDuplicates(List<Piece> kept, List<ReflectTranscript.Line> neighbors) {
+        List<Piece> result = new ArrayList<>();
+        for (Piece piece : kept) {
+            List<String> words = tokens(piece.text);
+            for (ReflectTranscript.Line neighbor : neighbors) {
+                if (overlap(piece.startMs, piece.endMs, neighbor.startMs, neighbor.endMs) <= 0) continue;
+                List<String> earlier = tokens(neighbor.text);
+                while (!words.isEmpty() && !earlier.isEmpty()
+                        && neighbor.endMs > piece.startMs
+                        && sameToken(words.get(0), earlier.get(earlier.size() - 1))) {
+                    words.remove(0);
+                }
+            }
+            if (words.isEmpty()) continue;
+            result.add(new Piece(piece.startMs, piece.endMs, String.join(" ", words), piece.emotion));
+        }
+        return result;
+    }
+
+    /**
+     * Если новая реплика заканчивается тем же словом, с которого начинается следующая,
+     * слово остаётся в новой реплике, а из следующей уходит.
+     */
+    private static ReflectTranscript.Line withoutRepeatedFollowingWord(ReflectTranscript.Line neighbor, List<Piece> kept) {
+        List<String> words = tokens(neighbor.text);
+        int start = neighbor.startMs;
+        boolean changed = false;
+        for (Piece piece : kept) {
+            if (overlap(piece.startMs, piece.endMs, start, neighbor.endMs) <= 0) continue;
+            List<String> fresh = tokens(piece.text);
+            while (!words.isEmpty() && !fresh.isEmpty()
+                    && piece.endMs > start
+                    && sameToken(fresh.get(fresh.size() - 1), words.get(0))) {
+                words.remove(0);
+                changed = true;
+                if (piece.endMs > start && piece.endMs < neighbor.endMs) start = piece.endMs;
+            }
+        }
+        if (!changed) return neighbor;
+        if (words.isEmpty() || start >= neighbor.endMs) return null;
+        return new ReflectTranscript.Line(neighbor.speakerId, start, neighbor.endMs, String.join(" ", words),
+                neighbor.emotionProbabilities, neighbor.speakerName);
+    }
+
+    private static List<String> tokens(String text) {
+        List<String> tokens = new ArrayList<>();
+        if (text == null) return tokens;
+        for (String token : text.trim().split("\\s+")) {
+            if (!token.isBlank()) tokens.add(token);
+        }
+        return tokens;
+    }
+
+    private static boolean sameToken(String first, String second) {
+        String left = tokenKey(first);
+        String right = tokenKey(second);
+        return !left.isEmpty() && left.equals(right);
+    }
+
+    private static String tokenKey(String token) {
+        return token.toLowerCase(Locale.ROOT).replaceAll("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$", "");
     }
 
     private static boolean coversSelected(ReflectTranscript.Line selected, List<Piece> kept) {
