@@ -49,6 +49,8 @@ Qwen возвращает только `select_asr_variant(chunk_id, source)`. �
 
 Публичный `ReflectEngine.Listener` и экспорт `Transcript` сохранены. `DetailedListener.onCoreReady` позволяет сохранить ранний полный результат. В `ProcessingStats` добавлены `artifactDirectory`, `warnings`, `complete` (покрытие фрагментов), `fullProfileCompleted`, `selectionResolved`. Параметры `punctuation`/`speakerCount` оставлены ради совместимости: текст больше не переписывается пунктуатором, Nemotron считает спикеров автоматически (неподдержанный фиксированный count отмечается предупреждением).
 
+При публикации промежуточного и финального результата в интерфейсе интервалы Nemotron без распознанного текста пропускаются: они не блокируют сохранение остальных реплик. Непустой текст, таймкоды, спикеры и эмоции переносятся без изменений; полные исходные интервалы остаются в артефактах движка и готовом чекпоинте. Если все интервалы пустые, приложение сообщает, что речь не распознана. Повторный запуск того же завершённого задания берёт результат из `finished.checkpoint.json`, без повторного инференса.
+
 ```sh
 bash scripts/fetch_models.sh --aar-only
 bash ./gradlew -PvextoSkipNative=true :engine:testDebugUnitTest

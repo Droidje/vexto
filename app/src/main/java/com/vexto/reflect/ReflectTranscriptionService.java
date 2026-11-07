@@ -195,7 +195,7 @@ public final class ReflectTranscriptionService extends Service {
             });
         } catch (IOException | RuntimeException unavailable) {
             // The inference checkpoint is durable even if the UI cannot publish the preview.
-            Log.w(TAG, "Could not publish provisional transcript" + ": " + unavailable.getClass().getSimpleName());
+            Log.w(TAG, "Could not publish provisional transcript", unavailable);
         }
     }
 
@@ -203,7 +203,12 @@ public final class ReflectTranscriptionService extends Service {
         if (started.interrupted) return;
         File recording = started.request.recording();
         try {
-            var saved = store.saveEngineFinal(recording, started.request.jobId(), convert(output));
+            ReflectTranscript converted = convert(output);
+            if (converted.lines.isEmpty()) {
+                main.post(() -> complete(started, null, "В записи не удалось распознать речь."));
+                return;
+            }
+            var saved = store.saveEngineFinal(recording, started.request.jobId(), converted);
             ReflectTranscript transcript = saved.transcript();
             if (!saved.owned()) {
                 main.post(() -> complete(started, transcript, "У записи уже есть расшифровка."));
@@ -227,7 +232,7 @@ public final class ReflectTranscriptionService extends Service {
                     : statsWarning == null ? profileWarning : profileWarning + " " + statsWarning;
             main.post(() -> complete(started, transcript, message));
         } catch (IOException | RuntimeException failure) {
-            Log.w(TAG, "Could not publish transcript" + ": " + failure.getClass().getSimpleName());
+            Log.w(TAG, "Could not publish transcript", failure);
             main.post(() -> complete(started, null, "Не удалось сохранить расшифровку."));
         }
     }
@@ -245,9 +250,12 @@ public final class ReflectTranscriptionService extends Service {
         return warning;
     }
 
-    private static ReflectTranscript convert(Transcript output) {
+    static ReflectTranscript convert(Transcript output) {
         List<ReflectTranscript.Line> lines = new ArrayList<>(output.getUtterances().size());
         for (Utterance utterance : output.getUtterances()) {
+            // Nemotron intervals without assigned ASR words remain in the engine artifacts.
+            // They have no display text and must not reject the rest of the transcript.
+            if (utterance.getText().trim().isEmpty()) continue;
             lines.add(new ReflectTranscript.Line(utterance.getSpeakerId(),
                     Math.toIntExact(utterance.getStartMs()), Math.toIntExact(utterance.getEndMs()),
                     utterance.getText(), utterance.getEmotionProbabilities()));
