@@ -1,0 +1,2295 @@
+{
+  "experiment": "natural-overlap-precision-v2",
+  "date": "2026-11-07",
+  "base_commit": "090e2351bf2004863dea214d9967398feb6cbfe5",
+  "selected": "wavlm",
+  "operating_point": {
+    "kind": "wavlm",
+    "threshold": 0.9120559394359589,
+    "enabled": true,
+    "sample_rate": 16000,
+    "window_samples": 64000,
+    "experimental": true,
+    "android_validated": false,
+    "encoder_sha256": "136a3e720c04f2c77bf7a4dc6a3868b14d5a2c145a988114b733cb1a8428be98",
+    "weights_sha256": "6a6cd637ab6842c3eb79f198f83bb4bdc6eee2c208cec7c1aedd3c1a3d03e7ed"
+  },
+  "data": {
+    "policy": "natural-v2-short-act-700ms-3words-gap8s",
+    "planned": 538,
+    "downloaded": 406,
+    "unavailable": 132,
+    "counts": {
+      "train": {
+        "single_or_turn": 74,
+        "sustained": 73,
+        "backchannel": 67
+      },
+      "selection": {
+        "backchannel": 18,
+        "sustained": 20,
+        "single_or_turn": 17
+      },
+      "calibration": {
+        "backchannel": 19,
+        "single_or_turn": 17,
+        "sustained": 19
+      },
+      "test": {
+        "single_or_turn": 29,
+        "sustained": 26,
+        "backchannel": 27
+      }
+    },
+    "meetings": {
+      "train": [
+        "ES2002b",
+        "ES2002c",
+        "ES2002d",
+        "ES2003a",
+        "ES2003b",
+        "ES2003c",
+        "ES2003d",
+        "ES2004a",
+        "ES2004b",
+        "ES2004c",
+        "ES2004d",
+        "ES2005a",
+        "ES2005b",
+        "ES2005c",
+        "ES2005d"
+      ],
+      "selection": [
+        "ES2006a",
+        "ES2006b",
+        "ES2006c",
+        "ES2006d"
+      ],
+      "calibration": [
+        "ES2007a",
+        "ES2007d"
+      ],
+      "test": [
+        "ES2008a",
+        "ES2008b",
+        "ES2008c",
+        "ES2008d",
+        "ES2009a",
+        "ES2009b",
+        "ES2009d"
+      ]
+    },
+    "people_counts": {
+      "train": 16,
+      "selection": 4,
+      "calibration": 4,
+      "test": 8
+    },
+    "annotations_sha256": "b56e5babb2496b8795deeeda7e71178d7fbc9963f94276cf2a3f4b56ebbc9f9d",
+    "plan_sha256": "bc09d9d084455ffa4b478169967d37d07cc45c805bf97ecde8317c2f22bceaae",
+    "manifest_sha256": "9c0e046b243184860d189f0240566d121296518d82611b293c3774e613bd01fd"
+  },
+  "selection": {
+    "seed": 20261108,
+    "selected": "wavlm",
+    "candidates": {
+      "cnn": {
+        "selection_loss": 0.688499391078949,
+        "selected_epoch": 4,
+        "point": {
+          "threshold": 0.4452897310256958,
+          "enabled": true,
+          "max_calibration_fpr": 0.05,
+          "min_calibration_precision": 0.9,
+          "minimum_true_positives": 3,
+          "calibration": {
+            "tp": 7,
+            "fp": 0,
+            "fn": 13,
+            "tn": 35,
+            "recall": 0.35,
+            "fpr": 0.0,
+            "precision": 1.0
+          },
+          "backchannel": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "tn": 18,
+            "recall": null,
+            "fpr": 0.0,
+            "precision": null
+          },
+          "reason": "calibration_constraints_met"
+        },
+        "metrics": {
+          "n": 55,
+          "tp": 7,
+          "fp": 0,
+          "fn": 13,
+          "tn": 35,
+          "precision": 1.0,
+          "recall": 0.35,
+          "f1": 0.5185185185185185,
+          "balanced_accuracy": 0.675,
+          "false_positive_rate": 0.0,
+          "roc_auc": 0.7885714285714286,
+          "by_kind": {
+            "backchannel": {
+              "n": 18,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 18,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.0,
+              "roc_auc": null
+            },
+            "single_or_turn": {
+              "n": 17,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 17,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.0,
+              "roc_auc": null
+            },
+            "sustained": {
+              "n": 20,
+              "tp": 7,
+              "fp": 0,
+              "fn": 13,
+              "tn": 0,
+              "precision": 1.0,
+              "recall": 0.35,
+              "f1": 0.5185185185185185,
+              "balanced_accuracy": null,
+              "false_positive_rate": null,
+              "roc_auc": null
+            }
+          }
+        },
+        "weights_sha256": "6991af3710b097b9be1e60a29a48397f640ede6648e33a14c1becaa11c29b50c"
+      },
+      "wavlm": {
+        "selection_loss": 0.3556482791900635,
+        "selected_epoch": 13,
+        "point": {
+          "threshold": 0.97808837890625,
+          "enabled": true,
+          "max_calibration_fpr": 0.05,
+          "min_calibration_precision": 0.9,
+          "minimum_true_positives": 3,
+          "calibration": {
+            "tp": 11,
+            "fp": 0,
+            "fn": 9,
+            "tn": 35,
+            "recall": 0.55,
+            "fpr": 0.0,
+            "precision": 1.0
+          },
+          "backchannel": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "tn": 18,
+            "recall": null,
+            "fpr": 0.0,
+            "precision": null
+          },
+          "reason": "calibration_constraints_met"
+        },
+        "metrics": {
+          "n": 55,
+          "tp": 11,
+          "fp": 0,
+          "fn": 9,
+          "tn": 35,
+          "precision": 1.0,
+          "recall": 0.55,
+          "f1": 0.7096774193548387,
+          "balanced_accuracy": 0.775,
+          "false_positive_rate": 0.0,
+          "roc_auc": 0.9642857142857143,
+          "by_kind": {
+            "backchannel": {
+              "n": 18,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 18,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.0,
+              "roc_auc": null
+            },
+            "single_or_turn": {
+              "n": 17,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 17,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.0,
+              "roc_auc": null
+            },
+            "sustained": {
+              "n": 20,
+              "tp": 11,
+              "fp": 0,
+              "fn": 9,
+              "tn": 0,
+              "precision": 1.0,
+              "recall": 0.55,
+              "f1": 0.7096774193548387,
+              "balanced_accuracy": null,
+              "false_positive_rate": null,
+              "roc_auc": null
+            }
+          }
+        },
+        "weights_sha256": "6a6cd637ab6842c3eb79f198f83bb4bdc6eee2c208cec7c1aedd3c1a3d03e7ed"
+      }
+    },
+    "rule": "best selection recall under precision/FPR constraints; weighted BCE tie-break",
+    "manifest_sha256": "9c0e046b243184860d189f0240566d121296518d82611b293c3774e613bd01fd",
+    "plan_sha256": "bc09d9d084455ffa4b478169967d37d07cc45c805bf97ecde8317c2f22bceaae",
+    "baseline_sha256": "fe03b47d79b4067473bc608bf0a46e55f31a0c12cb4ff1848836be86e34cfe4b",
+    "encoder_sha256": "136a3e720c04f2c77bf7a4dc6a3868b14d5a2c145a988114b733cb1a8428be98",
+    "encoder_bytes": 377604347,
+    "elapsed_seconds": 40.029982208041474,
+    "calibration_and_test_used": false
+  },
+  "calibration": {
+    "selected": "wavlm",
+    "manifest_sha256": "9c0e046b243184860d189f0240566d121296518d82611b293c3774e613bd01fd",
+    "selection_sha256": "60cd72efe7ff74ccbe32c3364b84960a82c13e4c8572495750e84642e81c430a",
+    "models": {
+      "baseline": {
+        "point": {
+          "threshold": 0.9897831082344055,
+          "enabled": true,
+          "max_calibration_fpr": 0.05,
+          "objective": "minimum_false_positives_then_recall",
+          "min_calibration_precision": 0.9,
+          "minimum_true_positives": 3,
+          "calibration": {
+            "tp": 9,
+            "fp": 0,
+            "fn": 10,
+            "tn": 36,
+            "recall": 0.47368421052631576,
+            "fpr": 0.0,
+            "precision": 1.0
+          },
+          "backchannel": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "tn": 19,
+            "recall": null,
+            "fpr": 0.0,
+            "precision": null
+          },
+          "reason": "calibration_constraints_met"
+        },
+        "metrics": {
+          "n": 55,
+          "tp": 9,
+          "fp": 0,
+          "fn": 10,
+          "tn": 36,
+          "precision": 1.0,
+          "recall": 0.47368421052631576,
+          "f1": 0.6428571428571429,
+          "balanced_accuracy": 0.7368421052631579,
+          "false_positive_rate": 0.0,
+          "roc_auc": 0.8289473684210527,
+          "by_kind": {
+            "backchannel": {
+              "n": 19,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 19,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.0,
+              "roc_auc": null
+            },
+            "single_or_turn": {
+              "n": 17,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 17,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.0,
+              "roc_auc": null
+            },
+            "sustained": {
+              "n": 19,
+              "tp": 9,
+              "fp": 0,
+              "fn": 10,
+              "tn": 0,
+              "precision": 1.0,
+              "recall": 0.47368421052631576,
+              "f1": 0.6428571428571429,
+              "balanced_accuracy": null,
+              "false_positive_rate": null,
+              "roc_auc": null
+            }
+          },
+          "fpr_wilson95_descriptive": [
+            0.0,
+            0.09641862859446367
+          ],
+          "by_meeting": {
+            "ES2007a": {
+              "n": 27,
+              "tp": 3,
+              "fp": 0,
+              "fn": 6,
+              "tn": 18,
+              "precision": 1.0,
+              "recall": 0.3333333333333333,
+              "f1": 0.5,
+              "balanced_accuracy": 0.6666666666666666,
+              "false_positive_rate": 0.0,
+              "roc_auc": 0.7345679012345679,
+              "by_kind": {
+                "backchannel": {
+                  "n": 10,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 10,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 8,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 8,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 9,
+                  "tp": 3,
+                  "fp": 0,
+                  "fn": 6,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.3333333333333333,
+                  "f1": 0.5,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2007d": {
+              "n": 28,
+              "tp": 6,
+              "fp": 0,
+              "fn": 4,
+              "tn": 18,
+              "precision": 1.0,
+              "recall": 0.6,
+              "f1": 0.75,
+              "balanced_accuracy": 0.8,
+              "false_positive_rate": 0.0,
+              "roc_auc": 0.9222222222222223,
+              "by_kind": {
+                "backchannel": {
+                  "n": 9,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 9,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 9,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 9,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 10,
+                  "tp": 6,
+                  "fp": 0,
+                  "fn": 4,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.6,
+                  "f1": 0.75,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            }
+          }
+        },
+        "at_original_strict_threshold": {
+          "n": 55,
+          "tp": 9,
+          "fp": 1,
+          "fn": 10,
+          "tn": 35,
+          "precision": 0.9,
+          "recall": 0.47368421052631576,
+          "f1": 0.6206896551724138,
+          "balanced_accuracy": 0.722953216374269,
+          "false_positive_rate": 0.02777777777777779,
+          "roc_auc": 0.8289473684210527,
+          "by_kind": {
+            "backchannel": {
+              "n": 19,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 19,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.0,
+              "roc_auc": null
+            },
+            "single_or_turn": {
+              "n": 17,
+              "tp": 0,
+              "fp": 1,
+              "fn": 0,
+              "tn": 16,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.05882352941176472,
+              "roc_auc": null
+            },
+            "sustained": {
+              "n": 19,
+              "tp": 9,
+              "fp": 0,
+              "fn": 10,
+              "tn": 0,
+              "precision": 1.0,
+              "recall": 0.47368421052631576,
+              "f1": 0.6428571428571429,
+              "balanced_accuracy": null,
+              "false_positive_rate": null,
+              "roc_auc": null
+            }
+          },
+          "fpr_wilson95_descriptive": [
+            0.004920407139810443,
+            0.14169718653273855
+          ],
+          "by_meeting": {
+            "ES2007a": {
+              "n": 27,
+              "tp": 3,
+              "fp": 1,
+              "fn": 6,
+              "tn": 17,
+              "precision": 0.75,
+              "recall": 0.3333333333333333,
+              "f1": 0.46153846153846156,
+              "balanced_accuracy": 0.6388888888888888,
+              "false_positive_rate": 0.05555555555555558,
+              "roc_auc": 0.7345679012345679,
+              "by_kind": {
+                "backchannel": {
+                  "n": 10,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 10,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 8,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 7,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.125,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 9,
+                  "tp": 3,
+                  "fp": 0,
+                  "fn": 6,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.3333333333333333,
+                  "f1": 0.5,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2007d": {
+              "n": 28,
+              "tp": 6,
+              "fp": 0,
+              "fn": 4,
+              "tn": 18,
+              "precision": 1.0,
+              "recall": 0.6,
+              "f1": 0.75,
+              "balanced_accuracy": 0.8,
+              "false_positive_rate": 0.0,
+              "roc_auc": 0.9222222222222223,
+              "by_kind": {
+                "backchannel": {
+                  "n": 9,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 9,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 9,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 9,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 10,
+                  "tp": 6,
+                  "fp": 0,
+                  "fn": 4,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.6,
+                  "f1": 0.75,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            }
+          }
+        }
+      },
+      "wavlm": {
+        "point": {
+          "threshold": 0.9120559394359589,
+          "enabled": true,
+          "max_calibration_fpr": 0.05,
+          "objective": "minimum_false_positives_then_recall",
+          "min_calibration_precision": 0.9,
+          "minimum_true_positives": 3,
+          "calibration": {
+            "tp": 14,
+            "fp": 0,
+            "fn": 5,
+            "tn": 36,
+            "recall": 0.7368421052631579,
+            "fpr": 0.0,
+            "precision": 1.0
+          },
+          "backchannel": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "tn": 19,
+            "recall": null,
+            "fpr": 0.0,
+            "precision": null
+          },
+          "reason": "calibration_constraints_met"
+        },
+        "metrics": {
+          "n": 55,
+          "tp": 14,
+          "fp": 0,
+          "fn": 5,
+          "tn": 36,
+          "precision": 1.0,
+          "recall": 0.7368421052631579,
+          "f1": 0.8484848484848485,
+          "balanced_accuracy": 0.868421052631579,
+          "false_positive_rate": 0.0,
+          "roc_auc": 0.9692982456140351,
+          "by_kind": {
+            "backchannel": {
+              "n": 19,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 19,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.0,
+              "roc_auc": null
+            },
+            "single_or_turn": {
+              "n": 17,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 17,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.0,
+              "roc_auc": null
+            },
+            "sustained": {
+              "n": 19,
+              "tp": 14,
+              "fp": 0,
+              "fn": 5,
+              "tn": 0,
+              "precision": 1.0,
+              "recall": 0.7368421052631579,
+              "f1": 0.8484848484848485,
+              "balanced_accuracy": null,
+              "false_positive_rate": null,
+              "roc_auc": null
+            }
+          },
+          "fpr_wilson95_descriptive": [
+            0.0,
+            0.09641862859446367
+          ],
+          "by_meeting": {
+            "ES2007a": {
+              "n": 27,
+              "tp": 9,
+              "fp": 0,
+              "fn": 0,
+              "tn": 18,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "balanced_accuracy": 1.0,
+              "false_positive_rate": 0.0,
+              "roc_auc": 1.0,
+              "by_kind": {
+                "backchannel": {
+                  "n": 10,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 10,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 8,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 8,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 9,
+                  "tp": 9,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 1.0,
+                  "f1": 1.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2007d": {
+              "n": 28,
+              "tp": 5,
+              "fp": 0,
+              "fn": 5,
+              "tn": 18,
+              "precision": 1.0,
+              "recall": 0.5,
+              "f1": 0.6666666666666666,
+              "balanced_accuracy": 0.75,
+              "false_positive_rate": 0.0,
+              "roc_auc": 0.9666666666666667,
+              "by_kind": {
+                "backchannel": {
+                  "n": 9,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 9,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 9,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 9,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 10,
+                  "tp": 5,
+                  "fp": 0,
+                  "fn": 5,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.5,
+                  "f1": 0.6666666666666666,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "split": "calibration",
+    "export_max_error": 0.0
+  },
+  "test": {
+    "selected": "wavlm",
+    "manifest_sha256": "9c0e046b243184860d189f0240566d121296518d82611b293c3774e613bd01fd",
+    "selection_sha256": "60cd72efe7ff74ccbe32c3364b84960a82c13e4c8572495750e84642e81c430a",
+    "models": {
+      "baseline": {
+        "point": {
+          "threshold": 0.9897831082344055,
+          "enabled": true,
+          "max_calibration_fpr": 0.05,
+          "objective": "minimum_false_positives_then_recall",
+          "min_calibration_precision": 0.9,
+          "minimum_true_positives": 3,
+          "calibration": {
+            "tp": 9,
+            "fp": 0,
+            "fn": 10,
+            "tn": 36,
+            "recall": 0.47368421052631576,
+            "fpr": 0.0,
+            "precision": 1.0
+          },
+          "backchannel": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "tn": 19,
+            "recall": null,
+            "fpr": 0.0,
+            "precision": null
+          },
+          "reason": "calibration_constraints_met"
+        },
+        "metrics": {
+          "n": 82,
+          "tp": 13,
+          "fp": 8,
+          "fn": 13,
+          "tn": 48,
+          "precision": 0.6190476190476191,
+          "recall": 0.5,
+          "f1": 0.5531914893617021,
+          "balanced_accuracy": 0.6785714285714286,
+          "false_positive_rate": 0.1428571428571429,
+          "roc_auc": 0.7836538461538461,
+          "by_kind": {
+            "backchannel": {
+              "n": 27,
+              "tp": 0,
+              "fp": 5,
+              "fn": 0,
+              "tn": 22,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.18518518518518523,
+              "roc_auc": null
+            },
+            "single_or_turn": {
+              "n": 29,
+              "tp": 0,
+              "fp": 3,
+              "fn": 0,
+              "tn": 26,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.10344827586206895,
+              "roc_auc": null
+            },
+            "sustained": {
+              "n": 26,
+              "tp": 13,
+              "fp": 0,
+              "fn": 13,
+              "tn": 0,
+              "precision": 1.0,
+              "recall": 0.5,
+              "f1": 0.6666666666666666,
+              "balanced_accuracy": null,
+              "false_positive_rate": null,
+              "roc_auc": null
+            }
+          },
+          "fpr_wilson95_descriptive": [
+            0.07420788536920624,
+            0.25735921228705333
+          ],
+          "by_meeting": {
+            "ES2008a": {
+              "n": 9,
+              "tp": 2,
+              "fp": 1,
+              "fn": 1,
+              "tn": 5,
+              "precision": 0.6666666666666666,
+              "recall": 0.6666666666666666,
+              "f1": 0.6666666666666666,
+              "balanced_accuracy": 0.75,
+              "false_positive_rate": 0.16666666666666663,
+              "roc_auc": 0.8888888888888888,
+              "by_kind": {
+                "backchannel": {
+                  "n": 2,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 2,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 3,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.25,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 2,
+                  "fp": 0,
+                  "fn": 1,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.6666666666666666,
+                  "f1": 0.8,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2008b": {
+              "n": 13,
+              "tp": 1,
+              "fp": 1,
+              "fn": 3,
+              "tn": 8,
+              "precision": 0.5,
+              "recall": 0.25,
+              "f1": 0.3333333333333333,
+              "balanced_accuracy": 0.5694444444444444,
+              "false_positive_rate": 0.11111111111111116,
+              "roc_auc": 0.4722222222222222,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 3,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.25,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 5,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 4,
+                  "tp": 1,
+                  "fp": 0,
+                  "fn": 3,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.25,
+                  "f1": 0.4,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2008c": {
+              "n": 14,
+              "tp": 3,
+              "fp": 2,
+              "fn": 2,
+              "tn": 7,
+              "precision": 0.6,
+              "recall": 0.6,
+              "f1": 0.6,
+              "balanced_accuracy": 0.6888888888888889,
+              "false_positive_rate": 0.2222222222222222,
+              "roc_auc": 0.8444444444444444,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 3,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.25,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.19999999999999996,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 5,
+                  "tp": 3,
+                  "fp": 0,
+                  "fn": 2,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.6,
+                  "f1": 0.75,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2008d": {
+              "n": 12,
+              "tp": 1,
+              "fp": 3,
+              "fn": 2,
+              "tn": 6,
+              "precision": 0.25,
+              "recall": 0.3333333333333333,
+              "f1": 0.2857142857142857,
+              "balanced_accuracy": 0.5,
+              "false_positive_rate": 0.33333333333333337,
+              "roc_auc": 0.7407407407407407,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 2,
+                  "fn": 0,
+                  "tn": 2,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.5,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.19999999999999996,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 1,
+                  "fp": 0,
+                  "fn": 2,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.3333333333333333,
+                  "f1": 0.5,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2009a": {
+              "n": 11,
+              "tp": 3,
+              "fp": 0,
+              "fn": 0,
+              "tn": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "balanced_accuracy": 1.0,
+              "false_positive_rate": 0.0,
+              "roc_auc": 1.0,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 3,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 1.0,
+                  "f1": 1.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2009b": {
+              "n": 10,
+              "tp": 1,
+              "fp": 0,
+              "fn": 2,
+              "tn": 7,
+              "precision": 1.0,
+              "recall": 0.3333333333333333,
+              "f1": 0.5,
+              "balanced_accuracy": 0.6666666666666666,
+              "false_positive_rate": 0.0,
+              "roc_auc": 0.6190476190476191,
+              "by_kind": {
+                "backchannel": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 5,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 2,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 2,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 1,
+                  "fp": 0,
+                  "fn": 2,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.3333333333333333,
+                  "f1": 0.5,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2009d": {
+              "n": 13,
+              "tp": 2,
+              "fp": 1,
+              "fn": 3,
+              "tn": 7,
+              "precision": 0.6666666666666666,
+              "recall": 0.4,
+              "f1": 0.5,
+              "balanced_accuracy": 0.6375,
+              "false_positive_rate": 0.125,
+              "roc_auc": 0.825,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 3,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.25,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 5,
+                  "tp": 2,
+                  "fp": 0,
+                  "fn": 3,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.4,
+                  "f1": 0.5714285714285714,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            }
+          }
+        },
+        "at_original_strict_threshold": {
+          "n": 82,
+          "tp": 16,
+          "fp": 13,
+          "fn": 10,
+          "tn": 43,
+          "precision": 0.5517241379310345,
+          "recall": 0.6153846153846154,
+          "f1": 0.5818181818181818,
+          "balanced_accuracy": 0.6916208791208791,
+          "false_positive_rate": 0.2321428571428571,
+          "roc_auc": 0.7836538461538461,
+          "by_kind": {
+            "backchannel": {
+              "n": 27,
+              "tp": 0,
+              "fp": 7,
+              "fn": 0,
+              "tn": 20,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.2592592592592593,
+              "roc_auc": null
+            },
+            "single_or_turn": {
+              "n": 29,
+              "tp": 0,
+              "fp": 6,
+              "fn": 0,
+              "tn": 23,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.2068965517241379,
+              "roc_auc": null
+            },
+            "sustained": {
+              "n": 26,
+              "tp": 16,
+              "fp": 0,
+              "fn": 10,
+              "tn": 0,
+              "precision": 1.0,
+              "recall": 0.6153846153846154,
+              "f1": 0.7619047619047619,
+              "balanced_accuracy": null,
+              "false_positive_rate": null,
+              "roc_auc": null
+            }
+          },
+          "fpr_wilson95_descriptive": [
+            0.1409937910920862,
+            0.35768153215010856
+          ],
+          "by_meeting": {
+            "ES2008a": {
+              "n": 9,
+              "tp": 2,
+              "fp": 1,
+              "fn": 1,
+              "tn": 5,
+              "precision": 0.6666666666666666,
+              "recall": 0.6666666666666666,
+              "f1": 0.6666666666666666,
+              "balanced_accuracy": 0.75,
+              "false_positive_rate": 0.16666666666666663,
+              "roc_auc": 0.8888888888888888,
+              "by_kind": {
+                "backchannel": {
+                  "n": 2,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 2,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 3,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.25,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 2,
+                  "fp": 0,
+                  "fn": 1,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.6666666666666666,
+                  "f1": 0.8,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2008b": {
+              "n": 13,
+              "tp": 1,
+              "fp": 3,
+              "fn": 3,
+              "tn": 6,
+              "precision": 0.25,
+              "recall": 0.25,
+              "f1": 0.25,
+              "balanced_accuracy": 0.4583333333333333,
+              "false_positive_rate": 0.33333333333333337,
+              "roc_auc": 0.4722222222222222,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 2,
+                  "fn": 0,
+                  "tn": 2,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.5,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.19999999999999996,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 4,
+                  "tp": 1,
+                  "fp": 0,
+                  "fn": 3,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.25,
+                  "f1": 0.4,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2008c": {
+              "n": 14,
+              "tp": 3,
+              "fp": 2,
+              "fn": 2,
+              "tn": 7,
+              "precision": 0.6,
+              "recall": 0.6,
+              "f1": 0.6,
+              "balanced_accuracy": 0.6888888888888889,
+              "false_positive_rate": 0.2222222222222222,
+              "roc_auc": 0.8444444444444444,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 3,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.25,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.19999999999999996,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 5,
+                  "tp": 3,
+                  "fp": 0,
+                  "fn": 2,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.6,
+                  "f1": 0.75,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2008d": {
+              "n": 12,
+              "tp": 2,
+              "fp": 4,
+              "fn": 1,
+              "tn": 5,
+              "precision": 0.3333333333333333,
+              "recall": 0.6666666666666666,
+              "f1": 0.4444444444444444,
+              "balanced_accuracy": 0.6111111111111112,
+              "false_positive_rate": 0.4444444444444444,
+              "roc_auc": 0.7407407407407407,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 2,
+                  "fn": 0,
+                  "tn": 2,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.5,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 2,
+                  "fn": 0,
+                  "tn": 3,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.4,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 2,
+                  "fp": 0,
+                  "fn": 1,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.6666666666666666,
+                  "f1": 0.8,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2009a": {
+              "n": 11,
+              "tp": 3,
+              "fp": 0,
+              "fn": 0,
+              "tn": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "balanced_accuracy": 1.0,
+              "false_positive_rate": 0.0,
+              "roc_auc": 1.0,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 3,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 1.0,
+                  "f1": 1.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2009b": {
+              "n": 10,
+              "tp": 1,
+              "fp": 1,
+              "fn": 2,
+              "tn": 6,
+              "precision": 0.5,
+              "recall": 0.3333333333333333,
+              "f1": 0.4,
+              "balanced_accuracy": 0.5952380952380952,
+              "false_positive_rate": 0.1428571428571429,
+              "roc_auc": 0.6190476190476191,
+              "by_kind": {
+                "backchannel": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.19999999999999996,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 2,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 2,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 1,
+                  "fp": 0,
+                  "fn": 2,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.3333333333333333,
+                  "f1": 0.5,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2009d": {
+              "n": 13,
+              "tp": 4,
+              "fp": 2,
+              "fn": 1,
+              "tn": 6,
+              "precision": 0.6666666666666666,
+              "recall": 0.8,
+              "f1": 0.7272727272727273,
+              "balanced_accuracy": 0.775,
+              "false_positive_rate": 0.25,
+              "roc_auc": 0.825,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 3,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.25,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 3,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.25,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 5,
+                  "tp": 4,
+                  "fp": 0,
+                  "fn": 1,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.8,
+                  "f1": 0.8888888888888888,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            }
+          }
+        }
+      },
+      "wavlm": {
+        "point": {
+          "threshold": 0.9120559394359589,
+          "enabled": true,
+          "max_calibration_fpr": 0.05,
+          "objective": "minimum_false_positives_then_recall",
+          "min_calibration_precision": 0.9,
+          "minimum_true_positives": 3,
+          "calibration": {
+            "tp": 14,
+            "fp": 0,
+            "fn": 5,
+            "tn": 36,
+            "recall": 0.7368421052631579,
+            "fpr": 0.0,
+            "precision": 1.0
+          },
+          "backchannel": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "tn": 19,
+            "recall": null,
+            "fpr": 0.0,
+            "precision": null
+          },
+          "reason": "calibration_constraints_met"
+        },
+        "metrics": {
+          "n": 82,
+          "tp": 18,
+          "fp": 1,
+          "fn": 8,
+          "tn": 55,
+          "precision": 0.9473684210526315,
+          "recall": 0.6923076923076923,
+          "f1": 0.8,
+          "balanced_accuracy": 0.8372252747252746,
+          "false_positive_rate": 0.017857142857142905,
+          "roc_auc": 0.948489010989011,
+          "by_kind": {
+            "backchannel": {
+              "n": 27,
+              "tp": 0,
+              "fp": 1,
+              "fn": 0,
+              "tn": 26,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.03703703703703709,
+              "roc_auc": null
+            },
+            "single_or_turn": {
+              "n": 29,
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 29,
+              "precision": 0.0,
+              "recall": null,
+              "f1": 0.0,
+              "balanced_accuracy": null,
+              "false_positive_rate": 0.0,
+              "roc_auc": null
+            },
+            "sustained": {
+              "n": 26,
+              "tp": 18,
+              "fp": 0,
+              "fn": 8,
+              "tn": 0,
+              "precision": 1.0,
+              "recall": 0.6923076923076923,
+              "f1": 0.8181818181818182,
+              "balanced_accuracy": null,
+              "false_positive_rate": null,
+              "roc_auc": null
+            }
+          },
+          "fpr_wilson95_descriptive": [
+            0.0031592103419746734,
+            0.09445637149397576
+          ],
+          "by_meeting": {
+            "ES2008a": {
+              "n": 9,
+              "tp": 1,
+              "fp": 0,
+              "fn": 2,
+              "tn": 6,
+              "precision": 1.0,
+              "recall": 0.3333333333333333,
+              "f1": 0.5,
+              "balanced_accuracy": 0.6666666666666666,
+              "false_positive_rate": 0.0,
+              "roc_auc": 0.9444444444444444,
+              "by_kind": {
+                "backchannel": {
+                  "n": 2,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 2,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 1,
+                  "fp": 0,
+                  "fn": 2,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.3333333333333333,
+                  "f1": 0.5,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2008b": {
+              "n": 13,
+              "tp": 1,
+              "fp": 0,
+              "fn": 3,
+              "tn": 9,
+              "precision": 1.0,
+              "recall": 0.25,
+              "f1": 0.4,
+              "balanced_accuracy": 0.625,
+              "false_positive_rate": 0.0,
+              "roc_auc": 0.9166666666666666,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 5,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 4,
+                  "tp": 1,
+                  "fp": 0,
+                  "fn": 3,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.25,
+                  "f1": 0.4,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2008c": {
+              "n": 14,
+              "tp": 4,
+              "fp": 0,
+              "fn": 1,
+              "tn": 9,
+              "precision": 1.0,
+              "recall": 0.8,
+              "f1": 0.8888888888888888,
+              "balanced_accuracy": 0.9,
+              "false_positive_rate": 0.0,
+              "roc_auc": 0.9333333333333333,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 5,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 5,
+                  "tp": 4,
+                  "fp": 0,
+                  "fn": 1,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.8,
+                  "f1": 0.8888888888888888,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2008d": {
+              "n": 12,
+              "tp": 3,
+              "fp": 0,
+              "fn": 0,
+              "tn": 9,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "balanced_accuracy": 1.0,
+              "false_positive_rate": 0.0,
+              "roc_auc": 1.0,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 5,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 3,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 1.0,
+                  "f1": 1.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2009a": {
+              "n": 11,
+              "tp": 3,
+              "fp": 0,
+              "fn": 0,
+              "tn": 8,
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "balanced_accuracy": 1.0,
+              "false_positive_rate": 0.0,
+              "roc_auc": 1.0,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 3,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 1.0,
+                  "f1": 1.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2009b": {
+              "n": 10,
+              "tp": 1,
+              "fp": 0,
+              "fn": 2,
+              "tn": 7,
+              "precision": 1.0,
+              "recall": 0.3333333333333333,
+              "f1": 0.5,
+              "balanced_accuracy": 0.6666666666666666,
+              "false_positive_rate": 0.0,
+              "roc_auc": 0.9523809523809523,
+              "by_kind": {
+                "backchannel": {
+                  "n": 5,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 5,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 2,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 2,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 3,
+                  "tp": 1,
+                  "fp": 0,
+                  "fn": 2,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 0.3333333333333333,
+                  "f1": 0.5,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            },
+            "ES2009d": {
+              "n": 13,
+              "tp": 5,
+              "fp": 1,
+              "fn": 0,
+              "tn": 7,
+              "precision": 0.8333333333333334,
+              "recall": 1.0,
+              "f1": 0.9090909090909091,
+              "balanced_accuracy": 0.9375,
+              "false_positive_rate": 0.125,
+              "roc_auc": 1.0,
+              "by_kind": {
+                "backchannel": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 1,
+                  "fn": 0,
+                  "tn": 3,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.25,
+                  "roc_auc": null
+                },
+                "single_or_turn": {
+                  "n": 4,
+                  "tp": 0,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 4,
+                  "precision": 0.0,
+                  "recall": null,
+                  "f1": 0.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": 0.0,
+                  "roc_auc": null
+                },
+                "sustained": {
+                  "n": 5,
+                  "tp": 5,
+                  "fp": 0,
+                  "fn": 0,
+                  "tn": 0,
+                  "precision": 1.0,
+                  "recall": 1.0,
+                  "f1": 1.0,
+                  "balanced_accuracy": null,
+                  "false_positive_rate": null,
+                  "roc_auc": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "split": "test",
+    "calibration_sha256": "2348a848a8be72b345bc17472e2e6c86b8087fc0a4c3e9aa0c821564731bd3ae"
+  },
+  "known_russian_negative_controls": {
+    "role": "Previously observed Russian negative controls; no recall estimate",
+    "n": 4,
+    "false_positives": 0,
+    "threshold": 0.9120559394359589,
+    "items": [
+      {
+        "id": "rinco-ru-02",
+        "start_s": 0.168,
+        "label": 0,
+        "score": 0.810838520526886,
+        "overlap": false,
+        "enabled": true,
+        "experimental": true
+      },
+      {
+        "id": "rinco-ru-03",
+        "start_s": 0.573,
+        "label": 0,
+        "score": 0.42009320855140686,
+        "overlap": false,
+        "enabled": true,
+        "experimental": true
+      },
+      {
+        "id": "rinco-ru-04",
+        "start_s": 0.325,
+        "label": 0,
+        "score": 0.8709927797317505,
+        "overlap": false,
+        "enabled": true,
+        "experimental": true
+      },
+      {
+        "id": "rinco-ru-05",
+        "start_s": 0.962,
+        "label": 0,
+        "score": 0.46197864413261414,
+        "overlap": false,
+        "enabled": true,
+        "experimental": true
+      }
+    ],
+    "skipped_shorter_than_4s": [
+      "rinco-ru-01"
+    ]
+  },
+  "runtime": {
+    "python": "3.11.15",
+    "torch": "2.5.1",
+    "torchaudio": "2.5.1",
+    "device": "macOS ARM64 CPU, two threads",
+    "android_validated": false,
+    "head_parameters": 3073,
+    "encoder_parameters": 94381168,
+    "encoder_bytes": 377604347,
+    "head_torchscript_bytes": 40936,
+    "head_torchscript_sha256": "73a94f0092a6b328889113a035ddcdf36d91114eca7e6655dc9dac3dde06f66e",
+    "head_export_max_error": 0.0,
+    "end_to_end_export_max_error": 2.9802322387695312e-08
+  },
+  "limitations": [
+    "Small automatically derived window labels; no new listening audit",
+    "Few independent people and meetings; missing planned clips from HTTP errors/timeouts",
+    "No Russian positive-overlap test",
+    "No continuous-stream false-alarm rate or Android evaluation"
+  ]
+}
