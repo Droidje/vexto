@@ -96,7 +96,9 @@ final class ReflectTranscriptStore {
             ReflectTranscript existing = readTranscript(target);
             ReflectTranscript core = readTranscript(engineMarker(jobId, "published-core.json"));
             ReflectTranscript finalWritten = readTranscript(marker);
-            if (finalWritten != null && finalWritten.sameLines(existing)) {
+            ReflectTranscript enriched = readTranscript(engineMarker(jobId, "published-emotions.json"));
+            if (finalWritten != null && (finalWritten.sameLines(existing)
+                    || enriched != null && enriched.sameLines(existing))) {
                 return new EngineSave(existing, core, true);
             }
             if (existing != null && (core == null || !core.sameLines(existing))) {
@@ -106,6 +108,37 @@ final class ReflectTranscriptStore {
             writeAtomically(marker, data);
             writeAtomically(target, data);
             return new EngineSave(transcript, core, true);
+        }
+    }
+
+    /** Enrich only the job's unchanged dialogue. Never overwrite an imported or edited transcript. */
+    EngineSave saveEngineEmotions(File recording, String jobId, ReflectTranscript incoming) throws IOException {
+        File target = sidecar(recording, ".json");
+        File marker = engineMarker(jobId, "published-emotions.json");
+        synchronized (TRANSCRIPT_WRITE_LOCK) {
+            ReflectTranscript existing = readTranscript(target);
+            ReflectTranscript dialogue = readTranscript(engineMarker(jobId, "published-final.json"));
+            ReflectTranscript previous = readTranscript(marker);
+            if (existing == null || dialogue == null
+                    || !dialogue.sameLines(existing) && (previous == null || !previous.sameLines(existing))) {
+                return new EngineSave(existing, null, false);
+            }
+            if (!java.util.Arrays.equals(dialogue.encodeSpeakerRevision(), incoming.encodeSpeakerRevision())) {
+                throw new IOException("Emotion result does not match the original dialogue");
+            }
+            java.util.List<ReflectTranscript.Line> lines = new java.util.ArrayList<>(existing.lines.size());
+            for (int index = 0; index < existing.lines.size(); index++) {
+                var original = existing.lines.get(index);
+                var scored = incoming.lines.get(index);
+                lines.add(new ReflectTranscript.Line(original.speakerId, original.startMs, original.endMs,
+                        original.text, scored.emotionProbabilities, original.speakerName));
+            }
+            ReflectTranscript enriched = new ReflectTranscript(lines);
+            byte[] data = enriched.encode();
+            // Keep published-final immutable: either the base or this proof survives a process death.
+            writeAtomically(marker, data);
+            writeAtomically(target, data);
+            return new EngineSave(enriched, dialogue, true);
         }
     }
 

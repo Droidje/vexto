@@ -254,9 +254,12 @@ def verify_job(job_dir, allow_legacy=False):
         recorded = language_record(root)
         whisper_only = recorded is not None and recorded["route"] == "whisper_only"
         excluded = ({"GIGAAM", "SELECT"} if whisper_only else set()) | (
-            {"DENOISE", "EMOTION"} if fast else set())
+            {"DENOISE"} if fast else set())
         if fast and report["schemaVersion"] < 4:
             excluded.add("VOICEPRINT")  # Completed legacy FAST jobs intentionally omitted identity.
+            # v3 also exists both before and after background emotions were introduced.
+            if not any(stage.get("stage") == "EMOTION" for stage in report.get("stages", [])):
+                excluded.add("EMOTION")
         required_stages = tuple(name for name in STAGES if name not in excluded)
         if fast:
             check(not (root / "stages/DENOISE.result.json").exists() and view == "original.wav",

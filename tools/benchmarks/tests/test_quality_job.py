@@ -92,6 +92,7 @@ class QualityJobTests(unittest.TestCase):
                        whisperWorkers=2, gigaThreads=2, whisperThreads=2)
         self.put("processing-profile.json", profile)
         voice = self.path("stages/VOICEPRINT.result.json").read_bytes()
+        emotion = self.path("stages/EMOTION.result.json").read_bytes()
         for name in ("DENOISE", "EMOTION", "VOICEPRINT"):
             self.path(f"stages/{name}.result.json").unlink()
         self.report["stages"] = [s for s in self.report["stages"] if s["stage"] not in ("DENOISE", "EMOTION", "VOICEPRINT")]
@@ -104,6 +105,8 @@ class QualityJobTests(unittest.TestCase):
         self.assertFalse(validator.verify_job(self.job)["valid"])
         self.path("stages/VOICEPRINT.result.json").write_bytes(voice)
         self.report["stages"].append(json.loads(voice))
+        self.path("stages/EMOTION.result.json").write_bytes(emotion)
+        self.report["stages"].append(json.loads(emotion))
         self.put("completion.json", self.report)
         current = validator.verify_job(self.job)
         self.assertTrue(current["valid"], current["errors"])

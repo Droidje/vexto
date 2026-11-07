@@ -101,7 +101,8 @@ final class ReflectTranscriptController {
         view.transcriptView().waveform(null);
         view.transcriptView().speakerNames(Collections.emptyMap());
         render();
-        boolean processing = showProcessing && (startImmediately || local.progress(recording) != null);
+        var currentProgress = local.progress(recording);
+        boolean processing = showProcessing && (startImmediately || currentProgress != null && !currentProgress.backgroundEmotions());
         if (processing) view.processingView().content(length, local.progress(recording));
         view.show(processing ? ReflectView.Screen.PROCESSING : ReflectView.Screen.TRANSCRIPT);
         // Start the foreground service while the activity is visible, before loading metadata on IO.
@@ -197,7 +198,8 @@ final class ReflectTranscriptController {
     }
 
     void openRecordingTranscript() {
-        if (file == null || loading || !recordingDetails || local.progress(file) != null
+        var progress = local.progress(file);
+        if (file == null || loading || !recordingDetails || progress != null && !progress.backgroundEmotions()
                 || transcript == null || transcript.lines.isEmpty()) return;
         File recording = file;
         int current = generation;
@@ -548,14 +550,17 @@ final class ReflectTranscriptController {
         if (!recording.equals(file)) return;
         var progress = local.progress(file);
         if (view.screen() == ReflectView.Screen.PROCESSING) {
-            if (progress == null) showTranscriptAfterProcessing();
+            if (progress == null || progress.backgroundEmotions() && transcript != null) {
+                showTranscriptAfterProcessing();
+                view.transcriptView().transcription(progress);
+            }
             else view.processingView().content(length, progress);
         } else view.transcriptView().transcription(progress);
     }
 
     private void transcriptionFinished(ReflectLocalTranscription.Result result) {
         titles.backendBusy(local.busy());
-        view.updateLibraryProgress(result.recording(), null);
+        view.updateLibraryProgress(result.recording(), local.progress(result.recording()));
         if (result.recording().equals(file)) {
             if (result.transcript() != null) {
                 transcript = result.transcript();
@@ -567,7 +572,8 @@ final class ReflectTranscriptController {
             render();
             showTranscriptAfterProcessing();
         }
-        if (result.transcript() != null || !result.recording().equals(file)) {
+        if ((!result.metadataOnly() || result.message() != null)
+                && (result.transcript() != null || !result.recording().equals(file) || result.metadataOnly())) {
             notice.accept(result.message() == null ? "Расшифровка готова" : result.message());
         }
         refreshCatalog.run();
