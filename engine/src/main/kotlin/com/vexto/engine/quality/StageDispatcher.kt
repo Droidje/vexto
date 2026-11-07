@@ -74,6 +74,15 @@ internal object StageDispatcher {
                 val known = choices.mapTo(mutableSetOf()) { it.chunkId }
                 val warnings = mutableListOf<String>()
                 val tasks = chunkPlan().chunks
+                // An older cached executable still works with its conservative byte cap.
+                // Probe before opening a model session; do not send it the new larger envelope.
+                val contract = prepareOutput(File(job, "qwen-contract")).also { it.mkdirs() }
+                val help = File(contract, "help.stdout")
+                val info = runner.run("libvexto_llama_exec.so", listOf("--help"), contract,
+                    help, File(contract, "help.stderr"), 15_000)
+                nativePeak = maxOf(nativePeak, info.peakCombinedRssBytes)
+                val promptBytes = if (help.readText().contains(BoundedQwenRequest.Protocol)) BoundedQwenRequest.MaxPromptBytes
+                    else BoundedQwenRequest.MaxIdentityPromptBytes.also { warnings += "QWEN_LEGACY_PROMPT_LIMIT" }
                 var names = saved?.speakerNames
                 val cadence = CheckpointCadence()
                 var processed = known.size
@@ -84,7 +93,7 @@ internal object StageDispatcher {
                             nativePeak = maxOf(nativePeak, it.peakCombinedRssBytes)
                         }
                     }
-                    val selector = QwenAsrSelector(metered, models.file("qwen"))
+                    val selector = QwenAsrSelector(metered, models.file("qwen"), promptBuilder = SelectorPrompt(promptBytes))
                     for (chunk in tasks) {
                         currentCoroutineContext().ensureActive()
                         if (chunk.id in known) continue

@@ -112,7 +112,7 @@ internal class SpeakerNamePlan private constructor(
                 if (found.any { it.self && cue.self && it.name.equals(cue.name, true) && it.allowed != cue.allowed }) continue
                 val next = selected + cue
                 val candidate = render(transcript, ids, next)
-                if (candidate.prompt.toByteArray(Charsets.UTF_8).size <= BoundedQwenRequest.MaxPromptBytes) {
+                if (candidate.prompt.toByteArray(Charsets.UTF_8).size <= BoundedQwenRequest.MaxIdentityPromptBytes) {
                     selected += cue; request = candidate
                 }
             }

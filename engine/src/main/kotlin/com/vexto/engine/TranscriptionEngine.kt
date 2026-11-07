@@ -266,7 +266,7 @@ class TranscriptionEngine(context: Context) {
         } else RefinementPlan(emptyMap())
         JobFiles.save(File(job, "refinement-plan.json"), refinement)
         if (refinement.ids.isNotEmpty()) {
-            stage(Stage.Preparing) { progress -> QualityModelStore.prepareRefinement(context, progress) }
+            stage(Stage.Preparing) { progress -> QualityModelStore.prepareRefinement(context, slavic, progress) }
             val dependencies = listOf(planHash, JobFiles.sha256(File(job, "refinement-plan.json")))
             if (slavic) worker(WorkerStage.GIGAAM_REFINE, Stage.Recognition, view, viewHash,
                 dependencies, plan, refinement.ids)
@@ -275,7 +275,8 @@ class TranscriptionEngine(context: Context) {
         val effectiveRefs = CandidateSources.read(job, slavic)
         val review = worker(WorkerStage.SELECT, Stage.Selection, view, viewHash,
             listOf(planHash, JobFiles.json.encodeToString(giga?.candidates.orEmpty()),
-                JobFiles.json.encodeToString(effectiveRefs), JobFiles.sha256(turnsFile), SpeakerNamePlan.Version), plan)
+                JobFiles.json.encodeToString(effectiveRefs), JobFiles.sha256(turnsFile), SpeakerNamePlan.Version,
+                QwenAsrSelector.Version), plan)
         val reviewedChoices = review.choices
         val choices = reviewedChoices.associateBy { it.chunkId }.toMutableMap()
         // Failure is explicitly unresolved, never interpreted as a quality win for either recognizer.

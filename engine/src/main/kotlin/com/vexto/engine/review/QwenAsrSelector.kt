@@ -13,6 +13,7 @@ class QwenAsrSelector(
     private val promptBuilder: SelectorPrompt = SelectorPrompt(),
     private val timeoutMs: Long = 120_000,
 ) {
+    companion object { const val Version = "selector-native-token-budget-v2" }
     suspend fun selectAll(pairs: List<AsrCandidatePair>, workDir: File): List<AsrSelection> {
         require(pairs.map { it.chunkId }.distinct().size == pairs.size) { "duplicate_chunk_id" }
         pairs.forEach { require(it.chunkId.matches(Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,95}"))) }
@@ -50,6 +51,8 @@ class QwenAsrSelector(
             Charsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(stdout.readBytes())).toString()
         } catch (_: TimeoutCancellationException) {
             return fallback("selector_timeout")
+        } catch (_: NativeRequestRejectedException) {
+            return fallback("prompt_exceeds_context_budget")
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
