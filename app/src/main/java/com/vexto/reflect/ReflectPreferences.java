@@ -6,6 +6,10 @@ import android.content.SharedPreferences;
 import com.vexto.engine.model.ProcessingMode;
 
 final class ReflectPreferences {
+    static final String PUNCTUATION_OFF = "off";
+    static final String PUNCTUATION_SELF = "self";
+    static final String PUNCTUATION_ALL = "all";
+
     private final SharedPreferences store;
 
     ReflectPreferences(Context context) {
@@ -24,4 +28,14 @@ final class ReflectPreferences {
         catch (IllegalArgumentException | NullPointerException invalid) { return ProcessingMode.AUTO; }
     }
     void setProcessingMode(ProcessingMode mode) { store.edit().putString("processing_mode", mode.name()).apply(); }
+    String punctuation() {
+        String mode = store.getString("dialogue_corrector", PUNCTUATION_OFF);
+        return PUNCTUATION_SELF.equals(mode) || PUNCTUATION_ALL.equals(mode) ? mode : PUNCTUATION_OFF;
+    }
+
+    void setPunctuation(String mode) {
+        if (!PUNCTUATION_SELF.equals(mode) && !PUNCTUATION_ALL.equals(mode)) mode = PUNCTUATION_OFF;
+        store.edit().putString("dialogue_corrector", mode).apply();
+    }
+
 }

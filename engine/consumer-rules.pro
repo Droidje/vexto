@@ -3,3 +3,5 @@
 # JNI symbols are resolved by this exact class/method name.
 -keep class com.vexto.engine.pipeline.EmotionNative { *; }
 -keepclasseswithmembernames class com.vexto.engine.emotion.GigaAmOrt { native <methods>; }
+
+-keep class com.vexto.engine.punctuation.RuPunctOrt { *; }

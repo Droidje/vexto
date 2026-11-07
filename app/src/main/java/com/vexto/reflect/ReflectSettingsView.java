@@ -23,6 +23,7 @@ final class ReflectSettingsView extends ScrollView {
     private final ReflectPreferences preferences;
     private final Runnable openMicrophoneSettings;
     private int layoutWidth;
+    private TextView correctorHint;
 
     ReflectSettingsView(Context context, ReflectArtwork artwork, ReflectPreferences preferences,
                         Runnable openMicrophoneSettings) {
@@ -63,6 +64,10 @@ final class ReflectSettingsView extends ScrollView {
         LinearLayout transcript = card(style);
         style.append(transcript, style.text("Размер текста", 17, Color.WHITE, artwork.semibold), 2, 12);
         style.append(transcript, textSizes(style), 0, 10);
+        style.append(transcript, style.text("Корректор", 17, Color.WHITE, artwork.semibold), 8, 4);
+        style.append(transcript, correctorModes(style), 0, 6);
+        correctorHint = style.text(correctorHint(preferences.punctuation()), 14, ReflectPageStyle.MUTED, artwork.regular);
+        style.append(transcript, correctorHint, 0, 10);
         style.append(transcript, toggle(style, "Метки времени", preferences.timestamps(), false,
                 preferences::setTimestamps), 0, 0);
         style.append(root, transcript, 0, 22);
@@ -238,6 +243,52 @@ final class ReflectSettingsView extends ScrollView {
                     Math.round(Color.green(from) + (Color.green(to) - Color.green(from)) * fraction),
                     Math.round(Color.blue(from) + (Color.blue(to) - Color.blue(from)) * fraction));
         }
+    }
+
+    private LinearLayout correctorModes(ReflectPageStyle style) {
+        LinearLayout options = new LinearLayout(getContext());
+        options.setBackground(style.rounded(0xff343434, 20));
+        options.setPadding(style.px(3), style.px(3), style.px(3), style.px(3));
+        String[] modes = {ReflectPreferences.PUNCTUATION_OFF, ReflectPreferences.PUNCTUATION_SELF,
+                ReflectPreferences.PUNCTUATION_ALL};
+        String[] labels = {"Откл", "Для меня", "Все спикеры"};
+        String[] descriptions = {"Корректор выключен", "Корректор включён для меня",
+                "Корректор включён для всех спикеров"};
+        for (int i = 0; i < modes.length; i++) {
+            String mode = modes[i];
+            TextView item = style.text(labels[i], 13, Color.WHITE, artwork.medium);
+            item.setGravity(Gravity.CENTER);
+            item.setMaxLines(2);
+            item.setTag(mode);
+            item.setContentDescription(descriptions[i]);
+            item.setOnClickListener(view -> {
+                preferences.setPunctuation(mode);
+                if (correctorHint != null) correctorHint.setText(correctorHint(mode));
+                selectMode(options, style);
+            });
+            options.addView(item, new LinearLayout.LayoutParams(0, style.px(44), 1));
+        }
+        selectMode(options, style);
+        return options;
+    }
+
+    private void selectMode(LinearLayout options, ReflectPageStyle style) {
+        for (int i = 0; i < options.getChildCount(); i++) {
+            android.view.View item = options.getChildAt(i);
+            boolean selected = preferences.punctuation().equals(item.getTag());
+            item.setSelected(selected);
+            item.setBackground(style.pressable(selected ? 0xff575757 : Color.TRANSPARENT, 17));
+        }
+    }
+
+    private static String correctorHint(String mode) {
+        if (ReflectPreferences.PUNCTUATION_SELF.equals(mode)) {
+            return "Знаки препинания и регистр у спикера с отметкой «Вы».";
+        }
+        if (ReflectPreferences.PUNCTUATION_ALL.equals(mode)) {
+            return "Знаки препинания и регистр у всех спикеров.";
+        }
+        return "Расшифровка показывается как есть.";
     }
 
     private LinearLayout textSizes(ReflectPageStyle style) {
