@@ -129,3 +129,5 @@ bash gradlew -PvextoSkipNative=true :engine:testDebugUnitTest :app:testDebugUnit
 [Быстрые сравнения на открытых записях, Emo и шумоподавление](docs/research/quick-audio-features.md): короткие AMI train/test проверки с DER, опциональный GigaAM-Emo и полная стенограмма без саммаризации.
 
 [Русские разговоры, Community-1 и полный NeMo MSDD](docs/research/russian-diarization.md): короткие русские пробы, сравнение INT8/FP32 segmentation, отдельные результаты Android и ноутбука. Там же — прямой DER production-диаризатора из dev APK на тех же файлах.
+
+В быстром и качественном режимах Qwen может определить имена спикеров по представлениям и обращениям в диалоге: максимум один дополнительный запрос на запись с лимитом 10 секунд, без повторной загрузки уже работающей LLM. Неясные имена остаются «Спикер N», ручные имена имеют приоритет. [Подробности](docs/architecture/context-speaker-names.md).

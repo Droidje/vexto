@@ -37,21 +37,11 @@ class QwenAsrSelector(
             return fallback("candidate_identity_or_hash_mismatch")
         }
         if (!modelFile.isFile) return fallback("selector_model_unavailable")
-        val prompt = File(dir, "prompt.txt").apply { writeText(request.prompt) }
-        val schema = File(dir, "tool-schema.json").apply { writeText(request.schema) }
-        val template = File(dir, "nonthinking.jinja").apply { writeText(SelectorPrompt.NonThinkingTemplate) }
+        val args = BoundedQwenRequest.arguments(modelFile, request, dir)
         val stdout = File(dir, "selector.stdout")
         val stderr = File(dir, "selector.stderr")
         val response = try {
-            executor.run("libvexto_llama_exec.so", listOf(
-                "-m", modelFile.absolutePath, "--jinja", "--chat-template-file", template.absolutePath,
-                "--reasoning", "off", "-cnv", "--single-turn", "--simple-io", "--no-display-prompt",
-                "--no-context-shift", "-c", "1024", "-t", "2", "--threads-batch", "2",
-                "-b", "128", "-ub", "64", "-ngl", "0", "--no-repack", "--no-warmup",
-                "--cache-type-k", "f16", "--cache-type-v", "f16", "--seed", "42",
-                "--temp", "0", "--repeat-penalty", "1.0", "-n", "16",
-                "--json-schema-file", schema.absolutePath, "-f", prompt.absolutePath,
-            ), dir, stdout, stderr, timeoutMs)
+            executor.run("libvexto_llama_exec.so", args, dir, stdout, stderr, timeoutMs)
             if (!stdout.isFile || stdout.length() > 8192) {
                 return fallback("selector_response_missing_or_oversized")
             }

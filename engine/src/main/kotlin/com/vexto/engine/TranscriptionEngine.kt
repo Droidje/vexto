@@ -207,9 +207,10 @@ class TranscriptionEngine(context: Context) {
         }
         val whisper = worker(WorkerStage.WHISPER, Stage.Comparison, view, viewHash,
             listOf(planHash, recordingLanguage.whisperLanguage), plan)
-        val reviewedChoices = if (slavic) worker(WorkerStage.SELECT, Stage.Selection, view, viewHash,
+        val review = worker(WorkerStage.SELECT, Stage.Selection, view, viewHash,
             listOf(planHash, JobFiles.json.encodeToString(giga?.candidates.orEmpty()),
-                JobFiles.json.encodeToString(whisper.candidates)), plan).choices else emptyList()
+                JobFiles.json.encodeToString(whisper.candidates), JobFiles.sha256(turnsFile), SpeakerNamePlan.Version), plan)
+        val reviewedChoices = review.choices
         val choices = reviewedChoices.associateBy { it.chunkId }.toMutableMap()
         // Failure is explicitly unresolved, never interpreted as a quality win for either recognizer.
         val all = loadCandidates(job, plan, giga?.candidates.orEmpty() + whisper.candidates, warnings, allowMultiple = true)
@@ -254,6 +255,10 @@ class TranscriptionEngine(context: Context) {
         JobFiles.save(File(job, "selection.json"), choices.values.sortedBy { it.chunkId })
         JobFiles.write(File(job, "selected.txt"), plan.chunks.mapNotNull { selected[it.id]?.text }.joinToString("\n").toByteArray())
         var transcript = attachVoices(assembled.transcript)
+        review.speakerNames?.let { names ->
+            transcript = names.attach(transcript)
+            if (names.status !in setOf("resolved", "no_identity_cues")) warnings += "SPEAKER_NAMES:${names.status}"
+        }
         if (profile.speakerAnnotations) {
             val emotionTargets = UtteranceEmotionAnnotations.targets(transcript)
             val emotionTargetsFile = File(job, "emotion-targets.json")
@@ -280,8 +285,8 @@ class TranscriptionEngine(context: Context) {
         JobFiles.write(metadata, TranscriptExport.jsonWithMetadata(transcript).toByteArray(Charsets.UTF_8))
         val whisperName = if (profile.fast) "Whisper-small-q5_1" else "Whisper-large-v3-q5_0"
         val gigaName = if (profile.fast) "GigaAM-v3-e2e-ctc-int8" else "GigaAM-v3-e2e-rnnt-int8"
-        val asrModel = if (slavic) "$gigaName+$whisperName; selection-only Qwen3-1.7B-Q4_K_M"
-            else "$whisperName; language=${recordingLanguage.code}; gigaam_skipped"
+        val asrModel = if (slavic) "$gigaName+$whisperName; selection + context names Qwen3-1.7B-Q4_K_M"
+            else "$whisperName; language=${recordingLanguage.code}; gigaam_skipped; context names Qwen3-1.7B-Q4_K_M"
         val stats = ProcessingStats(audioMs, SystemClock.elapsedRealtime() - started, times,
             peak / (1024 * 1024), asrModel, 4,
             artifactDirectory = job.absolutePath, warnings = warnings.distinct(), complete = coverage.complete,

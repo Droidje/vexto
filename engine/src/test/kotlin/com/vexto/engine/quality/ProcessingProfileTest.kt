@@ -10,7 +10,7 @@ class ProcessingProfileTest {
         val fast = ProcessingProfile.resolve(ProcessingMode.AUTO, 300_001)
         assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.GIGAAM, WorkerStage.WHISPER, WorkerStage.SELECT),
             fast.expectedStages(slavic = true))
-        assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.WHISPER), fast.expectedStages(slavic = false))
+        assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.WHISPER, WorkerStage.SELECT), fast.expectedStages(slavic = false))
         assertFalse(fast.speakerAnnotations)
         assertTrue("qwen" in QualityManifest.FastRequired)
         assertTrue(QualityManifest.FastRequired.intersect(setOf("gtcrn", "emotion", "voiceprint_embedding")).isEmpty())
