@@ -178,6 +178,17 @@ public final class ReflectTranscriptionService extends Service {
             }
 
             @Override public void onError(Throwable error) {
+                // Never log model input, exception messages or private artifact paths.
+                String diagnostic = "Processing failed at " + started.progress.stage()
+                        + " (" + error.getClass().getSimpleName() + ")";
+                Throwable cause = error;
+                for (int depth = 0; cause != null && depth < 5; depth++, cause = cause.getCause()) {
+                    if (cause instanceof com.vexto.engine.runtime.NativeProcessException nativeError) {
+                        diagnostic += ": " + nativeError.getReason() + "/" + nativeError.getExitCode();
+                        break;
+                    }
+                }
+                Log.w(TAG, diagnostic);
                 String message = "Не удалось расшифровать запись. Можно повторить попытку.";
                 if (error instanceof AudioInputTooLongException) {
                     message = "Запись длиннее 4 часов. Разделите её на несколько частей.";

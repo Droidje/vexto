@@ -3,6 +3,9 @@ package com.vexto.engine.runtime
 import android.content.Context
 import android.os.Process as AndroidProcess
 import android.os.SystemClock
+import android.system.ErrnoException
+import android.system.Os
+import android.system.OsConstants
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -76,7 +79,8 @@ class NativeProcessRunner(
                     coroutineContext.ensureActive()
                     onTick?.invoke()
                     val observed = snapshot()
-                    observed.filter { it.pid !in existingPids && it.parentPid == AndroidProcess.myPid() && it.nativeExecutable }
+                    observed.filter { it.pid !in existingPids && it.parentPid == AndroidProcess.myPid() &&
+                        it.nativeExecutable && it.command == executable.absolutePath }
                         .forEach { if (registeredPids.add(it.pid to it.startTicks)) register(it) }
                     peak = maxOf(peak, observed.sumOf { it.rss })
                     rejectMemory(peak)
@@ -96,8 +100,9 @@ class NativeProcessRunner(
                 NativeProcessResult(peak, SystemClock.elapsedRealtime() - started)
             } finally {
                 child.destroyForcibly()
-                runCatching { cleanupOrphans() }
                 runCatching { child.waitFor(2, TimeUnit.SECONDS) }
+                registeredPids.forEach { (pid, _) -> forgetSessionPid(pid) }
+                runCatching { cleanupOrphans() }
             }
         }
     }
@@ -116,24 +121,44 @@ class NativeProcessRunner(
             if (pid in activeSessionPids) return@forEach
             val saved = runCatching { record.readLines() }.getOrDefault(emptyList())
             val process = live[pid]
-            // A sibling inference slot owns its live children. PDEATHSIG handles dead owners.
-            if (process != null && process.parentPid != AndroidProcess.myPid() && process.parentPid in live) return@forEach
-            if (process != null && process.nativeExecutable && saved.size == 2 &&
-                saved[0] == process.startTicks && saved[1] == process.command) {
+            // Release ART processes may hide /proc/<pid>/stat even from the same UID.
+            // Their executable children remain visible, so absence from snapshot is not death.
+            val parentAlive = process != null && (process.parentPid in live || parentMayBeAlive(process.parentPid))
+            if (process != null && NativeReaperPolicy.shouldReap(process, saved, uid,
+                    pid in activeSessionPids, parentAlive)) {
                 AndroidProcess.killProcess(pid)
             }
-            record.delete()
+            if (!parentAlive) record.delete()
+        }
+    }
+
+    private fun parentMayBeAlive(pid: Int): Boolean {
+        if (pid <= 1) return false
+        // status is less restricted than stat/cmdline. A same-UID parent is a live lease,
+        // including ordinary (non-persistent) invocations in this process.
+        val parentUid = runCatching { File("/proc/$pid/status").readLines()
+            .firstOrNull { it.startsWith("Uid:") }?.trim()?.split(Regex("\\s+"))
+            ?.getOrNull(1)?.toIntOrNull() }.getOrNull()
+        if (parentUid == uid) return true
+        return try {
+            Os.kill(pid, 0)
+            true
+        } catch (failure: ErrnoException) {
+            // EPERM, an unreadable /proc entry, or a transient probe error is not proof of death.
+            failure.errno != OsConstants.ESRCH
         }
     }
 
     internal fun register(process: Proc) {
+        // Publish the live lease before its shared registry record can be reaped.
+        activeSessionPids.add(process.pid)
         registry.mkdirs()
         File(registry, process.pid.toString()).writeText(process.startTicks + "\n" + process.command + "\n")
     }
 
     internal data class Proc(val pid: Int, val parentPid: Int, val rss: Long,
                             val nativeExecutable: Boolean, val command: String, val startTicks: String,
-                            val arguments: String)
+                            val arguments: String, val uid: Int)
 
     internal fun snapshot(): List<Proc> {
         val result = ArrayList<Proc>()
@@ -151,7 +176,7 @@ class NativeProcessRunner(
                 val native = command.startsWith(nativeDir.absolutePath + File.separator) &&
                     (File(command).name in Executables || File(command).name.replace("_avx2_exec.so", "_exec.so") in Executables)
                 val stat = File(directory, "stat").readText().substringAfterLast(')').trim().split(Regex("\\s+"))
-                result += Proc(pid, (number("PPid:") ?: 0L).toInt(), rss, native, command, stat[19], arguments)
+                result += Proc(pid, (number("PPid:") ?: 0L).toInt(), rss, native, command, stat[19], arguments, uid)
             } catch (_: IOException) { /* Process exited or /proc hides a different UID. */ }
         }
         check(result.any { it.pid == AndroidProcess.myPid() && it.rss > 0 }) { "Cannot observe app RSS" }
