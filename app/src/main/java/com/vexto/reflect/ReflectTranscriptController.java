@@ -47,6 +47,7 @@ final class ReflectTranscriptController {
     private final ReflectLocalTranscription local;
     private final ReflectExportController exports;
     private final ReflectSummaryController summaries;
+    private final UtteranceRecheckSession rechecks;
     private final ExecutorService correctionIo = Executors.newSingleThreadExecutor();
     private final DialogueCorrector corrector;
     private final ReflectTranscriptionOutcomes outcomes;
@@ -81,6 +82,7 @@ final class ReflectTranscriptController {
         corrector = new DialogueCorrector(activity);
         outcomes = new ReflectTranscriptionOutcomes(activity);
         summaries = new ReflectSummaryController(activity, store, titles, io, view.transcriptView()::summary);
+        rechecks = new UtteranceRecheckSession(activity, store, profiles, io);
         exports = new ReflectExportController(activity, view, io, profiles, notice);
         local = new ReflectLocalTranscription(activity, this::processingChanged, this::transcriptionFinished);
     }
@@ -88,6 +90,8 @@ final class ReflectTranscriptController {
     void open(File recording, String fallback, String length, int durationMs, boolean recordingDetails,
               boolean showProcessing, boolean startImmediately) {
         int current = ++generation;
+        rechecks.cancel();
+        view.transcriptView().rechecking(null);
         file = recording;
         title = fallback;
         this.length = length;
@@ -147,6 +151,7 @@ final class ReflectTranscriptController {
     void close() {
         ++generation;
         ++correctionSerial;
+        rechecks.cancel();
         file = null;
         transcript = null;
         metadata = null;
@@ -361,6 +366,37 @@ final class ReflectTranscriptController {
             });
         }
         menu.show();
+    }
+
+    void recheck(ReflectTranscript.Line line) {
+        if (recordingDetails || file == null || transcript == null || line == null) return;
+        if (local.busy()) {
+            notice.accept("Дождитесь окончания расшифровки");
+            return;
+        }
+        File recording = file;
+        rechecks.start(recording, transcript, line, generation, new UtteranceRecheckSession.Host() {
+            @Override public boolean current(int token) {
+                return token == generation && !activity.isDestroyed();
+            }
+
+            @Override public void shimmer(ReflectTranscript.Line value) {
+                view.transcriptView().rechecking(value);
+            }
+
+            @Override public void idle() { view.transcriptView().rechecking(null); }
+
+            @Override public void show(ReflectTranscript value) {
+                if (!recording.equals(file)) return;
+                transcript = value;
+                view.transcriptView().rechecking(null);
+                render();
+                refreshSpeakerNames(generation, recording);
+                refreshCatalog.run();
+            }
+
+            @Override public void message(String text) { notice.accept(text); }
+        });
     }
 
     void lineOptions(ReflectTranscript.Line line) {

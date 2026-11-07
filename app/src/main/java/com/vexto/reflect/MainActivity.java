@@ -677,6 +677,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override public void openTranscriptStyle() { transcripts.styleOptions(); }
     @Override public void playTranscriptAudio() { play(); }
     @Override public void openTranscriptLine(ReflectTranscript.Line line) { transcripts.lineOptions(line); }
+    @Override public void recheckTranscriptLine(ReflectTranscript.Line line) { transcripts.recheck(line); }
 
     @Override public void refreshSpeakers() { profilesUi.refreshSpeakers(); }
 

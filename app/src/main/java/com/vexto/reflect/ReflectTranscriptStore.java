@@ -166,6 +166,20 @@ final class ReflectTranscriptStore {
         writeAtomically(sidecar(recording, ".engine"), path.getName().getBytes(StandardCharsets.UTF_8));
     }
 
+    /** Decoded 16 kHz WAV from the job that produced this transcript, or null. */
+    File decodedWav(File recording) throws IOException {
+        File marker = sidecar(recording, ".engine");
+        if (!marker.isFile() || marker.length() > 80) return null;
+        String name = new String(Files.readAllBytes(marker.toPath()), StandardCharsets.UTF_8).trim();
+        if (!name.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) {
+            return null;
+        }
+        File root = new File(filesDirectory, "inference/jobs").getCanonicalFile();
+        File wav = new File(new File(root, name), "original.wav").getCanonicalFile();
+        if (!root.equals(wav.getParentFile().getParentFile()) || !wav.isFile()) return null;
+        return wav;
+    }
+
     String title(File recording, String fallback) {
         try {
             File path = sidecar(recording, ".title");
