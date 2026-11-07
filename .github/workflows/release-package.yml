@@ -26,17 +26,30 @@ jobs:
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist \
             --pattern vexto.apk --pattern 'vexto-models-*.apk' --pattern SHA256SUMS
           cd dist
-          test -f vexto.apk && test -f vexto-models-1.apk && test -f vexto-models-2.apk && test -f vexto-models-3.apk
+          python3 - <<'PYTHON'
+          import re
+          from pathlib import Path
+          expected = {"vexto.apk", *(f"vexto-models-{i}.apk" for i in range(1, 4))}
+          rows = Path("SHA256SUMS").read_text(encoding="ascii").splitlines()
+          names = []
+          for row in rows:
+              match = re.fullmatch(r"[0-9a-f]{64}  (vexto(?:-models-[123])?\.apk)", row)
+              if not match:
+                  raise SystemExit("Invalid release checksum row")
+              names.append(match[1])
+          if len(names) != len(expected) or set(names) != expected:
+              raise SystemExit("Expected one checksum for each release APK")
+          PYTHON
           sha256sum --strict -c SHA256SUMS
           build_tools="$ANDROID_HOME/build-tools/35.0.0"
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;35.0.0'
-          certificate=""
+          # Public fingerprint of the Vexto Android release certificate.
+          certificate="2d9ea63345fc4ddac9eae45651674f8f3a1e2ba3e15139ac54ca743027a5f6bc"
           for apk in vexto.apk vexto-models-{1,2,3}.apk; do
             proof=$("$build_tools/apksigner" verify --print-certs "$apk")
             current=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<<"$proof")
-            test -n "$current"
-            [[ -z "$certificate" || "$current" == "$certificate" ]]
-            certificate=$current
+            [[ "$current" == "$certificate" ]]
+            [[ "$(sed -n '/^Signer #[0-9][0-9]* certificate SHA-256 digest: /p' <<<"$proof" | wc -l)" -eq 1 ]]
           done
       - name: Publish the installable set to GitHub Packages
         env:
