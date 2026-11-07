@@ -51,6 +51,8 @@ final class ReflectTranscriptView extends FrameLayout {
         void cancelTranscription();
         void openTranscriptOptions();
         void openTranscriptStyle();
+        void toggleSummary();
+        void retrySummary();
         void playTranscriptAudio();
         void seekPlayback(float fraction);
         void seekPlaybackMillis(int millis);
@@ -78,6 +80,10 @@ final class ReflectTranscriptView extends FrameLayout {
     private ProgressBar progressBar;
     private ReflectLocalTranscription.Progress transcription;
     private ListView list;
+    private ReflectSummaryState summaryState;
+    private LinearLayout summaryHeader;
+    private ReflectSummaryPanel summaryPanel;
+    private ReflectSummaryIcon summaryIcon;
     private View scrollContent, toolsGlass;
 
     ReflectTranscriptView(Context context, ReflectArtwork artwork, ReflectPreferences preferences, Actions actions) {
@@ -126,6 +132,20 @@ final class ReflectTranscriptView extends FrameLayout {
         else updateProgress();
     }
 
+    void summary(ReflectSummaryState state) {
+        boolean opening = summaryState == null && state != null;
+        summaryState = state;
+        if (summaryHeader != null) summaryHeader.setVisibility(state == null ? GONE : VISIBLE);
+        if (summaryPanel != null) summaryPanel.show(state);
+        if (summaryIcon != null) summaryIcon.setPanelOpen(state != null);
+        if (opening && list != null) {
+            ListView current = list;
+            current.post(() -> {
+                if (list == current && summaryState != null) current.setSelectionFromTop(0, 0);
+            });
+        }
+    }
+
     void refreshStyle() {
         refresh = true;
         requestLayout();
@@ -154,6 +174,10 @@ final class ReflectTranscriptView extends FrameLayout {
         toolsGlass = null;
         progressText = null;
         progressBar = null;
+        summaryHeader = null;
+        summaryPanel = null;
+        summaryIcon = null;
+        summaryState = null;
         transcription = null;
         refresh = true;
     }
@@ -176,17 +200,22 @@ final class ReflectTranscriptView extends FrameLayout {
         for (int index = 0; index < list.getChildCount(); index++) {
             if (list.getChildAt(index) instanceof TranscriptRow row) row.highlight(firstLine + index, true);
         }
-        if (current >= 0) followLine(current);
+        if (current >= 0 && !summaryVisibleInList()) followLine(current);
     }
 
     void playbackSeeked(boolean playing, int position) {
         int previous = activeLine;
+        boolean followingPausedForSummary = summaryVisibleInList();
         playback(playing, position);
         if (recordingDetails) return;
         pendingSeekFollow = list == null || lines.isEmpty();
-        if (!pendingSeekFollow && (activeLine < 0 || activeLine == previous)) {
+        if (!pendingSeekFollow && (followingPausedForSummary || activeLine < 0 || activeLine == previous)) {
             followLine(timeline.atSeek(position));
         }
+    }
+
+    private boolean summaryVisibleInList() {
+        return summaryState != null && list != null && list.getFirstVisiblePosition() == 0;
     }
 
     private void followLine(int index) {
@@ -215,6 +244,9 @@ final class ReflectTranscriptView extends FrameLayout {
         conversationPlayer = null;
         progressText = null;
         progressBar = null;
+        summaryHeader = null;
+        summaryPanel = null;
+        summaryIcon = null;
         list = new ListView(getContext());
         list.setDivider(null);
         list.setVerticalScrollBarEnabled(false);
@@ -229,6 +261,12 @@ final class ReflectTranscriptView extends FrameLayout {
         } else {
             style.append(content, titleView(), 0, hasAudio ? 12 : 16);
             if (hasAudio) addPlayer(content, "разговор");
+            summaryHeader = style.column();
+            summaryHeader.setVisibility(summaryState == null ? GONE : VISIBLE);
+            summaryPanel = new ReflectSummaryPanel(getContext(), style, actions::toggleSummary, actions::retrySummary);
+            addInset(summaryHeader, summaryPanel, 0, 12);
+            summaryPanel.show(summaryState);
+            list.addHeaderView(summaryHeader, null, false);
             if (lines.isEmpty()) {
                 LinearLayout details = style.column();
                 addInset(details, transcriptionCard(), 0, 12);
@@ -263,7 +301,15 @@ final class ReflectTranscriptView extends FrameLayout {
         if (recordingDetails) return;
 
         pill(16, 28, 144, 48, true);
-        icon("transcript_more", "Действия транскрипта", 16, 28, 48, 48, true, actions::openTranscriptOptions);
+        summaryIcon = new ReflectSummaryIcon(getContext(), artwork, preferences, layoutWidth / 393f);
+        summaryIcon.setEnabled(!lines.isEmpty());
+        summaryIcon.setPanelOpen(summaryState != null);
+        summaryIcon.setAlpha(lines.isEmpty() ? .55f : 1f);
+        summaryIcon.setFocusable(true);
+        summaryIcon.setBackground(new RippleDrawable(ColorStateList.valueOf(0x30ffffff), null,
+                style.rounded(Color.WHITE, 24)));
+        summaryIcon.setOnClickListener(v -> actions.toggleSummary());
+        place(summaryIcon, 16, 28, 48, 48, true);
         icon("transcript_add", "Импортировать транскрипт", 64, 28, 48, 48, true, actions::importTranscript);
         icon("transcript_style", "Настройки чтения", 112, 28, 48, 48, true, actions::openTranscriptStyle);
     }

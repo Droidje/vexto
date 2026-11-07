@@ -508,6 +508,8 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     @Override public void importTranscript() { transcripts.pick(); }
     @Override public void transcribeRecording() { transcripts.transcribe(); }
     @Override public void cancelTranscription() { transcripts.cancelTranscription(); }
+    @Override public void toggleSummary() { transcripts.toggleSummary(); }
+    @Override public void retrySummary() { transcripts.retrySummary(); }
     @Override public void openTranscriptOptions() { transcripts.options(); }
     @Override public void openTranscriptStyle() { transcripts.styleOptions(); }
     @Override public void playTranscriptAudio() { play(); }

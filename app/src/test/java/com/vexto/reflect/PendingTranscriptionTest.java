@@ -111,6 +111,22 @@ public class PendingTranscriptionTest {
         assertEquals("Импорт пользователя", store.load(recording).lines.get(0).text);
     }
 
+    @Test public void summaryIsReusedOnlyForTheSameTranscript() throws Exception {
+        var store = new ReflectTranscriptStore(context.getFilesDir());
+        var original = transcript("Встреча состоится в пятницу");
+        String fingerprint = ReflectSummaryController.sourceOf(original).fingerprint();
+        store.save(recording, original);
+        assertTrue(store.saveSummary(recording, fingerprint, "Договорились встретиться в пятницу."));
+
+        var reopened = new ReflectTranscriptStore(context.getFilesDir());
+        assertEquals("Договорились встретиться в пятницу.", reopened.loadSummary(recording, fingerprint));
+        var replacement = transcript("Встречу перенесли на понедельник");
+        reopened.save(recording, replacement);
+        assertNull(reopened.loadSummary(recording, ReflectSummaryController.sourceOf(replacement).fingerprint()));
+        assertFalse(reopened.saveSummary(recording, fingerprint, "Устаревший результат"));
+        assertEquals("Встречу перенесли на понедельник", reopened.load(recording).lines.get(0).text);
+    }
+
     private static ReflectTranscript transcript(String text) {
         return new ReflectTranscript(Collections.singletonList(new ReflectTranscript.Line("speaker_1", 0, 1000, text)));
     }

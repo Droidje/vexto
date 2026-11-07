@@ -40,6 +40,7 @@ final class ReflectTranscriptController {
     private final SpeakerProfilesUi profilesUi;
     private final ReflectLocalTranscription local;
     private final ReflectExportController exports;
+    private final ReflectSummaryController summaries;
     private RecordingExport restoreExport;
     private File file;
     private final Set<File> importing = new HashSet<>();
@@ -66,6 +67,7 @@ final class ReflectTranscriptController {
         this.refreshCatalog = refreshCatalog;
         this.profiles = profiles;
         this.profilesUi = profilesUi;
+        summaries = new ReflectSummaryController(activity, store, io, view.transcriptView()::summary);
         exports = new ReflectExportController(activity, view, io, profiles, notice);
         local = new ReflectLocalTranscription(activity, this::processingChanged, this::transcriptionFinished);
     }
@@ -132,6 +134,7 @@ final class ReflectTranscriptController {
         file = null;
         transcript = null;
         metadata = null;
+        summaries.content(null, null);
         view.transcriptView().clear();
     }
 
@@ -141,7 +144,13 @@ final class ReflectTranscriptController {
         if (active != null) processingChanged(active);
     }
 
-    void destroy() { local.close(); }
+    void destroy() {
+        summaries.destroy();
+        local.close();
+    }
+
+    void toggleSummary() { summaries.toggle(); }
+    void retrySummary() { summaries.retry(); }
 
     void transcribe() {
         if (file == null || loading || recordingDetails || transcript != null) return;
@@ -385,6 +394,7 @@ final class ReflectTranscriptController {
     private void render() {
         view.transcriptView().content(title, length, durationMs, transcript, file != null,
                 loading, issue, recordingDetails, metadata, local.progress(file));
+        summaries.content(recordingDetails ? null : file, transcript);
         restoreExportIfReady();
     }
 
