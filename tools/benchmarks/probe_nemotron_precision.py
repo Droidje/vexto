@@ -38,8 +38,27 @@ def main():
     parser.add_argument('--models', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--rebuild-frontend', action='store_true')
+    parser.add_argument('--prepare-native-only', action='store_true')
+    parser.add_argument('--prepared-native', action='store_true')
     args = parser.parse_args()
     out = args.output.resolve(); out.mkdir(parents=True, exist_ok=True)
+    lib = out / 'native'; lib.mkdir(exist_ok=True)
+    stamp = lib / 'frontend.sha256'
+    frontend_hash = hashlib.sha256(Path('tools/native/nemotron_main.cpp').read_bytes()).hexdigest()
+    if args.prepared_native:
+        if stamp.read_text().strip() != frontend_hash:
+            raise RuntimeError('Prepared native frontend differs from this checkout')
+    else:
+        with zipfile.ZipFile(args.apk) as apk:
+            for name in apk.namelist():
+                if name.startswith('lib/x86_64/') and name.endswith('.so'):
+                    (lib / Path(name).name).write_bytes(apk.read(name))
+        if args.rebuild_frontend:
+            rebuild_frontend(lib, args.models)
+            stamp.write_text(frontend_hash + '\n')
+    if args.prepare_native_only:
+        if not args.rebuild_frontend: raise ValueError('Prepare-only needs a current frontend rebuild')
+        return
     def adb(*items, timeout=60):
         return subprocess.check_output(['adb', '-s', 'emulator-5554', *items], text=True, timeout=timeout)
     memory = adb('shell', 'cat /proc/meminfo')
@@ -50,13 +69,6 @@ def main():
     avx = {'avx', 'avx2', 'fma', 'f16c', 'sse4_2'} <= flags
     remote = '/data/local/tmp/vexto-precision-probe'
     adb('shell', 'mkdir -p ' + remote)
-    lib = out / 'native'; lib.mkdir(exist_ok=True)
-    with zipfile.ZipFile(args.apk) as apk:
-        for name in apk.namelist():
-            if name.startswith('lib/x86_64/') and name.endswith('.so'):
-                (lib / Path(name).name).write_bytes(apk.read(name))
-    if args.rebuild_frontend:
-        rebuild_frontend(lib, args.models)
     for path in lib.glob('*.so'): adb('push', str(path), remote + '/' + path.name)
     adb('shell', 'chmod 700 ' + remote + '/*.so')
     for precision in ('f32', 'f16', 'q8_0'):

@@ -46,7 +46,8 @@ internal object StageDispatcher {
                         ids.getValue(row.speakerId), row.startMs, row.endMs) }
                     JobFiles.save(File(job, "diarization-progress.json"), DiarizationProgress(frontier, partial))
                 }
-                val diarized = LongRecordingDiarization.run(models.file("nemotron"), input, work, runner, stable)
+                val diarized = LongRecordingDiarization.run(models.file("nemotron"), input, work, runner,
+                    threads = if (request.streaming) 2 else 4, onStable = stable)
                 val result = diarized.result
                 val ids = result.turns.sortedBy { it.startMs }.map { it.speakerId }.distinct().withIndex().associate { it.value to it.index }
                 val durationMs = com.vexto.engine.audio.PcmWave.inspect(input).sampleCount / 16

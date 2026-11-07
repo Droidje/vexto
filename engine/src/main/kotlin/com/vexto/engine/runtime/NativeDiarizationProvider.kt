@@ -25,14 +25,15 @@ object RttmParser {
 
 object NativeDiarizationProvider {
     suspend fun run(model: File, inputWav: File, outRttm: File, workDir: File,
-                    runner: NativeProcessRunner,
+                    runner: NativeProcessRunner, threads: Int = 4,
                     onStable: ((Long, List<NativeSpeakerTurn>) -> Unit)? = null): NativeDiarizationResult {
         require(model.isFile && inputWav.isFile)
+        require(threads == 2 || threads == 4)
         require(!outRttm.exists()) { "Refusing stale RTTM output" }
         val progress = File(workDir, "stable-prefix.rttm")
         var frontier = -1L
         val args = listOf(model.absolutePath, inputWav.absolutePath,
-            "--gpu", "-1", "--preset", "v3-offline", "--rttm", "recording") +
+            "--gpu", "-1", "--preset", "v3-offline", "--rttm", "recording", "--threads", threads.toString()) +
             if (onStable == null) emptyList() else listOf("--progress", progress.absolutePath)
         val result = runner.run("libvexto_nemotron_exec.so", args, workDir,
             outRttm, File(workDir, "nemotron.stderr.log"), 30 * 60 * 1000L) {

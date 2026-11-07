@@ -211,6 +211,21 @@ jobs:
         run: bash scripts/prepare_release_models.sh "$RUNNER_TEMP/precision"
       - name: Install pinned frontend compiler
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.2.13676358"'
+      - name: Compile probe frontend and retire conversion dependencies
+        run: |
+          python3 tools/benchmarks/probe_nemotron_precision.py --apk unsigned/app-release-unsigned.apk --models "$RUNNER_TEMP/precision/converted/nemotron" --output .agents/work/precision-results --rebuild-frontend --prepare-native-only
+          python3 - <<'PY'
+          import os, shutil
+          from pathlib import Path
+          work = Path(os.environ['RUNNER_TEMP']) / 'precision'
+          # All remaining probe code is stdlib; retain weights + conversion manifests.
+          for path in work.iterdir():
+              if path.name in ('converted', 'requirements.txt'): continue
+              if path.is_dir(): shutil.rmtree(path)
+              else: path.unlink()
+          ndk = Path(os.environ['ANDROID_HOME']) / 'ndk/28.2.13676358'
+          shutil.rmtree(ndk)
+          PY
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -223,8 +238,8 @@ jobs:
           import os, shutil
           from pathlib import Path
           target = Path('/mnt/vexto-precision-avd')
-          if shutil.disk_usage(target).free < 9 * 1024**3:
-              raise RuntimeError('Need 9GiB free for the disposable Pixel userdata image')
+          if shutil.disk_usage(target).free < 7 * 1024**3:
+              raise RuntimeError('Need 7GiB free for disposable Pixel + system image')
           link = Path.home() / '.android/avd'
           link.parent.mkdir(exist_ok=True)
           if link.exists():
@@ -241,8 +256,10 @@ jobs:
           profile: pixel_7
           ram-size: 4096M
           cores: 4
+          disk-size: 4G
+          emulator-boot-timeout: 180
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 4096 -cores 4 -no-metrics -accel on
-          script: python3 tools/benchmarks/probe_nemotron_precision.py --apk unsigned/app-release-unsigned.apk --models "${{ runner.temp }}/precision/converted/nemotron" --output .agents/work/precision-results --rebuild-frontend
+          script: python3 tools/benchmarks/probe_nemotron_precision.py --apk unsigned/app-release-unsigned.apk --models "${{ runner.temp }}/precision/converted/nemotron" --output .agents/work/precision-results --prepared-native
       - uses: actions/upload-artifact@v7
         if: always()
         with:

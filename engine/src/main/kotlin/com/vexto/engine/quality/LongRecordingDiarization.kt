@@ -12,7 +12,7 @@ internal data class DiarizationOutput(val result: NativeDiarizationResult, val w
 
 /** Same Nemotron model. Recordings longer than five minutes do not spend it on long pauses. */
 internal object LongRecordingDiarization {
-    suspend fun run(model: File, input: File, work: File, runner: NativeProcessRunner,
+    suspend fun run(model: File, input: File, work: File, runner: NativeProcessRunner, threads: Int = 4,
                     onStable: ((Long, List<NativeSpeakerTurn>) -> Unit)? = null): DiarizationOutput {
         val plan = DiarizationTimeline.plan(input)
         JobFiles.save(File(work, "timeline.json"), mapOf(
@@ -24,7 +24,7 @@ internal object LongRecordingDiarization {
         val warning = if (!plan.compacted) emptyList() else listOf(
             "DIARIZATION_COMPACT:kept_ms=${plan.sampleCount * 1000 / 16000 - plan.omittedSamples * 1000 / 16000}:omitted_ms=${plan.omittedSamples * 1000 / 16000}")
         if (!plan.compacted) {
-            return DiarizationOutput(NativeDiarizationProvider.run(model, input, File(work, "turns.rttm"), work, runner, onStable), warning)
+            return DiarizationOutput(NativeDiarizationProvider.run(model, input, File(work, "turns.rttm"), work, runner, threads, onStable), warning)
         }
         if (plan.kept.isEmpty()) {
             JobFiles.write(File(work, "turns.rttm"), ByteArray(0))
@@ -47,7 +47,7 @@ internal object LongRecordingDiarization {
             }
             listener(original / 16, mapped)
         } }
-        val native = NativeDiarizationProvider.run(model, compact, File(work, "compact.rttm"), work, runner, mappedStable)
+        val native = NativeDiarizationProvider.run(model, compact, File(work, "compact.rttm"), work, runner, threads, mappedStable)
         val restored = DiarizationTimeline.remap(plan, native.turns.map {
             DiarizationTimeline.SpeakerInterval(it.speakerId, it.startMs, it.endMs)
         }).map { NativeSpeakerTurn(it.speakerId, it.startMs, it.endMs) }

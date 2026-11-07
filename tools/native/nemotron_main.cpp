@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -42,16 +43,17 @@ static uint32_t open_pcm(std::ifstream& file) {
 
 int main(int argc, char** argv) {
     if (argc == 2 && std::string(argv[1]) == "--help") {
-        std::puts("Vexto Nemotron: MODEL PCM16_WAV --gpu -1 --preset v3-offline --rttm ID [--progress PATH]");
+        std::puts("Vexto Nemotron: MODEL PCM16_WAV --gpu -1 --preset v3-offline --rttm ID [--progress PATH] [--threads 2|4]");
         return 0;
     }
     if (argc < 3) { std::fprintf(stderr, "usage: native MODEL WAV --gpu -1 --preset v3-offline --rttm ID\n"); return 1; }
-    std::string recording = "recording", progress_path;
+    std::string recording = "recording", progress_path, threads = "4";
     for (int i = 3; i < argc; i += 2) {
         if (i + 1 >= argc) return 1;
         std::string flag = argv[i], value = argv[i + 1];
         if (flag == "--rttm") recording = value;
         else if (flag == "--progress") progress_path = value;
+        else if (flag == "--threads" && (value == "2" || value == "4")) threads = value;
         else if ((flag == "--gpu" && value == "-1") || (flag == "--preset" && value == "v3-offline")) {}
         else return 1;
     }
@@ -59,6 +61,7 @@ int main(int argc, char** argv) {
     nemo_speech_diar_model* model = nullptr;
     nemo_speech_diar_stream* stream = nullptr;
     try {
+        if (setenv("VEXTO_NEMOTRON_THREADS", threads.c_str(), 1)) throw std::runtime_error("Cannot set thread budget");
         std::ifstream input(argv[2], std::ios::binary);
         uint32_t remaining = open_pcm(input);
         nemo_speech_diar_model_config cfg = {};

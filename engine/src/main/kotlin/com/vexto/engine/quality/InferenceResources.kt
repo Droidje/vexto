@@ -41,7 +41,7 @@ internal object InferenceResources {
 
     fun cost(request: WorkerRequest, profile: ProcessingProfile): Cost = when (request.stage) {
         WorkerStage.DENOISE -> Cost(2, 160_000_000)
-        WorkerStage.DIARIZE -> Cost(2, 600_000_000)
+        WorkerStage.DIARIZE -> Cost(if (request.streaming) 2 else 4, 600_000_000)
         WorkerStage.VOICEPRINT -> Cost(2, 250_000_000)
         WorkerStage.EMOTION -> Cost(2, 650_000_000)
         WorkerStage.SELECT -> Cost(2, 1_650_000_000)
