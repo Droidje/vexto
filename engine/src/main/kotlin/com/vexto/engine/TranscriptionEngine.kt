@@ -85,7 +85,8 @@ class TranscriptionEngine(context: Context) {
         val giga = worker(WorkerStage.GIGAAM, Stage.Recognition, view)
         val gigaCandidates = loadCandidates(job, plan, giga.candidates, warnings)
         if (gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
-            val core = attachVoices(assembler.assemble(plan, gigaCandidates, turns).transcript)
+            val core = attachVoices(AcousticTurnTranscript.place(
+                assembler.assemble(plan, gigaCandidates, turns).transcript, turns))
             // Originals are already durable before this callback. Refinement never destroys this checkpoint.
             JobFiles.write(File(job, "core.txt"), plan.chunks.joinToString("\n") { gigaCandidates.getValue(it.id).text }.toByteArray())
             JobFiles.write(File(job, "core.json"), TranscriptExport.json(core).toByteArray(Charsets.UTF_8))
@@ -109,7 +110,15 @@ class TranscriptionEngine(context: Context) {
                 selection.status.name, selection.audit.reason)
         }
         val selected = loadCandidates(job, plan, choices.values.map { it.candidate }, warnings)
-        val assembled = stage(Stage.Assembly) { assembler.assemble(plan, selected, turns) }
+        // Qwen may pick a Whisper chunk that drops words. The scored text stays the raw GigaAM candidate.
+        val display = if (gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
+            warnings += "EXPORT_TEXT:gigaam_raw"
+            gigaCandidates
+        } else selected
+        val assembled = stage(Stage.Assembly) {
+            val base = assembler.assemble(plan, display, turns)
+            base.copy(transcript = AcousticTurnTranscript.place(base.transcript, turns))
+        }
         if (assembled.estimatedTimingChunks.isNotEmpty()) warnings += "Estimated display word timing: ${assembled.estimatedTimingChunks.joinToString()}"
         val unresolved = choices.values.count { it.status == AsrSelectionStatus.UNRESOLVED.name }
         if (unresolved > 0) warnings += "LLM_UNRESOLVED:$unresolved (display fallback only; both originals retained)"
