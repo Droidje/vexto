@@ -1,5 +1,7 @@
 package com.vexto.reflect;
 
+import com.vexto.engine.ReflectEngine;
+
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -42,6 +44,7 @@ final class ReflectTranscriptController {
     private final IntConsumer playFrom;
     private final Runnable playAudio;
     private final Runnable refreshCatalog;
+    private final Runnable closeDetail;
     private final SpeakerProfiles profiles;
     private final SpeakerProfilesUi profilesUi;
     private final ReflectLocalTranscription local;
@@ -64,7 +67,7 @@ final class ReflectTranscriptController {
     ReflectTranscriptController(Activity activity, ReflectView view, ReflectPreferences preferences,
                                 ReflectTranscriptStore store, ReflectConversationStore conversations, ReflectConversationTitles titles,
                                 ExecutorService io, Consumer<String> notice,
-                                IntConsumer playFrom, Runnable playAudio, Runnable refreshCatalog,
+                                IntConsumer playFrom, Runnable playAudio, Runnable refreshCatalog, Runnable closeDetail,
                                 SpeakerProfiles profiles, SpeakerProfilesUi profilesUi) {
         this.activity = activity;
         this.view = view;
@@ -77,6 +80,7 @@ final class ReflectTranscriptController {
         this.playFrom = playFrom;
         this.playAudio = playAudio;
         this.refreshCatalog = refreshCatalog;
+        this.closeDetail = closeDetail;
         this.profiles = profiles;
         this.profilesUi = profilesUi;
         corrector = new DialogueCorrector(activity);
@@ -346,7 +350,7 @@ final class ReflectTranscriptController {
                 menu.option(view.transcriptView().isPlaying() ? "Приостановить" : "Прослушать аудио", playAudio);
             }
             menu.option("Переименовать", this::rename);
-            if (!recordingDetails) menu.option("Импортировать транскрипт", this::pick);
+            if (recordingDetails) menu.option("Удалить", ReflectPageStyle.DANGER, this::requestDeleteRecording);
         }
         if (!recordingDetails) menu.option("Настройки чтения", this::styleOptions);
         menu.show();
@@ -479,6 +483,38 @@ final class ReflectTranscriptController {
         input.requestFocus();
         editor.dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
         editor.show();
+    }
+
+    private void requestDeleteRecording() {
+        if (file == null || loading) return;
+        File recording = file;
+        int current = generation;
+        ReflectActionSheet confirmation = sheet("Удалить запись?");
+        TextView description = confirmation.style.text(
+                "Аудиозапись и связанный разговор будут удалены без возможности восстановления.",
+                15, ReflectPageStyle.MUTED, confirmation.style.art.regular);
+        confirmation.style.append(confirmation.root, description, 0, 12);
+        confirmation.option("Отмена", () -> {});
+        confirmation.option("Удалить запись", ReflectPageStyle.DANGER, () -> {
+            if (local.busy() || ReflectEngine.transcriptionBusy() || importing.contains(recording)) {
+                notice.accept("Дождитесь завершения обработки");
+                return;
+            }
+            rechecks.cancel();
+            summaries.cancel(recording);
+            io.execute(() -> {
+                try {
+                    new RecordingDeletion(activity, conversations, profiles).delete(recording);
+                    activity.runOnUiThread(() -> {
+                        if (!activity.isDestroyed()) refreshCatalog.run();
+                    });
+                    deliver(current, closeDetail);
+                } catch (IOException | RuntimeException failure) {
+                    deliver(current, () -> notice.accept("Не удалось удалить запись"));
+                }
+            });
+        });
+        confirmation.show();
     }
 
     void requestDeleteConversation(Runnable closed) {

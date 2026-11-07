@@ -7,13 +7,11 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Outline;
 import android.graphics.drawable.RippleDrawable;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewOutlineProvider;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
@@ -49,12 +47,6 @@ final class SpeakerProfileView extends FrameLayout {
         this.menu = menu;
         this.rename = rename;
         this.openUtterance = openUtterance;
-        setOutlineProvider(new ViewOutlineProvider() {
-            @Override public void getOutline(View view, Outline outline) {
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), view.getWidth() * 47f / 393f);
-            }
-        });
-        setClipToOutline(true);
     }
 
     void content(SpeakerDirectory.Detail next) {

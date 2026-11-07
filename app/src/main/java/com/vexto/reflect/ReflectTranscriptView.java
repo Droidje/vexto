@@ -8,7 +8,6 @@ import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Path;
 import android.graphics.Color;
-import android.graphics.Outline;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
@@ -22,7 +21,6 @@ import android.view.Gravity;
 import android.view.TouchDelegate;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewOutlineProvider;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.AbsListView;
 import android.widget.BaseAdapter;
@@ -109,12 +107,6 @@ final class ReflectTranscriptView extends FrameLayout {
         this.artwork = artwork;
         this.preferences = preferences;
         this.actions = actions;
-        setOutlineProvider(new ViewOutlineProvider() {
-            @Override public void getOutline(View view, Outline outline) {
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), view.getWidth() * 47f / 393f);
-            }
-        });
-        setClipToOutline(true);
     }
 
     void content(String title, String length, int durationMs, ReflectTranscript transcript,
@@ -447,14 +439,13 @@ final class ReflectTranscriptView extends FrameLayout {
         style.append(card, style.text(heading, 17, Color.WHITE, artwork.semibold), 0, 8);
         if (!loading) {
             String message = issue != null ? issue : hasAudio && !hasTranscript
-                    ? "Распознайте речь на устройстве или импортируйте JSON."
-                    : "Импортируйте JSON с репликами, спикерами и таймкодами.";
+                    ? "Распознайте речь на устройстве."
+                    : "Для расшифровки нужна аудиозапись.";
             style.append(card, style.text(message, 15, ReflectPageStyle.MUTED, artwork.regular), 0, 12);
             if (hasAudio && !hasTranscript) {
                 style.append(card, button(failedTranscription ? "Расшифровать ещё раз" : "Расшифровать на устройстве",
                         actions::transcribeRecording), 0, 8);
             }
-            if (hasAudio) style.append(card, button("Импортировать JSON", actions::importTranscript), 0, 0);
         }
         return card;
     }

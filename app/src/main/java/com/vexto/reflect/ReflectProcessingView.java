@@ -156,7 +156,7 @@ final class ReflectProcessingView extends ViewGroup {
             scale = nextScale;
             backgroundAction.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16 * scale);
             ReflectPageStyle style = new ReflectPageStyle(getContext(), artwork, width);
-            setBackground(style.rounded(0xff040402, 47));
+            setBackgroundColor(0xff040402);
             backgroundAction.setBackground(style.pressable(ReflectPageStyle.ACCENT, 24));
             for (TextSlot slot : slots) slot.view().setTextSize(TypedValue.COMPLEX_UNIT_PX, slot.size() * scale);
         }

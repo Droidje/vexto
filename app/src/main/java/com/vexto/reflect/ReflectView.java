@@ -96,7 +96,6 @@ final class ReflectView extends ViewGroup {
     private final Paint snapshotPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
     private final RectF snapshotBounds = new RectF(0, 0, WIDTH, HEIGHT);
     private final List<RectF> childAreas = new ArrayList<>();
-    private final Path stage = new Path();
     private final Path glass = new Path();
     private final RecordingVisuals recordingVisuals = new RecordingVisuals();
     private RecordingOrb recordingOrb;
@@ -152,7 +151,6 @@ final class ReflectView extends ViewGroup {
         };
         navigationGlass.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         setWillNotDraw(false);
-        stage.addRoundRect(0, 0, WIDTH, HEIGHT, 47, 47, Path.Direction.CW);
         glass.addRoundRect(175, 617, 377, 749, 26, 26, Path.Direction.CW);
         rebuildControls();
     }
@@ -534,12 +532,11 @@ final class ReflectView extends ViewGroup {
     }
 
     @Override protected void onDraw(Canvas canvas) {
-        canvas.drawColor(0xff1e1e1e);
+        canvas.drawColor(BACKGROUND);
         int save = canvas.save();
         canvas.translate(offsetX, offsetY);
         canvas.scale(scale, scale);
-        rounded(canvas, 0, 0, WIDTH, HEIGHT, 47, BACKGROUND);
-        canvas.clipPath(stage);
+        canvas.clipRect(0, 0, WIDTH, HEIGHT);
         drawPageCanvas(canvas);
         canvas.restoreToCount(save);
         if (recordingScreen(screen) && recordingVisuals.needsFrame(SystemClock.uptimeMillis())) {
@@ -555,7 +552,7 @@ final class ReflectView extends ViewGroup {
         int save = canvas.save();
         canvas.translate(offsetX, offsetY);
         canvas.scale(scale, scale);
-        canvas.clipPath(stage);
+        canvas.clipRect(0, 0, WIDTH, HEIGHT);
         int local = canvas.save();
         canvas.scale(1 / scale, 1 / scale);
         canvas.translate(-offsetX, -offsetY);
@@ -758,7 +755,11 @@ final class ReflectView extends ViewGroup {
         outline(c, 175, 617, 377, 749, 26, MENU_EDGE);
         artwork.icon(c, "attach", 191, 631);
         artwork.icon(c, "mic_menu", 191, 675);
-        artwork.icon(c, "headset", 191, 715);
+        c.save();
+        c.translate(189, 716);
+        c.scale(22f / 24, 22f / 24);
+        artwork.icon(c, "headset", 0, 0);
+        c.restore();
         text(c, "Прикрепить файл", 219.5f, 646, 16, WHITE, artwork.medium, false);
         text(c, "Записать сейчас", 219, 690, 16, WHITE, artwork.medium, false);
         text(c, "Звонок", 219, 734, 16, WHITE, artwork.medium, false);

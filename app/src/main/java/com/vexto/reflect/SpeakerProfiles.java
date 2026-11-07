@@ -336,6 +336,20 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
         }
     }
 
+    /** Remove only this recording's voice evidence and links, keeping the people themselves. */
+    void forgetRecording(String recording) {
+        SQLiteDatabase database = getWritableDatabase();
+        database.beginTransaction();
+        try {
+            for (String table : new String[]{"links", "embeddings", "active_transcripts"}) {
+                database.delete(table, "recording=?", new String[]{recording});
+            }
+            database.setTransactionSuccessful();
+        } finally {
+            database.endTransaction();
+        }
+    }
+
     void forgetActive(String recording) {
         getWritableDatabase().delete("active_transcripts", "recording=?", new String[]{recording});
     }

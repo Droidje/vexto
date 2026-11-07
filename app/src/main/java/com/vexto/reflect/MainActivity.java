@@ -106,10 +106,14 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
                     refreshRecordings();
                 });
         transcripts = new ReflectTranscriptController(this, view, preferences, transcriptStore, conversationStore, titles, imports,
-                this::notice, this::playFrom, this::play, this::refreshRecordings, profiles, profilesUi);
+                this::notice, this::playFrom, this::play, this::refreshRecordings, this::closeTranscript, profiles, profilesUi);
         setContentView(view);
         fullscreen();
         imports.execute(() -> {
+            try { new RecordingDeletion(this, conversationStore, profiles).recover(); }
+            catch (IOException | RuntimeException unavailable) {
+                runOnUiThread(() -> { if (!isDestroyed()) notice("Не удалось завершить удаление записи"); });
+            }
             try { CallRecordingService.recover(getApplicationContext()); }
             catch (IOException | RuntimeException unavailable) {
                 runOnUiThread(() -> { if (!isDestroyed()) notice("Не удалось восстановить прерванную запись звонка"); });
