@@ -38,7 +38,7 @@ class QualityEvalActivity : Activity() {
                     try {
                         media.setDataSource(audio.absolutePath)
                         val duration = media.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
-                        require(duration != null && duration <= 40_000) { "Use a short audio fixture of at most 40 seconds" }
+                        require(duration != null && duration <= 400_000) { "Use an audio fixture of at most 6 minutes 40 seconds" }
                     } finally { media.release() }
                     TranscriptionEngine(this@QualityEvalActivity).transcribe(Uri.fromFile(audio)).collect { event ->
                         when (event) {
