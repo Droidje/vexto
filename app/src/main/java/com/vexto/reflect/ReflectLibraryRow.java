@@ -55,75 +55,86 @@ final class ReflectLibraryRow extends View {
                 (canvas, paint) -> text(canvas, paint, message, 16, 25, 16, MUTED, artwork.regular, 0));
     }
 
-    ReflectLibraryRow recording(ReflectArtwork art, ReflectCatalog.Recording item, Runnable open) {
+    ReflectLibraryRow recording(ReflectArtwork art, ReflectCatalog.Recording item,
+                                ReflectLocalTranscription.Progress progress, Runnable open) {
         String participants = String.join(", ", item.participants);
         boolean hasSpeakers = !participants.isEmpty();
         boolean hasTranscript = item.hasTranscript();
-        String status = hasTranscript ? "Есть текст" : "Сохранено";
-        String timeAndLength = item.time + " · " + item.length;
-        String label = item.title + ", " + item.time + ", " + item.length + ", " + status;
+        String status = progress != null ? progress.percent() + "%" : hasTranscript ? "Есть текст" : "Сохранено";
+        String timeAndLength = item.timeLabel + " · " + item.length;
+        String label = item.title + ", " + item.timeLabel + ", " + item.length + ", " + status;
         if (hasSpeakers) label += ", участники: " + participants;
-        return bind(hasSpeakers ? 109 : 88, label, false, open, (canvas, paint) -> {
+        if (progress != null) label += ", " + progress.title();
+        boolean secondaryLine = hasSpeakers || progress != null;
+        return bind(secondaryLine ? 109 : 88, label, false, open, (canvas, paint) -> {
             recordingCover(canvas, art);
-            float statusRight = hasTranscript ? 377 : 361;
+            float statusRight = hasTranscript || progress != null ? 377 : 361;
             textRight(canvas, paint, status, statusRight, 29, 17,
-                    hasTranscript ? 0xff34c759 : MUTED, art.regular, -.43f);
+                    progress != null ? 0xff63b7ff : hasTranscript ? 0xff34c759 : MUTED, art.regular, -.43f);
             float available = statusRight - 74 - 10 - paint.measureText(status);
             rowTitle(canvas, paint, art, item.title, available);
             text(canvas, paint, timeAndLength, 74, 51, 16, MUTED, art.regular, -.23f);
-            if (!hasTranscript) chevron(canvas, paint, 373, 23);
-            if (hasSpeakers) {
-                String names = "Участники: " + participants;
+            if (!hasTranscript && progress == null) chevron(canvas, paint, 373, 23);
+            if (secondaryLine) {
+                String names = progress != null ? progress.title() : "Участники: " + participants;
                 style(paint, 16, MUTED, art.regular, -.23f);
                 CharSequence fitted = TextUtils.ellipsize(names, paint, 303, TextUtils.TruncateAt.END);
                 text(canvas, paint, fitted.toString(), 74, 83, 16, MUTED, art.regular, -.23f);
             }
-            separator(canvas, paint, hasSpeakers ? 106 : 85);
+            separator(canvas, paint, secondaryLine ? 106 : 85);
         });
     }
 
     ReflectLibraryRow speaker(ReflectArtwork art, ReflectCatalog.Speaker item, Runnable open) {
-        Typeface nameFont = item.name.codePoints().anyMatch(cp -> Character.UnicodeScript.of(cp)
+        String displayName = item.displayName();
+        int nameColor = item.self ? ReflectPageStyle.SELF_ACCENT : Color.WHITE;
+        int avatarColor = item.self ? ReflectPageStyle.SELF_SURFACE : 0xff2c1740;
+        int initialColor = item.self ? ReflectPageStyle.SELF_ACCENT : 0xffd4baff;
+        int badgeColor = item.self ? ReflectPageStyle.SELF_SURFACE : 0xff220053;
+        int badgeText = item.self ? ReflectPageStyle.SELF_ACCENT : 0xffae86e8;
+        Typeface nameFont = displayName.codePoints().anyMatch(cp -> Character.UnicodeScript.of(cp)
                 == Character.UnicodeScript.CYRILLIC) ? art.semibold : art.latinSemibold;
-        return bind(84, item.duration.isEmpty() ? item.name : item.name + ", " + item.duration,
+        return bind(84, item.duration.isEmpty() ? displayName : displayName + ", " + item.duration,
                 false, open, (canvas, paint) -> {
             if (item.avatar == null) {
-                paint.setColor(0xff2c1740);
+                paint.setColor(avatarColor);
                 canvas.drawCircle(48, 32, 32, paint);
-                String initial = item.name.substring(0, item.name.offsetByCodePoints(0, 1));
-                style(paint, 25, 0xffd4baff, art.display, 0);
+                String initial = displayName.substring(0, displayName.offsetByCodePoints(0, 1));
+                style(paint, 25, initialColor, art.display, 0);
                 paint.setTextAlign(Paint.Align.CENTER);
                 canvas.drawText(initial, 48, 41, paint);
             } else art.image(canvas, item.avatar, 16, 0, 64, 64);
             if (item.duration.isEmpty()) {
-                style(paint, 18, Color.WHITE, nameFont, -.306f);
-                CharSequence name = TextUtils.ellipsize(item.name, paint, 257, TextUtils.TruncateAt.END);
-                text(canvas, paint, name.toString(), 92, 38.5f, 18, Color.WHITE, nameFont, -.306f);
+                style(paint, 18, nameColor, nameFont, -.306f);
+                CharSequence name = TextUtils.ellipsize(displayName, paint, 257, TextUtils.TruncateAt.END);
+                text(canvas, paint, name.toString(), 92, 38.5f, 18, nameColor, nameFont, -.306f);
                 if (open != null) chevron(canvas, paint, 373, 33);
                 return;
             }
-            style(paint, 14, 0xffae86e8, art.durationBadge, -.42f);
+            style(paint, 14, badgeText, art.durationBadge, -.42f);
             float badgeWidth = paint.measureText(item.duration) + 16;
-            style(paint, 18, Color.WHITE, nameFont, -.306f);
+            style(paint, 18, nameColor, nameFont, -.306f);
             float nameWidth = (open == null ? 377 : 354) - 104 - badgeWidth;
-            String name = TextUtils.ellipsize(item.name, paint, Math.max(0, nameWidth), TextUtils.TruncateAt.END).toString();
+            String name = TextUtils.ellipsize(displayName, paint, Math.max(0, nameWidth), TextUtils.TruncateAt.END).toString();
             float badgeX = 104 + paint.measureText(name);
-            text(canvas, paint, name, 92, 38.5f, 18, Color.WHITE, nameFont, -.306f);
-            paint.setColor(0xff220053);
+            text(canvas, paint, name, 92, 38.5f, 18, nameColor, nameFont, -.306f);
+            paint.setColor(badgeColor);
             canvas.drawRoundRect(badgeX, 19, badgeX + badgeWidth, 45, 10, 10, paint);
-            text(canvas, paint, item.duration, badgeX + 8, 37, 14, 0xffae86e8, art.durationBadge, -.42f);
+            text(canvas, paint, item.duration, badgeX + 8, 37, 14, badgeText, art.durationBadge, -.42f);
             if (open != null) chevron(canvas, paint, 373, 33);
         });
     }
 
-    ReflectLibraryRow conversation(ReflectArtwork art, ReflectCatalog.Conversation item, Runnable open) {
+    ReflectLibraryRow conversation(ReflectArtwork art, ReflectCatalog.Conversation item,
+                                    ReflectLocalTranscription.Progress progress, Runnable open) {
+        String description = progress == null ? item.preview : progress.title() + " · " + progress.percent() + "%";
         return bind(91,
-                item.title + ", " + item.time + ", " + item.preview, false, open, (canvas, paint) -> {
+                item.title + ", " + item.recording.timeLabel + ", " + description, false, open, (canvas, paint) -> {
             recordingCover(canvas, art);
-            textRight(canvas, paint, item.time, 361, 29, 17, MUTED, art.duration, -.43f);
-            float available = 279 - paint.measureText(item.time);
+            textRight(canvas, paint, item.recording.timeLabel, 361, 29, 17, MUTED, art.duration, -.43f);
+            float available = 279 - paint.measureText(item.recording.timeLabel);
             rowTitle(canvas, paint, art, item.title, available);
-            preview(canvas, paint, art, item.preview, available);
+            preview(canvas, paint, art, description, 303);
             chevron(canvas, paint, 373, 23);
             separator(canvas, paint, 88);
         });

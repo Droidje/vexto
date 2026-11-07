@@ -19,7 +19,9 @@ data class QualityManifest(val version: String, val artifacts: Map<String, Quali
         artifacts.values.forEach { require(it.bytes > 0 && it.sha256.matches(Regex("[0-9a-f]{64}"))) }
     }
     companion object {
-        val Required = setOf("gtcrn", "nemotron", "giga_encoder", "giga_decoder", "giga_joiner", "giga_tokens", "whisper", "qwen", "emotion", "voiceprint_embedding")
+        val Required = setOf("gtcrn", "nemotron", "giga_encoder", "giga_decoder", "giga_joiner", "giga_tokens", "whisper", "qwen", "emotion", "voiceprint_embedding", "lid_encoder", "lid_decoder")
+        val FastRequired = Required - setOf("giga_encoder", "giga_decoder", "giga_joiner", "giga_tokens", "whisper") +
+            setOf("giga_fast_model", "giga_fast_tokens", "whisper_fast")
     }
 }
 
@@ -47,10 +49,17 @@ object QualityModelStore {
         return File(storage, "quality-models/${manifest.version}")
     }
 
-    suspend fun prepare(context: Context, progress: (Float) -> Unit): QualityModels {
+    suspend fun prepare(context: Context, progress: (Float) -> Unit): QualityModels = prepare(context, false, progress)
+
+    /** Both profiles ship in the APK; extract and verify only the profile this job will use. */
+    suspend fun prepare(context: Context, fast: Boolean, progress: (Float) -> Unit): QualityModels {
         val (manifest, manifestDigest) = readManifest(context)
         val root = root(context, manifest)
-        val entries = manifest.artifacts.entries.toList()
+        val required = if (fast) QualityManifest.FastRequired else QualityManifest.Required
+        if (!manifest.artifacts.keys.containsAll(required)) {
+            throw OfflineModelPackException("В установленном APK отсутствуют модели выбранного режима. Установите полный офлайн-комплект.")
+        }
+        val entries = manifest.artifacts.entries.filter { it.key in required }
         val files = entries.map { (_, artifact) ->
             JobFiles.inside(root, artifact.path) // Validate containment, retaining the path for NOFOLLOW below.
             File(root, artifact.path)

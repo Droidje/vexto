@@ -1,11 +1,14 @@
 package com.vexto.engine.model
 
+import kotlinx.serialization.Serializable
+
 /** Этапы обработки в порядке выполнения. */
 enum class Stage(val title: String) {
     Preparing("Готовлю модели"),
     Decoding("Декодирую аудио"),
     Denoising("Убираю шум"),
     Diarization("Разделяю голоса"),
+    Language("Определяю язык"),
     Voiceprints("Сохраняю голоса"),
     Recognition("Распознаю речь"),
     Comparison("Распознаю Whisper"),
@@ -27,6 +30,7 @@ sealed interface TranscriptionEvent {
     data class Done(val transcript: Transcript, val stats: ProcessingStats) : TranscriptionEvent
 }
 
+@Serializable
 data class ProcessingStats(
     val audioMs: Long,
     val processingMs: Long,
@@ -50,6 +54,7 @@ data class TranscriptionOptions @JvmOverloads constructor(
     val speakerCount: Int? = null,
     /** Legacy API flag. Selection-only profile always preserves recognizer punctuation verbatim. */
     val punctuation: Boolean = true,
+    val processingMode: ProcessingMode = ProcessingMode.AUTO,
 )
 
 const val SampleRate = 16_000

@@ -1,0 +1,16 @@
+{
+  "transcript": [
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 100,
+      "end_ms": 1936,
+      "text": "Анархия получается – понимаешь?"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 3064,
+      "end_ms": 5824,
+      "text": "А я не пойму – стоило ему это делать?"
+    }
+  ]
+}

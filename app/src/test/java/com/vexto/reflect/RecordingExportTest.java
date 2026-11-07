@@ -123,6 +123,21 @@ public class RecordingExportTest {
                 new ByteArrayInputStream(unknown.getBytes(StandardCharsets.UTF_8))));
     }
 
+    @Test public void exportShowsBasicPhoneticsWhileTheSavedTranscriptKeepsTheMarks() throws Exception {
+        var source = new ReflectTranscript(List.of(new ReflectTranscript.Line(
+                "speaker_1", 0, 1000, "пауза (ə) и #пеньк-пеньк#")));
+        String json = new String(export(RecordingExport.JSON, source), StandardCharsets.UTF_8);
+        String markdown = new String(export(RecordingExport.MARKDOWN, source), StandardCharsets.UTF_8);
+        String stored = new String(source.encode(), StandardCharsets.UTF_8);
+        assertTrue(json.contains("пауза э и пеньк пеньк"));
+        assertFalse(json.contains("ə"));
+        assertTrue(markdown.contains("пауза э и пеньк пеньк"));
+        assertFalse(markdown.contains("(ə)"));
+        assertTrue(stored.contains("(ə)"));
+        assertTrue(stored.contains("#пеньк-пеньк#"));
+        assertEquals("пауза (ə) и #пеньк-пеньк#", source.lines.get(0).text);
+    }
+
     @Test public void audioIsCopiedByteForByteAndDocumentHasCorrectMimeAndSafeName() throws Exception {
         var path = Files.createTempFile("export-audio-", ".wav");
         try {

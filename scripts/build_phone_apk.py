@@ -16,6 +16,7 @@ from prepare_quality_models import MANIFEST, ROOT
 
 ASSETS = "assets/vexto-models/"
 MARKER = ASSETS + "embedded"
+ZIP32_LIMIT = 0xFFFFFFFE
 
 
 def append_models(base: Path, splits: list[Path]) -> None:
@@ -24,9 +25,13 @@ def append_models(base: Path, splits: list[Path]) -> None:
         ASSETS + item["path"]: item
         for item in json.loads(manifest_bytes)["artifacts"].values()
     }
+    # Reserve room for asset headers, alignment and the signing block. Refuse a
+    # new profile before copying multi-GB weights if one APK cannot contain it.
+    if base.stat().st_size + sum(item["bytes"] for item in models.values()) + (1 << 20) >= ZIP32_LIMIT:
+        raise ValueError("Base APK plus all processing-mode models exceeds the ZIP32 APK size limit")
     # APK ZIP offsets are unsigned 32-bit. Python conservatively switches at 2 GiB,
     # while Android accepts ZIP32 offsets up to the reserved ZIP64 sentinel.
-    zipfile.ZIP64_LIMIT = 0xFFFFFFFE
+    zipfile.ZIP64_LIMIT = ZIP32_LIMIT
     with ExitStack() as stack:
         sources = [stack.enter_context(zipfile.ZipFile(path)) for path in splits]
         apk = stack.enter_context(zipfile.ZipFile(base, "a", allowZip64=False))

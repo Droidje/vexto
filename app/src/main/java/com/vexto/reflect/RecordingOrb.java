@@ -5,7 +5,7 @@ final class RecordingOrb {
     static final float LEFT = 39.49f, TOP = 251, WIDTH = 289.51f, HEIGHT = 278;
     static final float CENTER_X = 196.79f, CENTER_Y = 389.72f;
     static final int GRID = 24;
-    private static final float RADIUS = 130.5f;
+    static final float RADIUS = 130.5f;
     private static final float SPOT_X = 198.5f, SPOT_Y = 476;
     private final float[] base = new float[2 * (GRID + 1) * (GRID + 1)];
     private final float[] vertices = new float[base.length];

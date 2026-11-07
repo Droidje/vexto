@@ -33,16 +33,19 @@ final class ReflectExportView extends FrameLayout {
     private static final Pattern JSON_VALUE = Pattern.compile(
             "\"(?:[^\"\\\\]|\\\\.)*\"|-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?");
     private final ReflectArtwork artwork;
+    private final ReflectPreferences preferences;
     private final Actions actions;
     private ReflectPageStyle style;
     private String title = "", length = "", preview = "";
     private int lineCount, speakerCount, layoutWidth;
     private RecordingExport selected = RecordingExport.JSON;
     private boolean hasTranscript, canExport, canSelect, writing, refresh = true;
+    private boolean animatePreview;
 
-    ReflectExportView(Context context, ReflectArtwork artwork, Actions actions) {
+    ReflectExportView(Context context, ReflectArtwork artwork, ReflectPreferences preferences, Actions actions) {
         super(context);
         this.artwork = artwork;
+        this.preferences = preferences;
         this.actions = actions;
         setBackgroundColor(INK);
         setOutlineProvider(new ViewOutlineProvider() {
@@ -57,6 +60,7 @@ final class ReflectExportView extends FrameLayout {
                  String preview, boolean hasTranscript, boolean canExport, boolean canSelect, boolean writing) {
         this.title = title;
         this.length = length;
+        animatePreview |= this.selected != selected && isShown() && preferences.motionEnabled();
         this.selected = selected;
         this.preview = preview;
         this.hasTranscript = hasTranscript;
@@ -138,12 +142,18 @@ final class ReflectExportView extends FrameLayout {
         scroll.setPadding(style.px(20), style.px(16), style.px(20), style.px(16));
         scroll.setFillViewport(false);
         TextView text = style.text(selected == RecordingExport.JSON ? highlight(preview) : preview,
-                20, 0xffadadac, artwork.regular);
+                15, 0xffadadac, artwork.regular);
         text.setGravity(Gravity.TOP | Gravity.START);
         text.setTextIsSelectable(true);
         text.setLineSpacing(0, 1.05f);
         scroll.addView(text, new ScrollView.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
         place(scroll, 16, 365, 361, 248);
+        if (animatePreview && preferences.motionEnabled()) {
+            text.setAlpha(.6f);
+            text.setTranslationY(style.px(6));
+            text.animate().alpha(1).translationY(0).setDuration(200).setInterpolator(ReflectMotion.EASE).start();
+        }
+        animatePreview = false;
 
         TextView share = button(writing ? "Подготовка файла…" : "Поделиться файлом", null, actions::shareExport);
         share.setTextColor(INK);

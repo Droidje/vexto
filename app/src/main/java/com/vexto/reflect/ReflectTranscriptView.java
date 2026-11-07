@@ -9,6 +9,7 @@ import android.graphics.Canvas;
 import android.graphics.Path;
 import android.graphics.Color;
 import android.graphics.Outline;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.RippleDrawable;
 import android.text.SpannableStringBuilder;
@@ -21,7 +22,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.view.accessibility.AccessibilityNodeInfo;
-import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -52,6 +52,8 @@ final class ReflectTranscriptView extends FrameLayout {
         void openTranscriptOptions();
         void openTranscriptStyle();
         void playTranscriptAudio();
+        void seekPlayback(float fraction);
+        void seekPlaybackMillis(int millis);
         void openTranscriptLine(ReflectTranscript.Line line);
     }
 
@@ -67,11 +69,16 @@ final class ReflectTranscriptView extends FrameLayout {
     private String title = "", length = "", issue;
     private List<ReflectTranscript.Line> lines = Collections.emptyList();
     private Map<String, String> speakerNames = Collections.emptyMap();
-    private TextView play;
+    private ReflectConversationPlayer conversationPlayer;
+    private int durationMs, playbackPosition, activeLine = -1;
+    private boolean pendingSeekFollow;
+    private int[] audioWaveform;
+    private ReflectPlaybackTimeline timeline = new ReflectPlaybackTimeline(lines);
     private TextView progressText;
     private ProgressBar progressBar;
     private ReflectLocalTranscription.Progress transcription;
     private ListView list;
+    private View scrollContent, toolsGlass;
 
     ReflectTranscriptView(Context context, ReflectArtwork artwork, ReflectPreferences preferences, Actions actions) {
         super(context);
@@ -86,12 +93,13 @@ final class ReflectTranscriptView extends FrameLayout {
         setClipToOutline(true);
     }
 
-    void content(String title, String length, ReflectTranscript transcript,
+    void content(String title, String length, int durationMs, ReflectTranscript transcript,
                  boolean hasAudio, boolean loading, String issue, boolean recordingDetails,
                  RecordingMetadata metadata, ReflectLocalTranscription.Progress transcription) {
         if (!title.equals(this.title)) list = null;
         this.title = title;
         this.length = length;
+        this.durationMs = durationMs;
         this.hasAudio = hasAudio;
         this.loading = loading;
         this.issue = issue;
@@ -99,7 +107,13 @@ final class ReflectTranscriptView extends FrameLayout {
         this.metadata = metadata;
         this.transcription = transcription;
         hasTranscript = transcript != null;
-        lines = recordingDetails || transcript == null ? Collections.emptyList() : transcript.lines;
+        List<ReflectTranscript.Line> updated = recordingDetails || transcript == null
+                ? Collections.emptyList() : transcript.lines;
+        if (lines != updated) {
+            lines = updated;
+            timeline = new ReflectPlaybackTimeline(lines);
+            activeLine = -1;
+        }
         refresh = true;
         requestLayout();
     }
@@ -125,21 +139,60 @@ final class ReflectTranscriptView extends FrameLayout {
 
     void clear() {
         lines = Collections.emptyList();
+        timeline = new ReflectPlaybackTimeline(lines);
+        playing = false;
+        playbackPosition = 0;
+        activeLine = -1;
+        pendingSeekFollow = false;
+        audioWaveform = null;
+        conversationPlayer = null;
         speakerNames = Collections.emptyMap();
         metadata = null;
         removeAllViews();
         list = null;
-        play = null;
+        scrollContent = null;
+        toolsGlass = null;
         progressText = null;
         progressBar = null;
         transcription = null;
         refresh = true;
     }
 
-    void playing(boolean playing) {
-        if (this.playing == playing) return;
+    void waveform(int[] bars) {
+        audioWaveform = bars;
+        if (conversationPlayer != null) conversationPlayer.waveform(bars);
+    }
+
+    void playback(boolean playing, int position) {
+        boolean stateChanged = this.playing != playing;
         this.playing = playing;
-        if (play != null) play.setText(playing ? "Приостановить" : "Прослушать аудио");
+        playbackPosition = position;
+        if (conversationPlayer != null) conversationPlayer.update(playing, position, durationMs);
+        int current = playing ? timeline.at(position) : -1;
+        if (activeLine == current && !stateChanged) return;
+        activeLine = current;
+        if (list == null) return;
+        int firstLine = list.getFirstVisiblePosition() - list.getHeaderViewsCount();
+        for (int index = 0; index < list.getChildCount(); index++) {
+            if (list.getChildAt(index) instanceof TranscriptRow row) row.highlight(firstLine + index, true);
+        }
+        if (current >= 0) followLine(current);
+    }
+
+    void playbackSeeked(boolean playing, int position) {
+        int previous = activeLine;
+        playback(playing, position);
+        if (recordingDetails) return;
+        pendingSeekFollow = list == null || lines.isEmpty();
+        if (!pendingSeekFollow && (activeLine < 0 || activeLine == previous)) {
+            followLine(timeline.atSeek(position));
+        }
+    }
+
+    private void followLine(int index) {
+        int position = index + list.getHeaderViewsCount();
+        if (preferences.motionEnabled()) list.smoothScrollToPositionFromTop(position, style.px(8), 250);
+        else list.setSelectionFromTop(position, style.px(8));
     }
 
     boolean isPlaying() { return playing; }
@@ -159,7 +212,7 @@ final class ReflectTranscriptView extends FrameLayout {
         int first = list == null ? 0 : list.getFirstVisiblePosition();
         int offset = list == null || list.getChildCount() == 0 ? 0 : list.getChildAt(0).getTop();
         removeAllViews();
-        play = null;
+        conversationPlayer = null;
         progressText = null;
         progressBar = null;
         list = new ListView(getContext());
@@ -168,14 +221,39 @@ final class ReflectTranscriptView extends FrameLayout {
         list.setOverScrollMode(OVER_SCROLL_NEVER);
         list.setClipToPadding(false);
         list.setPadding(0, 0, 0, style.px(86));
-        list.addHeaderView(header(), null, false);
-        list.setAdapter(new LineAdapter());
+        LinearLayout content = style.column();
         FrameLayout.LayoutParams scroll = new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT);
         scroll.topMargin = style.px(recordingDetails ? 141 : 139);
-        addView(list, scroll);
+        if (recordingDetails) {
+            list.addHeaderView(header(), null, false);
+        } else {
+            style.append(content, titleView(), 0, hasAudio ? 12 : 16);
+            if (hasAudio) addPlayer(content, "разговор");
+            if (lines.isEmpty()) {
+                LinearLayout details = style.column();
+                addInset(details, transcriptionCard(), 0, 12);
+                list.addHeaderView(details, null, false);
+            }
+        }
+        list.setAdapter(new LineAdapter());
+        content.addView(list, new LinearLayout.LayoutParams(MATCH_PARENT, 0, 1));
+        addView(content, scroll);
+        scrollContent = content;
+        toolsGlass = null;
         list.setSelectionFromTop(first, offset);
+        if (playing && activeLine < 0) {
+            ListView current = list;
+            list.post(() -> {
+                if (list == current && playing) playback(true, playbackPosition);
+            });
+        }
+        if (pendingSeekFollow && !lines.isEmpty()) {
+            ListView current = list;
+            list.post(() -> {
+                if (list == current && pendingSeekFollow) playbackSeeked(playing, playbackPosition);
+            });
+        }
 
-        if (!recordingDetails) addTranscriptBackdrop();
         pill(16, 60, 48, 48, false);
         icon("transcript_back", "Назад", 16, 60, 48, 48, false, actions::closeTranscript);
         pill(281, 60, 96, 48, false);
@@ -190,37 +268,34 @@ final class ReflectTranscriptView extends FrameLayout {
         icon("transcript_style", "Настройки чтения", 112, 28, 48, 48, true, actions::openTranscriptStyle);
     }
 
-    private void addTranscriptBackdrop() {
-        View shade = new ReflectTranscriptBackdrop(getContext(), list, style.px(8));
-        addView(shade, new FrameLayout.LayoutParams(MATCH_PARENT, style.px(115), Gravity.BOTTOM));
-        list.setOnScrollListener(new AbsListView.OnScrollListener() {
-            @Override public void onScrollStateChanged(AbsListView view, int state) {}
-
-            @Override public void onScroll(AbsListView view, int first, int count, int total) {
-                shade.invalidate();
-            }
-        });
+    private TextView titleView() {
+        TextView heading = style.title(title);
+        if (!recordingDetails) heading.setTextSize(TypedValue.COMPLEX_UNIT_PX, style.px(22));
+        heading.setPadding(style.px(16), 0, style.px(16), 0);
+        return heading;
     }
 
     private LinearLayout header() {
         LinearLayout header = style.column();
-        TextView heading = style.title(title);
-        if (!recordingDetails) heading.setTextSize(TypedValue.COMPLEX_UNIT_PX, style.px(22));
-        heading.setPadding(style.px(16), 0, style.px(16), 0);
-        style.append(header, heading, 0, lines.isEmpty() ? 14 : 30);
-        if (hasAudio && lines.isEmpty()) {
+        style.append(header, titleView(), 0, 14);
+        if (hasAudio) {
             TextView label = style.text(length + " · Локальная запись", 14, ReflectPageStyle.MUTED, artwork.regular);
             label.setPadding(style.px(16), 0, style.px(16), 0);
             style.append(header, label, 0, 10);
-            play = button(playing ? "Приостановить" : "Прослушать аудио", actions::playTranscriptAudio);
-            addInset(header, play, 0, 16);
+            addPlayer(header, "запись");
         }
-        if (recordingDetails) {
-            addInset(header, metadataCard(), 8, 12);
-        } else if (lines.isEmpty()) {
-            addInset(header, transcriptionCard(), 8, 12);
-        }
+        addInset(header, metadataCard(), 8, 12);
         return header;
+    }
+
+    private void addPlayer(LinearLayout content, String audioLabel) {
+        conversationPlayer = new ReflectConversationPlayer(getContext(), artwork, preferences, length, audioLabel,
+                actions::playTranscriptAudio, actions::seekPlayback);
+        conversationPlayer.waveform(audioWaveform);
+        conversationPlayer.update(playing, playbackPosition, durationMs);
+        LinearLayout.LayoutParams player = new LinearLayout.LayoutParams(MATCH_PARENT, style.px(44));
+        player.setMargins(style.px(16), 0, style.px(16), style.px(16));
+        content.addView(conversationPlayer, player);
     }
 
     private LinearLayout transcriptionCard() {
@@ -312,9 +387,31 @@ final class ReflectTranscriptView extends FrameLayout {
     }
 
     private void pill(int left, int y, int width, int height, boolean bottom) {
-        View pill = new View(getContext());
-        pill.setBackground(style.rounded(recordingDetails ? 0xff212121 : 0x1cffffff, 24));
+        View pill = new View(getContext()) {
+            private final ReflectGlassBackdrop backdrop = new ReflectGlassBackdrop();
+            private final Paint tint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+            @Override protected void onDraw(Canvas canvas) {
+                float corner = getHeight() / 2f;
+                float radius = style.px(10);
+                if (scrollContent != null && scrollContent.getTop() < getBottom() + 3 * radius) {
+                    backdrop.draw(canvas, 0, 0, getWidth(), getHeight(), corner, radius, sample -> {
+                        sample.translate(-getLeft(), -getTop());
+                        ReflectTranscriptView.this.drawChild(sample, scrollContent, getDrawingTime());
+                    });
+                }
+                tint.setColor(bottom ? 0xa62a2a2a : 0x1dffffff);
+                canvas.drawRoundRect(0, 0, getWidth(), getHeight(), corner, corner, tint);
+            }
+        };
+        pill.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         place(pill, left, y, width, height, bottom);
+        if (bottom) toolsGlass = pill;
+    }
+
+    @Override public void onDescendantInvalidated(View child, View target) {
+        super.onDescendantInvalidated(child, target);
+        if (toolsGlass != null && child == scrollContent) toolsGlass.invalidate();
     }
 
     private void icon(String asset, String label, int left, int y, int width, int height, boolean bottom,
@@ -429,6 +526,7 @@ final class ReflectTranscriptView extends FrameLayout {
         private final AvatarView avatar = new AvatarView();
         private final TextView metadata;
         private final TextView body;
+        private float emphasis = 1f;
 
         TranscriptRow() {
             super(ReflectTranscriptView.this.getContext());
@@ -460,8 +558,27 @@ final class ReflectTranscriptView extends FrameLayout {
             }
             metadata.setText(label);
             body.setLineHeight(style.px(preferences.textSize() * (position == 0 ? 1.3125f : 1.5f)));
-            body.setText(line.text);
+            body.setText(com.vexto.engine.model.PhoneticSurface.present(line.text));
+            setOnClickListener(v -> {
+                if (playing) actions.seekPlaybackMillis(line.startMs);
+            });
+            highlight(position, false);
             setOnLongClickListener(v -> { actions.openTranscriptLine(line); return true; });
+        }
+
+        void highlight(int position, boolean animate) {
+            setClickable(playing);
+            boolean active = playing && position == activeLine;
+            float opacity = playing && !active ? .52f : 1f;
+            body.setTextColor(active ? Color.WHITE : 0xffcccccc);
+            if (animate && emphasis == opacity) return;
+            emphasis = opacity;
+            animate().cancel();
+            if (animate && preferences.motionEnabled()) {
+                animate().alpha(opacity).setDuration(150).setInterpolator(ReflectMotion.EASE).start();
+            } else {
+                setAlpha(opacity);
+            }
         }
     }
 

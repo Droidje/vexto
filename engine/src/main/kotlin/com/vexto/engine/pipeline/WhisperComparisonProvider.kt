@@ -1,5 +1,6 @@
 package com.vexto.engine.pipeline
 
+import com.vexto.engine.audio.PcmWave
 import com.vexto.engine.model.Word
 import com.vexto.engine.review.AsrSource
 import com.vexto.engine.review.AsrToken
@@ -30,7 +31,7 @@ data class ComparisonChunk(val id: String, val wav: File, val inputSha256: Strin
 data class WhisperComparisonAttempt(val chunkId: String, val candidate: ImmutableAsrCandidate?,
     val failureCode: String? = null, val nativeResult: LocalNativeResult? = null)
 
-/** Serial native children, whole candidates. Root adapts LocalNativeExecutor to NativeProcessRunner. */
+/** One worker's serial requests, whole candidates. Its executor can retain a native model/context. */
 class WhisperComparisonProvider(
     private val executor: LocalNativeExecutor,
     private val modelFile: File,
@@ -40,9 +41,43 @@ class WhisperComparisonProvider(
     private val flashAttention: Boolean = true,
     private val timeoutMs: Long = 600_000,
     private val audioContext: Int = 768,
+    private val language: String = "ru",
 ) {
-    suspend fun generate(chunk: ComparisonChunk, artifactFile: File): ImmutableAsrCandidate =
-        generateMeasured(chunk, artifactFile).first
+    suspend fun generate(chunk: ComparisonChunk, artifactFile: File): ImmutableAsrCandidate {
+        val capacityMs = minOf(10_000L, audioContext * 20L)
+        if (chunk.durationMs <= capacityMs) return generateMeasured(chunk, artifactFile).first
+        return generateWindowed(chunk, artifactFile, capacityMs)
+    }
+
+    /** Whisper's encoder context stays at 10s. The exported transcript does not use this text. */
+    private suspend fun generateWindowed(chunk: ComparisonChunk, artifactFile: File, capacityMs: Long): ImmutableAsrCandidate {
+        val info = PcmWave.inspect(chunk.wav)
+        require(info.sampleRate == 16000 && info.sampleCount > 0)
+        val window = capacityMs * 16
+        val work = File(requireNotNull(artifactFile.parentFile), artifactFile.nameWithoutExtension + "-windows")
+        val texts = mutableListOf<String>()
+        val tokens = mutableListOf<AsrToken>()
+        val words = mutableListOf<Word>()
+        var from = 0L
+        var index = 0
+        while (from < info.sampleCount) {
+            var to = minOf(from + window, info.sampleCount)
+            if (info.sampleCount - to in 1..15) to = info.sampleCount
+            val wav = File(work, "w$index.wav")
+            wav.parentFile?.mkdirs()
+            PcmWave.crop(chunk.wav, wav, from, to)
+            val slice = ComparisonChunk("w$index", wav, sha256(wav.readBytes()), (to - from + 15) / 16)
+            val piece = generateMeasured(slice, File(work, "w$index.json")).first
+            val offset = from * 1000 / 16000
+            texts += piece.text
+            tokens += piece.tokens.map { it.copy(startMs = it.startMs?.plus(offset), endMs = it.endMs?.plus(offset)) }
+            words += piece.words.map { it.copy(startMs = it.startMs + offset, endMs = it.endMs + offset) }
+            from = to
+            index++
+        }
+        return ImmutableAsrCandidate.create(chunk.id, AsrSource.WHISPER, chunk.inputSha256,
+            texts.joinToString(""), tokens, words, artifactFile)
+    }
 
     suspend fun generateAll(chunks: List<ComparisonChunk>, workDir: File): List<WhisperComparisonAttempt> {
         require(chunks.map { it.id }.distinct().size == chunks.size) { "duplicate_chunk_id" }
@@ -65,6 +100,7 @@ class WhisperComparisonProvider(
         require(sha256(chunk.wav.readBytes()) == chunk.inputSha256) { "chunk_input_hash_mismatch" }
         require(modelFile.isFile) { "whisper_model_missing" }
         require(threads in 1..8 && beamSize >= 1 && bestOf >= 1)
+        require(language.matches(Regex("[a-z]{2,3}"))) { "invalid_whisper_language" }
         require(!artifactFile.exists()) { "candidate_artifact_already_exists" }
         val dir = requireNotNull(artifactFile.parentFile)
         dir.mkdirs()
@@ -72,7 +108,7 @@ class WhisperComparisonProvider(
         val original = File(prefix.absolutePath + ".json")
         require(!original.exists()) { "native_artifact_already_exists" }
         val arguments = mutableListOf("-m", modelFile.absolutePath, "-f", chunk.wav.absolutePath,
-            "-of", prefix.absolutePath, "-ojf", "-l", "ru", "-ng", "-t", threads.toString(),
+            "-of", prefix.absolutePath, "-ojf", "-l", language, "-ng", "-t", threads.toString(),
             "-bs", beamSize.toString(), "-bo", bestOf.toString(), "-ac", audioContext.toString())
         if (flashAttention) arguments += "-fa"
         val result = executor.run("libvexto_whisper_exec.so", arguments, dir,
@@ -90,7 +126,7 @@ class WhisperComparisonProvider(
             put("audio_context_frames", audioContext); put("encoder_frame_ms", 20)
             put("audio_context_capacity_ms", audioContext * 20L); put("input_duration_ms", chunk.durationMs)
             put("threads", threads); put("beam_size", beamSize); put("best_of", bestOf)
-            put("flash_attention", flashAttention); put("use_gpu", false); put("language", "ru")
+            put("flash_attention", flashAttention); put("use_gpu", false); put("language", language)
             put("elapsed_ms", result.elapsedMs); put("peak_combined_rss_bytes", result.peakCombinedRssBytes)
         }
         writeImmutableArtifact(File(dir, artifactFile.nameWithoutExtension + ".profile-audit.json"),

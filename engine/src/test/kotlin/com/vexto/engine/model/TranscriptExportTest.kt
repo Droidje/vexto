@@ -1,6 +1,7 @@
 package com.vexto.engine.model
 
 import com.vexto.engine.model.export.TranscriptExport
+import com.vexto.engine.model.PhoneticSurface
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
@@ -102,6 +103,21 @@ class TranscriptExportTest {
         val parsed = TranscriptExport.parseJson(TranscriptExport.json(overlapping))
         assertEquals(listOf(0L, 100L), parsed.map { it.startMs })
         assertEquals(listOf(1000L, 200L), parsed.map { it.endMs })
+    }
+
+    @Test
+    fun `submission replaces phonetic marks and leaves the stored utterance unchanged`() {
+        val stored = "пауза (əɯ) (ɥ) и #пеньк-пеньк#"
+        val original = Transcript(listOf(Utterance("speaker_1", 0, 1000, stored)), listOf(Speaker("speaker_1")))
+        assertEquals(stored, TranscriptExport.parseJson(TranscriptExport.json(original)).single().text)
+        assertEquals("пауза эм вдох и пеньк пеньк", TranscriptExport.parseJson(TranscriptExport.submissionJson(original)).single().text)
+        assertEquals(stored, original.utterances.single().text)
+        assertTrue(TranscriptExport.markdown(original).contains("пауза эм вдох и пеньк пеньк"))
+        assertFalse(TranscriptExport.markdown(original).contains("ə"))
+        assertEquals("э", PhoneticSurface.present("(ˀ)"))
+        assertEquals("эм", PhoneticSurface.present("(ɐɯɥ)"))
+        assertEquals("см. э", PhoneticSurface.present("см. ə"))
+        assertEquals("привет", PhoneticSurface.present("привет"))
     }
 
     @Test

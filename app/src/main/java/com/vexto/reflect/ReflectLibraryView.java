@@ -17,42 +17,60 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
 /** Content above the shared navigation. Geometry follows the 393 dp design stage. */
 final class ReflectLibraryView extends ViewGroup {
+    private static final int SPEAKER_BUTTON_HEIGHT = 48;
+    private static final int SPEAKER_BUTTON_BOTTOM_INSET = 103;
+
     enum Page { RECORDS, SPEAKERS, CONVERSATIONS }
 
     interface Actions {
         void openRecording(ReflectCatalog.Recording recording);
         void openConversation(ReflectCatalog.Conversation conversation);
+        Future<?> searchConversations(List<ReflectCatalog.Conversation> conversations, String query,
+                                      Consumer<List<ReflectCatalog.Conversation>> result);
         void addSpeaker();
         void openSpeaker(ReflectCatalog.Speaker speaker);
     }
 
     private final ReflectArtwork artwork;
+    private final ReflectPreferences preferences;
     private final Page page;
     private final Actions actions;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final ListView scroller;
+    private final View scrollEndSpace;
     private final RowAdapter adapter;
     private final EditText search;
     private final Button addSpeaker;
     private List<ReflectCatalog.Recording> recordings = Collections.emptyList();
     private List<ReflectCatalog.Speaker> speakers = Collections.emptyList();
     private List<ReflectCatalog.Conversation> conversations = Collections.emptyList();
+    private File processingRecording;
+    private ReflectLocalTranscription.Progress processing;
+    private Future<?> conversationSearch;
+    private Runnable pendingSearch;
+    private int searchGeneration;
     private float scale = 1;
     private int measuredWidth = -1;
 
-    ReflectLibraryView(Context context, ReflectArtwork artwork, Page page, Actions actions) {
+    ReflectLibraryView(Context context, ReflectArtwork artwork, ReflectPreferences preferences, Page page,
+                       Actions actions) {
         super(context);
         this.artwork = artwork;
+        this.preferences = preferences;
         this.page = page;
         this.actions = actions;
         setWillNotDraw(false);
@@ -61,15 +79,17 @@ final class ReflectLibraryView extends ViewGroup {
         scroller = new ListView(context);
         scroller.setDivider(null);
         scroller.setDividerHeight(0);
-        scroller.setPadding(0, 0, 0, 0);
         scroller.setSelector(new ColorDrawable(Color.TRANSPARENT));
         scroller.setItemsCanFocus(true);
         scroller.setVerticalScrollBarEnabled(false);
         scroller.setOverScrollMode(OVER_SCROLL_NEVER);
+        scrollEndSpace = new View(context);
+        scrollEndSpace.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        scroller.addFooterView(scrollEndSpace, null, false);
         adapter = new RowAdapter();
         scroller.setAdapter(adapter);
 
-        search = page == Page.CONVERSATIONS ? null : createSearch(context);
+        search = createSearch(context);
         addSpeaker = page == Page.SPEAKERS ? speakerButton(context, "Добавить спикера", actions::addSpeaker) : null;
         if (search != null) addView(search);
         addView(scroller);
@@ -90,7 +110,11 @@ final class ReflectLibraryView extends ViewGroup {
         search.setTypeface(artwork.regular);
         search.setTextColor(Color.WHITE);
         search.setHintTextColor(0xff808080);
-        search.setHint(page == Page.RECORDS ? "Поиск по записи, участникам" : "Поиск по имени, id");
+        search.setHint(switch (page) {
+            case RECORDS -> "Поиск по записи, участникам";
+            case SPEAKERS -> "Поиск по имени, id";
+            case CONVERSATIONS -> "Поиск по разговорам";
+        });
         search.setOnEditorActionListener((field, action, event) -> {
             if (action != EditorInfo.IME_ACTION_SEARCH) return false;
             dismissKeyboard();
@@ -105,7 +129,19 @@ final class ReflectLibraryView extends ViewGroup {
     }
 
     private Button speakerButton(Context context, String label, Runnable action) {
-        Button invite = new Button(context);
+        Button invite = new Button(context) {
+            private final ReflectGlassBackdrop backdrop = new ReflectGlassBackdrop();
+
+            @Override public void draw(Canvas canvas) {
+                if (!emptySpeakers()) {
+                    backdrop.draw(canvas, 0, 0, getWidth(), getHeight(), px(24), px(10), sample -> {
+                        sample.translate(-getLeft(), -getTop());
+                        ReflectLibraryView.this.drawChild(sample, scroller, getDrawingTime());
+                    });
+                }
+                super.draw(canvas);
+            }
+        };
         invite.setAllCaps(false);
         invite.setText(label);
         invite.setTextColor(0xff040402);
@@ -117,6 +153,11 @@ final class ReflectLibraryView extends ViewGroup {
         invite.setStateListAnimator(null);
         invite.setOnClickListener(v -> action.run());
         return invite;
+    }
+
+    @Override public void onDescendantInvalidated(View child, View target) {
+        super.onDescendantInvalidated(child, target);
+        if (addSpeaker != null && child == scroller) addSpeaker.invalidate();
     }
 
     void setRecordings(List<ReflectCatalog.Recording> recordings) {
@@ -132,6 +173,27 @@ final class ReflectLibraryView extends ViewGroup {
     void setConversations(List<ReflectCatalog.Conversation> conversations) {
         this.conversations = conversations;
         renderRows(false);
+    }
+
+    void updateProgress(File recording, ReflectLocalTranscription.Progress progress) {
+        File previous = processingRecording;
+        if (progress == null && !recording.equals(previous)) return;
+        processingRecording = progress == null ? null : recording;
+        processing = progress;
+        for (int offset = 0; offset < scroller.getChildCount(); offset++) {
+            int position = scroller.getFirstVisiblePosition() + offset;
+            if (position >= adapter.getCount()) break;
+            Object item = adapter.getItem(position);
+            File file = item instanceof ReflectCatalog.Recording row ? row.file
+                    : item instanceof ReflectCatalog.Conversation row ? row.recording.file : null;
+            if (file != null && (file.equals(recording) || file.equals(previous))) {
+                adapter.getView(position, scroller.getChildAt(offset), scroller);
+            }
+        }
+    }
+
+    private ReflectLocalTranscription.Progress progress(File recording) {
+        return recording.equals(processingRecording) ? processing : null;
     }
 
     boolean hasConversations() { return !conversations.isEmpty(); }
@@ -160,12 +222,12 @@ final class ReflectLibraryView extends ViewGroup {
             case RECORDS -> collectRecordings(query);
             case SPEAKERS -> {
                 for (ReflectCatalog.Speaker speaker : speakers) {
-                    if (ReflectCatalog.matches(speaker.name + " " + speaker.id, query)) {
+                    if (ReflectCatalog.matches(speaker.displayName() + " " + speaker.name + " " + speaker.id, query)) {
                         adapter.rows.add(speaker);
                     }
                 }
             }
-            case CONVERSATIONS -> adapter.rows.addAll(conversations);
+            case CONVERSATIONS -> collectConversations(query);
         }
         if (adapter.rows.isEmpty() && !emptySpeakers() && page != Page.CONVERSATIONS) {
             String message = query.trim().isEmpty() ? "Сохранённых записей пока нет" : "Ничего не найдено";
@@ -173,6 +235,31 @@ final class ReflectLibraryView extends ViewGroup {
         }
         adapter.notifyDataSetChanged();
         if (scrollToTop) scroller.setSelection(0);
+    }
+
+    private void collectConversations(String query) {
+        int request = ++searchGeneration;
+        if (pendingSearch != null) removeCallbacks(pendingSearch);
+        if (conversationSearch != null) conversationSearch.cancel(true);
+        if (query.trim().isEmpty() || conversations.isEmpty()) {
+            adapter.rows.addAll(conversations);
+            return;
+        }
+        adapter.rows.add(new TextRow("Ищем по разговорам…", false));
+        pendingSearch = () -> conversationSearch = actions.searchConversations(conversations, query, results -> {
+            if (request != searchGeneration) return;
+            adapter.rows.clear();
+            adapter.rows.addAll(results);
+            if (results.isEmpty()) adapter.rows.add(new TextRow("Ничего не найдено", false));
+            adapter.notifyDataSetChanged();
+            scroller.animate().cancel();
+            scroller.setAlpha(1f);
+            if (isShown() && preferences.motionEnabled()) {
+                scroller.setAlpha(.72f);
+                scroller.animate().alpha(1f).setDuration(150).setInterpolator(ReflectMotion.EASE).start();
+            }
+        });
+        postDelayed(pendingSearch, 180);
     }
 
     private void collectRecordings(String query) {
@@ -215,7 +302,7 @@ final class ReflectLibraryView extends ViewGroup {
             Object item = getItem(position);
             ReflectLibraryRow row = ReflectLibraryRow.reuse(getContext(), recycled);
             if (item instanceof ReflectCatalog.Recording recording) {
-                return row.recording(artwork, recording, () -> {
+                return row.recording(artwork, recording, progress(recording.file), () -> {
                     dismissKeyboard();
                     actions.openRecording(recording);
                 });
@@ -224,7 +311,10 @@ final class ReflectLibraryView extends ViewGroup {
                 return row.speaker(artwork, speaker, () -> actions.openSpeaker(speaker));
             }
             if (item instanceof ReflectCatalog.Conversation conversation) {
-                return row.conversation(artwork, conversation, () -> actions.openConversation(conversation));
+                return row.conversation(artwork, conversation, progress(conversation.recording.file), () -> {
+                    dismissKeyboard();
+                    actions.openConversation(conversation);
+                });
             }
             TextRow label = (TextRow) item;
             return label.heading ? row.heading(artwork, label.text) : row.message(artwork, label.text);
@@ -237,6 +327,10 @@ final class ReflectLibraryView extends ViewGroup {
         if (width != measuredWidth) {
             measuredWidth = width;
             scale = width / 393f;
+            int bottomInset = addSpeaker == null ? ReflectView.NAV_BOTTOM_CLEARANCE
+                    : SPEAKER_BUTTON_BOTTOM_INSET + SPEAKER_BUTTON_HEIGHT + 12;
+            scrollEndSpace.setLayoutParams(new AbsListView.LayoutParams(
+                    LayoutParams.MATCH_PARENT, px(bottomInset)));
             if (search != null) {
                 search.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16 * scale);
                 search.setPadding(px(48), 0, px(12), 0);
@@ -245,22 +339,24 @@ final class ReflectLibraryView extends ViewGroup {
         }
         if (search != null && search.getVisibility() != GONE) search.measure(exact(px(361)), exact(px(48)));
         if (scroller.getVisibility() != GONE) scroller.measure(exact(width),
-                exact(Math.max(0, height - px(scrollTop() + (addSpeaker != null ? 72 : 0)))));
-        if (addSpeaker != null) addSpeaker.measure(exact(px(195)), exact(px(48)));
+                exact(Math.max(0, height - px(scrollTop()))));
+        if (addSpeaker != null) addSpeaker.measure(exact(px(195)), exact(px(SPEAKER_BUTTON_HEIGHT)));
     }
 
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         if (search != null && search.getVisibility() != GONE) search.layout(px(16), px(51), px(377), px(99));
         if (scroller.getVisibility() != GONE) scroller.layout(0, px(scrollTop()), getWidth(),
-                Math.max(px(scrollTop()), getHeight() - px(addSpeaker != null ? 72 : 0)));
-        if (addSpeaker != null) addSpeaker.layout(px(100), emptySpeakers() ? px(446) : getHeight() - px(60),
-                px(295), emptySpeakers() ? px(494) : getHeight() - px(12));
+                Math.max(px(scrollTop()), getHeight()));
+        if (addSpeaker != null) {
+            int bottom = emptySpeakers() ? px(494) : getHeight() - px(SPEAKER_BUTTON_BOTTOM_INSET);
+            addSpeaker.layout(px(100), bottom - addSpeaker.getMeasuredHeight(), px(295), bottom);
+        }
     }
 
     private void styleSpeakerButton(Button button) {
         button.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16 * scale);
         GradientDrawable pill = new GradientDrawable();
-        pill.setColor(Color.WHITE);
+        pill.setColor(0xddffffff);
         pill.setCornerRadius(px(24));
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x22000000), pill, null));
     }
@@ -280,22 +376,14 @@ final class ReflectLibraryView extends ViewGroup {
                 case CONVERSATIONS -> "Ваши разговоры";
             };
             ReflectLibraryRow.text(canvas, paint, title, 16, 27, 24, Color.WHITE, artwork.display, -.24f);
-            if (page != Page.CONVERSATIONS) {
-                paint.setColor(0xff333333);
-                canvas.drawRoundRect(16, 51, 377, 99, 24, 24, paint);
-                artwork.icon(canvas, "search", 28, 63);
-            }
+            paint.setColor(0xff333333);
+            canvas.drawRoundRect(16, 51, 377, 99, 24, 24, paint);
+            artwork.icon(canvas, "search", 28, 63);
         }
         canvas.restore();
     }
 
     private int px(float design) { return Math.round(design * scale); }
-    private int scrollTop() {
-        return switch (page) {
-            case RECORDS -> 125;
-            case SPEAKERS -> 131;
-            case CONVERSATIONS -> 51;
-        };
-    }
+    private int scrollTop() { return 108; }
     private static int exact(int size) { return MeasureSpec.makeMeasureSpec(size, MeasureSpec.EXACTLY); }
 }

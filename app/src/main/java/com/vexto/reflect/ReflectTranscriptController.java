@@ -1,21 +1,16 @@
 package com.vexto.reflect;
 
 import android.app.Activity;
-import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
 import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputFilter;
 import android.text.InputType;
-import android.view.Gravity;
-import android.view.Window;
 import android.view.WindowManager;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.io.File;
 import java.io.IOException;
@@ -35,6 +30,7 @@ final class ReflectTranscriptController {
     private final ReflectView view;
     private final ReflectPreferences preferences;
     private final ReflectTranscriptStore store;
+    private final ReflectConversationStore conversations;
     private final ExecutorService io;
     private final Consumer<String> notice;
     private final IntConsumer playFrom;
@@ -54,13 +50,15 @@ final class ReflectTranscriptController {
     private int generation, transcriptRequest, durationMs;
 
     ReflectTranscriptController(Activity activity, ReflectView view, ReflectPreferences preferences,
-                                ReflectTranscriptStore store, ExecutorService io, Consumer<String> notice,
+                                ReflectTranscriptStore store, ReflectConversationStore conversations,
+                                ExecutorService io, Consumer<String> notice,
                                 IntConsumer playFrom, Runnable playAudio, Runnable refreshCatalog,
                                 SpeakerProfiles profiles, SpeakerProfilesUi profilesUi) {
         this.activity = activity;
         this.view = view;
         this.preferences = preferences;
         this.store = store;
+        this.conversations = conversations;
         this.io = io;
         this.notice = notice;
         this.playFrom = playFrom;
@@ -69,12 +67,11 @@ final class ReflectTranscriptController {
         this.profiles = profiles;
         this.profilesUi = profilesUi;
         exports = new ReflectExportController(activity, view, io, profiles, notice);
-        local = new ReflectLocalTranscription(activity, store, profiles, io, this::processingChanged,
-                this::transcriptionFinished);
+        local = new ReflectLocalTranscription(activity, this::processingChanged, this::transcriptionFinished);
     }
 
     void open(File recording, String fallback, String length, int durationMs, boolean recordingDetails,
-              boolean startImmediately) {
+              boolean showProcessing, boolean startImmediately) {
         int current = ++generation;
         file = recording;
         title = fallback;
@@ -85,52 +82,49 @@ final class ReflectTranscriptController {
         metadata = null;
         loading = true;
         issue = null;
+        view.transcriptView().waveform(null);
         view.transcriptView().speakerNames(Collections.emptyMap());
         render();
-        if (startImmediately) view.processingView().content(length, null);
-        view.show(startImmediately ? ReflectView.Screen.PROCESSING : ReflectView.Screen.TRANSCRIPT);
+        boolean processing = showProcessing && (startImmediately || local.progress(recording) != null);
+        if (processing) view.processingView().content(length, local.progress(recording));
+        view.show(processing ? ReflectView.Screen.PROCESSING : ReflectView.Screen.TRANSCRIPT);
+        // Start the foreground service while the activity is visible, before loading metadata on IO.
+        if (startImmediately && !local.start(recording)) showTranscriptAfterProcessing();
         io.execute(() -> {
-            String resolvedTitle = store.title(recording, fallback);
+            String resolvedTitle = resolveTitle(recording, fallback, recordingDetails);
             RecordingMetadata properties = RecordingMetadata.read(recording);
             try {
                 ReflectTranscript loaded = store.load(recording);
                 activity.runOnUiThread(() -> {
-                    if (activity.isDestroyed()) return;
-                    if (current != generation) {
-                        // The user can send processing to the background before metadata is loaded.
-                        if (startImmediately && loaded == null && !importing.contains(recording)) {
-                            if (local.busy()) notice.accept("Дождитесь завершения текущей обработки.");
-                            else local.start(recording);
-                        }
-                        return;
-                    }
+                    if (activity.isDestroyed() || current != generation) return;
                     title = resolvedTitle;
                     metadata = properties;
-                    transcript = loaded;
+                    if (transcript == null) transcript = loaded;
                     loading = false;
                     render();
                     refreshSpeakerNames(current, recording);
-                    if (startImmediately && loaded == null) transcribe();
-                    else showTranscriptAfterProcessing();
+                    if (local.progress(recording) == null) showTranscriptAfterProcessing();
                 });
             } catch (IOException | RuntimeException invalid) {
                 String readIssue = "Не удалось прочитать сохранённый транскрипт. Можно импортировать другой JSON.";
                 activity.runOnUiThread(() -> {
-                    if (activity.isDestroyed()) return;
-                    if (current != generation) {
-                        if (startImmediately) notice.accept(readIssue);
-                        return;
-                    }
+                    if (activity.isDestroyed() || current != generation) return;
                     title = resolvedTitle;
                     metadata = properties;
-                    issue = readIssue;
+                    if (transcript == null) issue = readIssue;
                     loading = false;
                     render();
-                    showTranscriptAfterProcessing();
+                    if (local.progress(recording) == null) showTranscriptAfterProcessing();
                     refreshSpeakerNames(current, recording);
                 });
             }
         });
+    }
+
+    private String resolveTitle(File recording, String fallback, boolean recordingDetails) {
+        if (recordingDetails) return store.title(recording, fallback);
+        try { return conversations.title(recording); }
+        catch (RuntimeException unavailable) { return fallback; }
     }
 
     void close() {
@@ -139,6 +133,12 @@ final class ReflectTranscriptController {
         transcript = null;
         metadata = null;
         view.transcriptView().clear();
+    }
+
+    void resumeProcessing() {
+        local.resume();
+        File active = local.activeRecording();
+        if (active != null) processingChanged(active);
     }
 
     void destroy() { local.close(); }
@@ -157,7 +157,21 @@ final class ReflectTranscriptController {
         local.start(file);
     }
 
-    void cancelTranscription() { local.cancel(file); }
+    boolean canStartBackground() {
+        if (!local.busy()) return true;
+        notice.accept("Дождитесь завершения текущей обработки.");
+        return false;
+    }
+
+    void startBackground(File recording) {
+        if (!canStartBackground() || importing.contains(recording)) return;
+        if (local.start(recording)) notice.accept("Расшифровка запущена в фоне");
+    }
+
+    void cancelTranscription() {
+        local.cancel(file);
+        if (local.progress(file) == null) showTranscriptAfterProcessing();
+    }
 
     void saveState(Bundle state) {
         if (view.screen() != ReflectView.Screen.TRANSCRIPT && view.screen() != ReflectView.Screen.PROCESSING
@@ -272,12 +286,12 @@ final class ReflectTranscriptController {
     }
 
     void options() {
-        Sheet menu = sheet(recordingDetails ? "Действия записи" : "Действия разговора");
+        ReflectActionSheet menu = sheet(recordingDetails ? "Действия записи" : "Действия разговора");
         if (file != null) {
             if (!recordingDetails && transcript != null && !transcript.lines.isEmpty()) {
                 menu.option(view.transcriptView().isPlaying() ? "Приостановить" : "Прослушать аудио", playAudio);
             }
-            menu.option("Переименовать", () -> rename());
+            if (recordingDetails) menu.option("Переименовать", this::rename);
             if (!recordingDetails) menu.option("Импортировать транскрипт", this::pick);
         }
         if (!recordingDetails) menu.option("Настройки чтения", this::styleOptions);
@@ -285,7 +299,7 @@ final class ReflectTranscriptController {
     }
 
     void styleOptions() {
-        Sheet menu = sheet("Размер текста");
+        ReflectActionSheet menu = sheet("Размер текста");
         int[] sizes = {14, 16, 20};
         String[] labels = {"Мелкий", "Обычный", "Крупный"};
         for (int i = 0; i < sizes.length; i++) {
@@ -301,8 +315,9 @@ final class ReflectTranscriptController {
     }
 
     void lineOptions(ReflectTranscript.Line line) {
-        Sheet menu = sheet("Реплика");
-        TextView excerpt = menu.style.text(line.text, 15, ReflectPageStyle.MUTED, menu.style.art.regular);
+        ReflectActionSheet menu = sheet("Реплика");
+        String shown = com.vexto.engine.model.PhoneticSurface.present(line.text);
+        TextView excerpt = menu.style.text(shown, 15, ReflectPageStyle.MUTED, menu.style.art.regular);
         excerpt.setMaxLines(5);
         menu.style.append(menu.root, excerpt, 0, 12);
         if (file != null) menu.option("Прослушать с метки", () -> playFrom.accept(line.startMs));
@@ -317,11 +332,11 @@ final class ReflectTranscriptController {
         menu.option("Скопировать текст", () -> {
             ClipboardManager clipboard = activity.getSystemService(ClipboardManager.class);
             if (clipboard != null) {
-                clipboard.setPrimaryClip(ClipData.newPlainText(activity.getString(R.string.app_name), line.text));
+                clipboard.setPrimaryClip(ClipData.newPlainText(activity.getString(R.string.app_name), shown));
             }
         });
         menu.option("Поделиться репликой", () -> activity.startActivity(Intent.createChooser(
-                new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, line.text),
+                new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, shown),
                 "Поделиться репликой")));
         menu.show();
     }
@@ -329,7 +344,7 @@ final class ReflectTranscriptController {
     private void rename() {
         File recording = file;
         if (recording == null) return;
-        Sheet editor = sheet(recordingDetails ? "Название записи" : "Название разговора");
+        ReflectActionSheet editor = sheet("Название записи");
         EditText input = new EditText(activity);
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -344,7 +359,7 @@ final class ReflectTranscriptController {
         editor.option("Сохранить", () -> {
             String newTitle = input.getText().toString().trim();
             if (newTitle.isEmpty()) {
-                notice.accept("Введите название разговора");
+                notice.accept("Введите название записи");
                 return;
             }
             int current = generation;
@@ -368,24 +383,30 @@ final class ReflectTranscriptController {
     }
 
     private void render() {
-        view.transcriptView().content(title, length, transcript, file != null,
+        view.transcriptView().content(title, length, durationMs, transcript, file != null,
                 loading, issue, recordingDetails, metadata, local.progress(file));
         restoreExportIfReady();
     }
 
     private void processingChanged(File recording) {
+        view.updateLibraryProgress(recording, local.progress(recording));
         if (!recording.equals(file) || recordingDetails) return;
         var progress = local.progress(file);
-        if (view.screen() == ReflectView.Screen.PROCESSING) view.processingView().content(length, progress);
-        else view.transcriptView().transcription(progress);
+        if (view.screen() == ReflectView.Screen.PROCESSING) {
+            if (progress == null) showTranscriptAfterProcessing();
+            else view.processingView().content(length, progress);
+        } else view.transcriptView().transcription(progress);
     }
 
     private void transcriptionFinished(ReflectLocalTranscription.Result result) {
+        view.updateLibraryProgress(result.recording(), null);
         if (result.recording().equals(file)) {
-            if (transcript == null) {
+            if (result.transcript() != null) {
                 transcript = result.transcript();
-                issue = transcript == null ? result.message() : null;
-                if (transcript != null) refreshSpeakerNames(generation, file);
+                issue = null;
+                refreshSpeakerNames(generation, file);
+            } else if (transcript == null) {
+                issue = result.message();
             }
             render();
             showTranscriptAfterProcessing();
@@ -419,45 +440,7 @@ final class ReflectTranscriptController {
         });
     }
 
-    private Sheet sheet(String title) { return new Sheet(title); }
-
-    private final class Sheet {
-        final Dialog dialog = new Dialog(activity);
-        final ReflectPageStyle style = view.pageStyle();
-        final LinearLayout root = style.column();
-
-        Sheet(String title) {
-            dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-            root.setPadding(style.px(16), style.px(16), style.px(16), style.px(12));
-            root.setBackground(style.rounded(ReflectPageStyle.CARD, 24));
-            style.append(root, style.text(title, 18, Color.WHITE, style.art.semibold), 0, 12);
-            dialog.setContentView(root);
-        }
-
-        void option(String title, Runnable action) {
-            option(title, null, action);
-        }
-
-        private void option(String title, String icon, Runnable action) {
-            TextView button = style.text(title, 16, Color.WHITE, style.art.regular);
-            button.setMinHeight(style.px(44));
-            button.setPadding(style.px(10), 0, style.px(10), 0);
-            if (icon != null) {
-                button.setCompoundDrawablesRelative(
-                        style.art.iconDrawable(activity.getResources(), icon, style.px(22)), null, null, null);
-                button.setCompoundDrawablePadding(style.px(10));
-            }
-            button.setBackground(style.pressable(0xff303030, 14));
-            button.setOnClickListener(v -> { dialog.dismiss(); action.run(); });
-            style.append(root, button, 4, 0);
-        }
-
-        void show() {
-            Window window = dialog.getWindow();
-            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            window.setGravity(Gravity.CENTER);
-            dialog.show();
-            window.setLayout(style.px(361), WindowManager.LayoutParams.WRAP_CONTENT);
-        }
+    private ReflectActionSheet sheet(String title) {
+        return view.actionSheet(activity, title);
     }
 }

@@ -1,0 +1,16 @@
+{
+  "transcript": [
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 5,
+      "end_ms": 1690,
+      "text": "А вы подумали, что он приходил?"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 2905,
+      "end_ms": 4550,
+      "text": "А ты решил, что он испугался?"
+    }
+  ]
+}

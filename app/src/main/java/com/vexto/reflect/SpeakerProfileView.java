@@ -25,6 +25,7 @@ import java.util.function.Consumer;
 /** On-device speaker profile with a scrollable index of the speaker's utterances. */
 final class SpeakerProfileView extends FrameLayout {
     private final ReflectArtwork artwork;
+    private final ReflectPreferences preferences;
     private final Runnable back;
     private final Runnable menu;
     private final Consumer<SpeakerDirectory.Utterance> openUtterance;
@@ -33,11 +34,14 @@ final class SpeakerProfileView extends FrameLayout {
     private ListView list;
     private int width;
     private boolean rebuild = true;
+    private boolean revealProfile;
 
-    SpeakerProfileView(Context context, ReflectArtwork artwork, Runnable back, Runnable menu,
+    SpeakerProfileView(Context context, ReflectArtwork artwork, ReflectPreferences preferences,
+                       Runnable back, Runnable menu,
                        Consumer<SpeakerDirectory.Utterance> openUtterance) {
         super(context);
         this.artwork = artwork;
+        this.preferences = preferences;
         this.back = back;
         this.menu = menu;
         this.openUtterance = openUtterance;
@@ -51,7 +55,9 @@ final class SpeakerProfileView extends FrameLayout {
 
     void content(SpeakerDirectory.Detail next) {
         if (next == detail) return;
-        if (next == null || detail == null || !next.profile().id().equals(detail.profile().id())) list = null;
+        boolean changedProfile = next == null || detail == null || !next.profile().id().equals(detail.profile().id());
+        if (changedProfile) list = null;
+        revealProfile = next != null && changedProfile;
         detail = next;
         rebuild = true;
         requestLayout();
@@ -78,7 +84,8 @@ final class SpeakerProfileView extends FrameLayout {
         list.setOverScrollMode(OVER_SCROLL_NEVER);
         list.setClipToPadding(false);
         list.setPadding(style.px(16), 0, style.px(16), style.px(24));
-        list.addHeaderView(header(), null, false);
+        LinearLayout profileHeader = header();
+        list.addHeaderView(profileHeader, null, false);
         list.setAdapter(new UtteranceAdapter(detail == null ? List.of() : detail.utterances()));
         list.setOnItemClickListener((parent, row, position, id) -> {
             Object item = parent.getItemAtPosition(position);
@@ -88,6 +95,13 @@ final class SpeakerProfileView extends FrameLayout {
         body.topMargin = style.px(139);
         addView(list, body);
         list.setSelectionFromTop(Math.min(first, list.getCount() - 1), offset);
+        if (revealProfile && isShown() && preferences.motionEnabled()) {
+            profileHeader.setAlpha(.65f);
+            profileHeader.setTranslationY(style.px(5));
+            profileHeader.animate().alpha(1f).translationY(0f).setDuration(200)
+                    .setInterpolator(ReflectMotion.EASE).start();
+        }
+        revealProfile = false;
 
         toolbarButton("transcript_back", "Назад", Gravity.LEFT, back);
         if (detail != null) toolbarButton("transcript_more", "Действия спикера", Gravity.RIGHT, menu);
@@ -101,19 +115,10 @@ final class SpeakerProfileView extends FrameLayout {
             return header;
         }
 
-        LinearLayout identity = new LinearLayout(getContext());
-        identity.setGravity(Gravity.CENTER_VERTICAL);
-        TextView name = style.title(detail.profile().name());
-        identity.addView(name, new LinearLayout.LayoutParams(0, WRAP_CONTENT, 1));
-        if (detail.profile().self()) {
-            TextView badge = style.text("Я", 14, Color.WHITE, artwork.semibold);
-            badge.setGravity(Gravity.CENTER);
-            badge.setBackground(style.rounded(0xff254f40, 15));
-            LinearLayout.LayoutParams badgeSize = new LinearLayout.LayoutParams(style.px(32), style.px(30));
-            badgeSize.leftMargin = style.px(12);
-            identity.addView(badge, badgeSize);
-        }
-        style.append(header, identity, 0, 22);
+        var profile = detail.profile();
+        TextView name = style.title(ReflectCatalog.speakerName(profile.name(), profile.self()));
+        if (profile.self()) name.setTextColor(ReflectPageStyle.SELF_ACCENT);
+        style.append(header, name, 0, 22);
 
         LinearLayout statistics = new LinearLayout(getContext());
         statistics.setBackground(style.rounded(ReflectPageStyle.CARD, 20));
@@ -210,7 +215,7 @@ final class SpeakerProfileView extends FrameLayout {
 
         void bind(SpeakerDirectory.Utterance utterance) {
             source.setText(time(utterance.startMs()) + "–" + time(utterance.endMs()) + " · " + utterance.title());
-            text.setText(utterance.text());
+            text.setText(com.vexto.engine.model.PhoneticSurface.present(utterance.text()));
         }
     }
 }

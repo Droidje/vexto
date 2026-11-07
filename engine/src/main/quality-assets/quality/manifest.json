@@ -1,5 +1,5 @@
 {
-  "version": "quality-508faa2fac36",
+  "version": "quality-370552aab094",
   "artifacts": {
     "giga_decoder": {
       "path": "gigaam-v3-e2e-rnnt/decoder.onnx",
@@ -43,6 +43,20 @@
       "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models/gtcrn_simple.onnx",
       "license": "MIT"
     },
+    "lid_decoder": {
+      "path": "lid/whisper-tiny-lid-decoder.int8.onnx",
+      "sha256": "7325bcdaa957fb553621b20d3b4d5f888b4b788c2642727c7c00cf581822886d",
+      "bytes": 10344342,
+      "url": "",
+      "license": "MIT; pruned Whisper tiny int8, see docs/research/spoken-language-id.md"
+    },
+    "lid_encoder": {
+      "path": "lid/whisper-tiny-lid-encoder.int8.onnx",
+      "sha256": "91113bca326f519d2a5724709030c5abf6305106fadf5f96b891c30ee98dbfec",
+      "bytes": 12937458,
+      "url": "",
+      "license": "MIT; pruned Whisper tiny int8, see docs/research/spoken-language-id.md"
+    },
     "nemotron": {
       "path": "nemotron/Nemotron-3-Diarization.f32.gguf",
       "sha256": "3339eca67ba8c7bc4a67b68797b60f8956e3ba1a34d5f84b14a0157ca96185b2",
@@ -70,6 +84,27 @@
       "bytes": 39593765,
       "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_200k_sv_zh-cn_16k-common.onnx",
       "license": "Apache-2.0 (3D-Speaker)"
+    },
+    "whisper_fast": {
+      "path": "whisper/ggml-small-q5_1.bin",
+      "sha256": "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb",
+      "bytes": 190085487,
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-small-q5_1.bin",
+      "license": "MIT"
+    },
+    "giga_fast_model": {
+      "path": "gigaam-v3-e2e-ctc/model.int8.onnx",
+      "sha256": "d5fea8df94263c285e54b21e5774b707c707192d3bdbeffd7b1eb07fb6743b35",
+      "bytes": 224893661,
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-ctc-punct-giga-am-v3-russian-2025-12-16/resolve/4fb5407ff028a69fec516cdf4c10fac9ddea7c16/model.int8.onnx",
+      "license": "MIT"
+    },
+    "giga_fast_tokens": {
+      "path": "gigaam-v3-e2e-ctc/tokens.txt",
+      "sha256": "142de7570b3de5b3035ce111a89c228e80e6085273731d944093ddf24fa539cd",
+      "bytes": 2007,
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-ctc-punct-giga-am-v3-russian-2025-12-16/resolve/4fb5407ff028a69fec516cdf4c10fac9ddea7c16/tokens.txt",
+      "license": "MIT"
     }
   }
 }

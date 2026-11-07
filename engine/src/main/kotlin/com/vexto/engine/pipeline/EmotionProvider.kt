@@ -12,9 +12,13 @@ import java.io.File
 
 /** GigaAM-Emo v1, original audio only. Predictions are evidence, not verified feelings. */
 class EmotionProvider private constructor(private val factory: () -> Predictor) : Closeable {
-    constructor(model: File, threads: Int = 2) : this({ NativePredictor(model, threads) })
+    constructor(model: File, threads: Int = 2) : this({ NativePredictor(model, threads, false) })
+    internal constructor(model: File, allowNpu: Boolean) : this({ NativePredictor(model, 2, allowNpu) })
+
+    internal val backend: String? get() = predictor?.backend
     internal constructor(predictor: Predictor) : this({ predictor })
     internal interface Predictor : Closeable {
+        val backend: String get() = "cpu"
         val runtimeVersion: String
         fun predict(features: FloatArray, frames: Int): FloatArray
     }
@@ -90,13 +94,15 @@ class EmotionProvider private constructor(private val factory: () -> Predictor) 
     }
     override fun close() { predictor?.close(); predictor = null }
 
-    private class NativePredictor(model: File, threads: Int) : Predictor {
+    private class NativePredictor(model: File, threads: Int, allowNpu: Boolean) : Predictor {
         private var handle: Long
         init {
             require(model.isFile && threads in 1..4)
-            handle = EmotionNative.create(model.absolutePath,threads)
+            handle = if (allowNpu) EmotionNative.createAccelerated(model.absolutePath, threads)
+                else EmotionNative.create(model.absolutePath, threads)
             check(handle != 0L)
         }
+        override val backend: String get() = EmotionNative.backend(handle)
         override val runtimeVersion: String get() = EmotionNative.runtimeVersion()
         @Synchronized override fun predict(features: FloatArray, frames: Int): FloatArray {
             check(handle != 0L)
@@ -111,6 +117,9 @@ class EmotionProvider private constructor(private val factory: () -> Predictor) 
 internal object EmotionNative {
     init { System.loadLibrary("vexto_emotion_jni") }
     external fun create(modelPath: String, threads: Int): Long
+    external fun createAccelerated(modelPath: String, threads: Int): Long
+    external fun backend(handle: Long): String
+    external fun npuDriver(): String?
     external fun predict(handle: Long, features: FloatArray, frames: Int): FloatArray
     external fun release(handle: Long)
     external fun runtimeVersion(): String
