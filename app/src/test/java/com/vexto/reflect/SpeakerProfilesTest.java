@@ -69,9 +69,10 @@ public class SpeakerProfilesTest {
         profiles.markSelf(a);
         assertEquals(supplied + " · Я", profiles.names(first, imported).get("speaker_1"));
         var out = new ByteArrayOutputStream();
-        RecordingExport.JSON.write(out, first, imported, "Разговор", profiles.exportNames(first, imported));
-        var exported = ReflectTranscript.parse(new java.io.ByteArrayInputStream(out.toByteArray()));
-        assertEquals(supplied, exported.lines.get(0).speakerName);
+        RecordingExport.MARKDOWN.write(out, first, imported, "Разговор", profiles.exportNames(first, imported));
+        String exported = out.toString(StandardCharsets.UTF_8);
+        assertTrue(exported.contains(supplied));
+        assertFalse(exported.contains("· Я"));
         profiles.rename(a, "Алиса");
         assertEquals("Алиса", profiles.exportNames(first, imported).get("speaker_1"));
         assertEquals(supplied, profiles.exportNames(second, imported).get("speaker_1"));

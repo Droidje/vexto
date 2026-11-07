@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -183,16 +182,16 @@ final class ReflectTranscript {
 
     private byte[] encode(boolean includeDetails) throws IOException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-        writeJson(output, Collections.emptyMap(), false, output, includeDetails);
+        writeJson(output, false, output, includeDetails);
         return output.toByteArray();
     }
 
     /** Export every line, even when presentation whitespace/names exceed the import budget. */
-    void writeExport(OutputStream output, Map<String, String> names) throws IOException {
-        writeJson(output, names, true, null, true);
+    void writeSubmission(OutputStream output) throws IOException {
+        writeJson(output, true, null, false);
     }
 
-    private void writeJson(OutputStream output, Map<String, String> names, boolean pretty,
+    private void writeJson(OutputStream output, boolean pretty,
                            ByteArrayOutputStream bounded, boolean includeDetails) throws IOException {
         JsonWriter json = new JsonWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8));
         if (pretty) json.setIndent("  ");
@@ -203,8 +202,7 @@ final class ReflectTranscript {
                     .name("start_ms").value(line.startMs)
                     .name("end_ms").value(line.endMs)
                     .name("text").value(line.text);
-            String name = names.getOrDefault(line.speakerId, line.speakerName);
-            if (includeDetails && name != null) json.name("speaker_name").value(checkedText(name, MAX_SPEAKER_LENGTH));
+            if (includeDetails && line.speakerName != null) json.name("speaker_name").value(line.speakerName);
             if (includeDetails && line.emotionProbabilities != null) {
                 json.name("emotion_probabilities").beginArray();
                 for (Double probability : line.emotionProbabilities.ordered()) json.value(probability);

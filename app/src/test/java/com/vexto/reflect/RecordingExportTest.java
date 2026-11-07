@@ -37,12 +37,13 @@ public class RecordingExportTest {
         return out.toByteArray();
     }
 
-    @Test public void jsonPreservesEverySpeakerLineTimestampTextAndEmotionAfterImport() throws Exception {
+    @Test public void jsonMatchesTheFourFieldContractWithoutLosingAnyUtterance() throws Exception {
         ReflectTranscript source = conversation(137);
         byte[] data = export(RecordingExport.JSON, source);
         ReflectTranscript parsed = ReflectTranscript.parse(new ByteArrayInputStream(data));
         assertEquals(137, parsed.lines.size());
         assertEquals(7, parsed.lines.stream().map(line -> line.speakerId).distinct().count());
+        var rows = new org.json.JSONObject(new String(data, StandardCharsets.UTF_8)).getJSONArray("transcript");
         for (int i = 0; i < source.lines.size(); i++) {
             var expected = source.lines.get(i);
             var actual = parsed.lines.get(i);
@@ -50,14 +51,17 @@ public class RecordingExportTest {
             assertEquals(expected.startMs, actual.startMs);
             assertEquals(expected.endMs, actual.endMs);
             assertEquals(expected.text, actual.text);
-            assertEquals(expected.emotionProbabilities, actual.emotionProbabilities);
-            assertEquals(i % 7 < 2 ? "Алиса" : null, actual.speakerName);
+            var keys = new java.util.HashSet<String>();
+            rows.getJSONObject(i).keys().forEachRemaining(keys::add);
+            assertEquals(java.util.Set.of("speaker_id", "start_ms", "end_ms", "text"), keys);
+            assertNull(actual.emotionProbabilities);
+            assertNull(actual.speakerName);
         }
         assertTrue(parsed.sameLines(ReflectTranscript.parse(new ByteArrayInputStream(parsed.encode()))));
         var engineParsed = TranscriptExport.parseJson(new String(data, StandardCharsets.UTF_8));
         assertEquals(137, engineParsed.size());
-        assertEquals("Алиса", engineParsed.get(0).getSpeakerName());
-        assertEquals(EMOTIONS.ordered(), engineParsed.get(0).getEmotionProbabilities());
+        assertNull(engineParsed.get(0).getSpeakerName());
+        assertNull(engineParsed.get(0).getEmotionProbabilities());
     }
 
     @Test public void optionalExportDetailsDoNotChangeExistingSpeakerLinks() throws Exception {
@@ -66,7 +70,11 @@ public class RecordingExportTest {
                 "speaker_1", 0, 1000, "Текст", EMOTIONS, "Алиса")));
 
         assertArrayEquals(plain.encode(), enriched.encodeSpeakerRevision());
-        assertTrue(enriched.sameLines(ReflectTranscript.parse(new ByteArrayInputStream(enriched.encode()))));
+        byte[] stored = enriched.encode();
+        assertTrue(enriched.sameLines(ReflectTranscript.parse(new ByteArrayInputStream(stored))));
+        var legacy = TranscriptExport.parseJson(new String(stored, StandardCharsets.UTF_8)).get(0);
+        assertEquals("Алиса", legacy.getSpeakerName());
+        assertEquals(EMOTIONS.ordered(), legacy.getEmotionProbabilities());
     }
 
     @Test public void markdownIncludesAllIdsEvenForIdenticalNamesAndAllProbabilityValues() throws Exception {
@@ -90,7 +98,7 @@ public class RecordingExportTest {
 
     @Test public void acceptedTranscriptStillExportsWhenFormattingExceedsImportByteBudget() throws Exception {
         List<ReflectTranscript.Line> lines = new ArrayList<>();
-        String words = "x".repeat(65400);
+        String words = "x".repeat(65455);
         for (int i = 0; i < 128; i++) lines.add(new ReflectTranscript.Line("speaker_0", i, i + 1, words));
         ReflectTranscript source = new ReflectTranscript(lines);
         byte[] stored = source.encode();
@@ -102,7 +110,7 @@ public class RecordingExportTest {
         var result = new org.json.JSONObject(out.toString(StandardCharsets.UTF_8)).getJSONArray("transcript");
         assertEquals(128, result.length());
         assertEquals(words, result.getJSONObject(127).getString("text"));
-        assertEquals("А".repeat(120), result.getJSONObject(127).getString("speaker_name"));
+        assertFalse(result.getJSONObject(127).has("speaker_name"));
     }
 
     @Test public void legacyJsonHasNoInventedNamesOrEmotionsAndUnknownFieldsStillFail() throws Exception {

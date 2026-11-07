@@ -67,7 +67,7 @@ enum RecordingExport {
         }
         if (transcript == null || transcript.lines.isEmpty()) throw new IOException("No transcript to export");
         if (this == JSON) {
-            transcript.writeExport(stream, names);
+            transcript.writeSubmission(stream);
         } else {
             Writer markdown = new OutputStreamWriter(stream, StandardCharsets.UTF_8);
             markdown.write("# " + escape(title).replace('\n', ' ').replace('\r', ' ') + "\n\n");
