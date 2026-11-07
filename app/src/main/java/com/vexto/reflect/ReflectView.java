@@ -1,6 +1,7 @@
 package com.vexto.reflect;
 
 import android.animation.ValueAnimator;
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
@@ -155,6 +156,10 @@ final class ReflectView extends ViewGroup {
     ReflectExportView exportView() { return export; }
     void trimMemory(int level) { artwork.trimMemory(level); }
     ReflectPageStyle pageStyle() { return new ReflectPageStyle(getContext(), artwork, Math.max(1, Math.round(WIDTH * scale))); }
+    ReflectActionSheet actionSheet(Activity activity, String title) {
+        return new ReflectActionSheet(activity, pageStyle(), preferences, title);
+    }
+
     void refreshSettings() { settings.refresh(); }
     void setRecordings(List<ReflectCatalog.Recording> recordings) { records.setRecordings(recordings); }
     void setSpeakers(List<ReflectCatalog.Speaker> entries) { speakers.setSpeakers(entries); }
@@ -207,7 +212,7 @@ final class ReflectView extends ViewGroup {
         }
         applyEntrance(pageChanged ? 0 : 1, withinNavigation);
         animator = ValueAnimator.ofFloat(0, 1);
-        animator.setDuration(withinNavigation ? 350 : 320);
+        animator.setDuration(pageChanged ? 380 : 300);
         animator.addUpdateListener(value -> {
             float time = (float) value.getAnimatedValue();
             float eased = ReflectMotion.EASE.getInterpolation(time);
@@ -215,7 +220,7 @@ final class ReflectView extends ViewGroup {
             menuProgress = lerp(startMenu, endMenu, eased);
             capsuleLeft = lerp(startLeft, targetLeft, movingRight ? eased : leading);
             capsuleRight = lerp(startRight, targetRight, movingRight ? leading : eased);
-            applyEntrance(pageChanged ? eased : 1, withinNavigation);
+            applyEntrance(pageChanged ? ReflectMotion.PAGE.getInterpolation(time) : 1, withinNavigation);
         });
         animator.setInterpolator(LINEAR);
         animator.start();
@@ -224,9 +229,9 @@ final class ReflectView extends ViewGroup {
     private void applyEntrance(float progress, boolean withinNavigation) {
         transition = progress;
         if (pageContent != null) {
-            pageContent.setAlpha(.55f + .45f * progress);
-            pageContent.setTranslationX(withinNavigation ? 10 * scale * entranceDirection * (1 - progress) : 0);
-            pageContent.setTranslationY(withinNavigation ? 0 : 12 * scale * (1 - progress));
+            pageContent.setAlpha(.22f + .78f * progress);
+            pageContent.setTranslationX(withinNavigation ? 18 * scale * entranceDirection * (1 - progress) : 0);
+            pageContent.setTranslationY(withinNavigation ? 0 : 22 * scale * (1 - progress));
         }
         navigationGlass.invalidate();
         invalidate();
@@ -423,8 +428,8 @@ final class ReflectView extends ViewGroup {
         rounded(canvas, 0, 0, WIDTH, HEIGHT, 47, BACKGROUND);
         canvas.clipPath(stage);
         if (transition < 1) {
-            canvas.saveLayerAlpha(0, 0, WIDTH, HEIGHT, Math.round(255 * (.55f + .45f * transition)));
-            canvas.translate(0, 12 * (1 - transition));
+            canvas.saveLayerAlpha(0, 0, WIDTH, HEIGHT, Math.round(255 * (.22f + .78f * transition)));
+            canvas.translate(0, 22 * (1 - transition));
             drawScreen(canvas, screen);
             canvas.restore();
         } else {

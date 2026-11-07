@@ -1,21 +1,16 @@
 package com.vexto.reflect;
 
 import android.app.Activity;
-import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
 import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputFilter;
 import android.text.InputType;
-import android.view.Gravity;
-import android.view.Window;
 import android.view.WindowManager;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.io.File;
 import java.io.IOException;
@@ -294,7 +289,7 @@ final class ReflectTranscriptController {
     }
 
     void options() {
-        Sheet menu = sheet(recordingDetails ? "Действия записи" : "Действия разговора");
+        ReflectActionSheet menu = sheet(recordingDetails ? "Действия записи" : "Действия разговора");
         if (file != null) {
             if (!recordingDetails && transcript != null && !transcript.lines.isEmpty()) {
                 menu.option(view.transcriptView().isPlaying() ? "Приостановить" : "Прослушать аудио", playAudio);
@@ -307,7 +302,7 @@ final class ReflectTranscriptController {
     }
 
     void styleOptions() {
-        Sheet menu = sheet("Размер текста");
+        ReflectActionSheet menu = sheet("Размер текста");
         int[] sizes = {14, 16, 20};
         String[] labels = {"Мелкий", "Обычный", "Крупный"};
         for (int i = 0; i < sizes.length; i++) {
@@ -323,7 +318,7 @@ final class ReflectTranscriptController {
     }
 
     void lineOptions(ReflectTranscript.Line line) {
-        Sheet menu = sheet("Реплика");
+        ReflectActionSheet menu = sheet("Реплика");
         TextView excerpt = menu.style.text(line.text, 15, ReflectPageStyle.MUTED, menu.style.art.regular);
         excerpt.setMaxLines(5);
         menu.style.append(menu.root, excerpt, 0, 12);
@@ -351,7 +346,7 @@ final class ReflectTranscriptController {
     private void rename() {
         File recording = file;
         if (recording == null) return;
-        Sheet editor = sheet("Название записи");
+        ReflectActionSheet editor = sheet("Название записи");
         EditText input = new EditText(activity);
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -443,45 +438,7 @@ final class ReflectTranscriptController {
         });
     }
 
-    private Sheet sheet(String title) { return new Sheet(title); }
-
-    private final class Sheet {
-        final Dialog dialog = new Dialog(activity);
-        final ReflectPageStyle style = view.pageStyle();
-        final LinearLayout root = style.column();
-
-        Sheet(String title) {
-            dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-            root.setPadding(style.px(16), style.px(16), style.px(16), style.px(12));
-            root.setBackground(style.rounded(ReflectPageStyle.CARD, 24));
-            style.append(root, style.text(title, 18, Color.WHITE, style.art.semibold), 0, 12);
-            dialog.setContentView(root);
-        }
-
-        void option(String title, Runnable action) {
-            option(title, null, action);
-        }
-
-        private void option(String title, String icon, Runnable action) {
-            TextView button = style.text(title, 16, Color.WHITE, style.art.regular);
-            button.setMinHeight(style.px(44));
-            button.setPadding(style.px(10), 0, style.px(10), 0);
-            if (icon != null) {
-                button.setCompoundDrawablesRelative(
-                        style.art.iconDrawable(activity.getResources(), icon, style.px(22)), null, null, null);
-                button.setCompoundDrawablePadding(style.px(10));
-            }
-            button.setBackground(style.pressable(0xff303030, 14));
-            button.setOnClickListener(v -> { dialog.dismiss(); action.run(); });
-            style.append(root, button, 4, 0);
-        }
-
-        void show() {
-            Window window = dialog.getWindow();
-            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            window.setGravity(Gravity.CENTER);
-            dialog.show();
-            window.setLayout(style.px(361), WindowManager.LayoutParams.WRAP_CONTENT);
-        }
+    private ReflectActionSheet sheet(String title) {
+        return view.actionSheet(activity, title);
     }
 }

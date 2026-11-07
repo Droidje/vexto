@@ -119,25 +119,28 @@ final class SpeakerProfilesUi {
     void openMenu() {
         if (detail == null || !isOpen(detail.profile().id())) return;
         var profile = detail.profile();
-        String[] options = profile.self() ? new String[]{"Переименовать", "Объединить с другим спикером"}
-                : new String[]{"Переименовать", "Объединить с другим спикером", "Отметить как «Я»"};
-        new AlertDialog.Builder(activity).setTitle(profile.name()).setItems(options, (dialog, which) -> {
+        ReflectActionSheet menu = view.actionSheet(activity, profile.name());
+        menu.option("Переименовать", () -> {
             if (!isOpen(profile.id())) return;
-            switch (which) {
-                case 0 -> editName("Имя спикера", profile.name(), name -> {
-                    if (isOpen(profile.id())) run(() -> {
-                        profiles.rename(profile.id(), name);
-                        return null;
-                    }, ignored -> updated());
-                });
-                case 1 -> chooseMergeTarget(profile);
-                case 2 -> run(() -> {
+            editName("Имя спикера", profile.name(), name -> {
+                if (isOpen(profile.id())) run(() -> {
+                    profiles.rename(profile.id(), name);
+                    return null;
+                }, ignored -> updated());
+            });
+        });
+        menu.option("Объединить с другим спикером", () -> {
+            if (isOpen(profile.id())) chooseMergeTarget(profile);
+        });
+        if (!profile.self()) {
+            menu.option("Отметить как «Я»", () -> {
+                if (isOpen(profile.id())) run(() -> {
                     profiles.markSelf(profile.id());
                     return null;
                 }, ignored -> updated());
-                default -> { }
-            }
-        }).show();
+            });
+        }
+        menu.show();
     }
 
     private void chooseMergeTarget(SpeakerProfiles.Profile source) {

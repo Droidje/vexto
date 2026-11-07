@@ -6,14 +6,12 @@ import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 import java.util.function.Consumer;
 
@@ -60,13 +58,13 @@ final class ReflectSettingsView extends ScrollView {
         LinearLayout transcript = card(style);
         style.append(transcript, style.text("Размер текста", 17, Color.WHITE, artwork.semibold), 2, 12);
         style.append(transcript, textSizes(style), 0, 10);
-        style.append(transcript, toggle(style, "Метки времени", preferences.timestamps(),
+        style.append(transcript, toggle(style, "Метки времени", preferences.timestamps(), false,
                 preferences::setTimestamps), 0, 0);
         style.append(root, transcript, 0, 22);
 
         section(root, style, "Интерфейс");
         LinearLayout display = card(style);
-        style.append(display, toggle(style, "Уменьшить движение", preferences.reduceMotion(),
+        style.append(display, toggle(style, "Уменьшить движение", preferences.reduceMotion(), true,
                 preferences::setReduceMotion), 0, 0);
         style.append(root, display, 0, 22);
 
@@ -102,39 +100,94 @@ final class ReflectSettingsView extends ScrollView {
         return card;
     }
 
-    private Switch toggle(ReflectPageStyle style, String label, boolean checked, Consumer<Boolean> change) {
-        Switch toggle = new Switch(getContext()) {
-            @Override public void setChecked(boolean value) {
-                super.setChecked(value);
-                if (isLaidOut() && !preferences.motionEnabled()) jumpDrawablesToCurrentState();
-            }
-        };
+    private CompoundButton toggle(ReflectPageStyle style, String label, boolean checked,
+                                  boolean motionSetting, Consumer<Boolean> change) {
+        SettingSwitch toggle = new SettingSwitch(style, motionSetting);
         toggle.setText(label);
         toggle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, style.px(17));
         toggle.setTypeface(artwork.regular);
         toggle.setTextColor(Color.WHITE);
         toggle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         toggle.setMinHeight(style.px(48));
-        toggle.setSwitchMinWidth(style.px(56));
-        toggle.setSwitchPadding(style.px(12));
-        toggle.setShowText(false);
-        toggle.setSplitTrack(false);
-        var track = style.rounded(Color.WHITE, 14);
-        track.setSize(style.px(56), style.px(28));
-        toggle.setTrackDrawable(track);
-        var thumb = style.rounded(Color.WHITE, 11);
-        thumb.setSize(style.px(22), style.px(22));
-        int inset = style.px(3);
-        LayerDrawable insetThumb = new LayerDrawable(new Drawable[]{thumb});
-        insetThumb.setLayerInset(0, inset, inset, inset, inset);
-        toggle.setThumbDrawable(insetThumb);
+        toggle.setPaddingRelative(0, 0, style.px(68), 0);
         toggle.setChecked(checked);
-        toggle.setTrackTintList(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},
-                new int[]{ReflectPageStyle.ACCENT, 0xff626262}));
-        toggle.setThumbTintList(new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},
-                new int[]{Color.WHITE, 0xffbcbcbc}));
         toggle.setOnCheckedChangeListener((button, value) -> change.accept(value));
         return toggle;
+    }
+
+    private final class SettingSwitch extends CompoundButton {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final int trackWidth, trackHeight, thumbRadius, thumbInset;
+        private final boolean motionSetting;
+        private float position;
+        private ValueAnimator animation;
+
+        SettingSwitch(ReflectPageStyle style, boolean motionSetting) {
+            super(ReflectSettingsView.this.getContext());
+            this.motionSetting = motionSetting;
+            trackWidth = style.px(56);
+            trackHeight = style.px(28);
+            thumbRadius = style.px(11);
+            thumbInset = style.px(3);
+            setButtonDrawable((android.graphics.drawable.Drawable) null);
+            setClickable(true);
+            setFocusable(true);
+        }
+
+        @Override public CharSequence getAccessibilityClassName() {
+            return android.widget.Switch.class.getName();
+        }
+
+        @Override public void setChecked(boolean checked) {
+            boolean changed = checked != isChecked();
+            super.setChecked(checked);
+            if (!changed) return;
+            if (animation != null) animation.cancel();
+            float target = checked ? 1 : 0;
+            // Let the motion preference itself acknowledge the tap in either direction.
+            boolean animate = motionSetting ? ValueAnimator.areAnimatorsEnabled() : preferences.motionEnabled();
+            if (!isLaidOut() || !animate) {
+                position = target;
+                invalidate();
+                return;
+            }
+            animation = ValueAnimator.ofFloat(position, target);
+            animation.setDuration(260);
+            animation.setInterpolator(ReflectMotion.PAGE);
+            animation.addUpdateListener(frame -> {
+                position = (float) frame.getAnimatedValue();
+                invalidate();
+            });
+            animation.start();
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            boolean rtl = getLayoutDirection() == LAYOUT_DIRECTION_RTL;
+            float left = rtl ? 0 : getWidth() - trackWidth;
+            float centerY = getHeight() / 2f;
+            float radius = trackHeight / 2f;
+            paint.setColor(blend(0xff626262, ReflectPageStyle.ACCENT, position));
+            canvas.drawRoundRect(left, centerY - radius, left + trackWidth, centerY + radius,
+                    radius, radius, paint);
+            float travel = trackWidth - 2 * (thumbRadius + thumbInset);
+            float thumbX = left + thumbInset + thumbRadius + travel * (rtl ? 1 - position : position);
+            paint.setColor(blend(0xffbcbcbc, Color.WHITE, position));
+            canvas.drawCircle(thumbX, centerY, thumbRadius, paint);
+        }
+
+        @Override protected void onDetachedFromWindow() {
+            if (animation != null) animation.cancel();
+            position = isChecked() ? 1 : 0;
+            super.onDetachedFromWindow();
+        }
+
+        private int blend(int from, int to, float fraction) {
+            return Color.rgb(
+                    Math.round(Color.red(from) + (Color.red(to) - Color.red(from)) * fraction),
+                    Math.round(Color.green(from) + (Color.green(to) - Color.green(from)) * fraction),
+                    Math.round(Color.blue(from) + (Color.blue(to) - Color.blue(from)) * fraction));
+        }
     }
 
     private LinearLayout textSizes(ReflectPageStyle style) {

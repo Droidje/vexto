@@ -32,7 +32,7 @@ import java.util.function.Consumer;
 /** Content above the shared navigation. Geometry follows the 393 dp design stage. */
 final class ReflectLibraryView extends ViewGroup {
     private static final int SPEAKER_BUTTON_HEIGHT = 48;
-    private static final int SPEAKER_BUTTON_BOTTOM_INSET = 128;
+    private static final int SPEAKER_BUTTON_BOTTOM_INSET = 103;
 
     enum Page { RECORDS, SPEAKERS, CONVERSATIONS }
 

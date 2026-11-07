@@ -142,7 +142,7 @@ final class ReflectExportView extends FrameLayout {
         scroll.setPadding(style.px(20), style.px(16), style.px(20), style.px(16));
         scroll.setFillViewport(false);
         TextView text = style.text(selected == RecordingExport.JSON ? highlight(preview) : preview,
-                20, 0xffadadac, artwork.regular);
+                15, 0xffadadac, artwork.regular);
         text.setGravity(Gravity.TOP | Gravity.START);
         text.setTextIsSelectable(true);
         text.setLineSpacing(0, 1.05f);
