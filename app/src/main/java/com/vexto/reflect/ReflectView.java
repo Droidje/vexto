@@ -247,7 +247,8 @@ final class ReflectView extends ViewGroup {
         }
         navigationAnimator = ValueAnimator.ofFloat(0, 1);
         boolean skippingTabs = pageSteps > 1;
-        navigationAnimator.setDuration(skippingTabs ? pageDuration() : 300);
+        boolean movingCapsule = startLeft != targetLeft || startRight != targetRight;
+        navigationAnimator.setDuration(movingCapsule ? pageDuration() : 300);
         navigationAnimator.addUpdateListener(value -> {
             float time = (float) value.getAnimatedValue();
             float eased = ReflectMotion.EASE.getInterpolation(time);
@@ -264,7 +265,7 @@ final class ReflectView extends ViewGroup {
         navigationAnimator.start();
     }
 
-    private int pageDuration() { return 380 + 180 * (pageSteps - 1); }
+    private int pageDuration() { return 210 + 85 * (pageSteps - 1); }
 
     private void startPageTransition() {
         pageAnimator = ValueAnimator.ofFloat(0, 1);
