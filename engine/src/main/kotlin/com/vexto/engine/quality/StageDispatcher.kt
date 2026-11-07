@@ -83,10 +83,12 @@ internal object StageDispatcher {
             WorkerStage.WHISPER -> {
                 val refs = mutableListOf<CandidateRef>()
                 val warnings = mutableListOf<String>()
-                val provider = WhisperComparisonProvider(executor, models.file("whisper"))
+                // Preserve dev's context margin: 512 encoder frames cover 10.24s; chunks are <=10s.
+                val provider = WhisperComparisonProvider(executor, models.file("whisper"), audioContext = 512)
                 val plan = chunkPlan()
                 val waves = ChunkWaveMaterializer(job, plan, input) { warnings += it }
                 val tasks = plan.chunks
+
                 for ((index, chunk) in tasks.withIndex()) {
                     currentCoroutineContext().ensureActive()
                     try {

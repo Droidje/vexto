@@ -10,6 +10,7 @@ import com.vexto.engine.model.Stage;
 import com.vexto.engine.model.Transcript;
 import com.vexto.engine.model.TranscriptionOptions;
 import com.vexto.engine.model.Utterance;
+import com.vexto.engine.models.OfflineModelPackException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -107,9 +108,8 @@ final class ReflectLocalTranscription {
             }
 
             @Override public void onError(Throwable error) {
-                String detail = error.getMessage();
-                String message = detail != null && detail.startsWith("В APK нет моделей:")
-                        ? "В этой сборке нет моделей распознавания."
+                String message = error instanceof OfflineModelPackException
+                        ? "Установите проверенный офлайн-пакет моделей и повторите расшифровку."
                         : "Не удалось расшифровать запись. Можно повторить попытку.";
                 complete(started, null, message);
             }

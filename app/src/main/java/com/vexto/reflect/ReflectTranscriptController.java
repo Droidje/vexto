@@ -43,6 +43,8 @@ final class ReflectTranscriptController {
     private final SpeakerProfiles profiles;
     private final SpeakerProfilesUi profilesUi;
     private final ReflectLocalTranscription local;
+    private final ReflectExportController exports;
+    private RecordingExport restoreExport;
     private File file;
     private final Set<File> importing = new HashSet<>();
     private ReflectTranscript transcript;
@@ -67,6 +69,7 @@ final class ReflectTranscriptController {
         this.refreshCatalog = refreshCatalog;
         this.profiles = profiles;
         this.profilesUi = profilesUi;
+        exports = new ReflectExportController(activity, view, io, profiles, notice);
         local = new ReflectLocalTranscription(activity, store, profiles, io, this::processingChanged,
                 this::transcriptionFinished);
     }
@@ -176,7 +179,9 @@ final class ReflectTranscriptController {
     void cancelTranscription() { local.cancel(file); }
 
     void saveState(Bundle state) {
-        if (view.screen() != ReflectView.Screen.TRANSCRIPT && view.screen() != ReflectView.Screen.PROCESSING) return;
+        if (view.screen() != ReflectView.Screen.TRANSCRIPT && view.screen() != ReflectView.Screen.PROCESSING
+                && view.screen() != ReflectView.Screen.EXPORT) return;
+        if (view.screen() == ReflectView.Screen.EXPORT) exports.saveState(state);
         state.putBoolean("transcript", true);
         state.putBoolean("transcriptProcessing", view.screen() == ReflectView.Screen.PROCESSING);
         state.putBoolean("recordingDetails", recordingDetails);
@@ -201,22 +206,29 @@ final class ReflectTranscriptController {
     }
 
     void exportOptions() {
-        if (file == null || loading) {
-            notice.accept(previewKey != null ? "Это пример из макета" : "Данные записи ещё загружаются");
+        if ((file == null && previewKey == null) || loading) {
+            notice.accept("Данные записи ещё загружаются");
             return;
         }
-        Sheet menu = sheet("Экспорт записи");
-        if (transcript != null && !transcript.lines.isEmpty()) {
-            menu.exportOption(RecordingExport.JSON);
-            menu.exportOption(RecordingExport.MARKDOWN);
-        }
-        menu.exportOption(RecordingExport.AUDIO);
-        menu.show();
+        exports.open(file, transcript, metadata, title, length, RecordingExport.JSON);
     }
 
-    private void export(RecordingExport format) {
-        if (file == null) return;
-        activity.startActivityForResult(format.createDocument(metadata, title), format.request);
+    void closeExport() { exports.close(); }
+    void selectExport(RecordingExport format) { exports.select(format); }
+    void shareExport() { exports.share(); }
+    void saveExport() { exports.save(); }
+
+    void restoreExport(Bundle state) {
+        if (!state.containsKey("exportFormat")) return;
+        restoreExport = ReflectExportController.restoredFormat(state);
+        restoreExportIfReady();
+    }
+
+    private void restoreExportIfReady() {
+        if (restoreExport == null || loading || (file == null && previewKey == null)) return;
+        RecordingExport format = restoreExport;
+        restoreExport = null;
+        exports.open(file, transcript, metadata, title, length, format);
     }
 
     boolean onActivityResult(int request, int result, Intent data) {
@@ -265,7 +277,7 @@ final class ReflectTranscriptController {
                     try (OutputStream stream = activity.getContentResolver().openOutputStream(uri, "wt")) {
                         if (stream == null) throw new IOException("No export output");
                         format.write(stream, recording, source, exportTitle,
-                                format != RecordingExport.MARKDOWN || source == null ? Collections.emptyMap() : profiles.names(recording, source));
+                                format == RecordingExport.MARKDOWN && source != null ? profiles.exportNames(recording, source) : Collections.emptyMap());
                     }
                     deliver(current, () -> notice.accept("Файл экспортирован"));
                 }
@@ -378,6 +390,7 @@ final class ReflectTranscriptController {
     private void render() {
         view.transcriptView().content(title, length, transcript, file != null,
                 loading, issue, recordingDetails, metadata, local.progress(file));
+        restoreExportIfReady();
     }
 
     private void processingChanged(File recording) {
@@ -442,10 +455,6 @@ final class ReflectTranscriptController {
 
         void option(String title, Runnable action) {
             option(title, null, action);
-        }
-
-        void exportOption(RecordingExport format) {
-            option(format.label, format.icon, () -> export(format));
         }
 
         private void option(String title, String icon, Runnable action) {

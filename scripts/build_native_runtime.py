@@ -63,8 +63,15 @@ def main() -> int:
     sentence_cmake = sources["nemotron"] / "cmake/sentencepiece.cmake"
     if digest(sentence_cmake, text=True) != "faf9803756a56e076004998aa9dfb2042f22a542e017ac54bb30b2cf63c8b26f":
         raise ValueError("apply documented tools/benchmarks/patches/nemotron-android-liblog.patch first")
-    llvm = ndk / "toolchains/llvm/prebuilt/windows-x86_64/bin"
-    readelf, strip = llvm / "llvm-readelf.exe", llvm / "llvm-strip.exe"
+    host_tools = {"darwin": "darwin-x86_64", "linux": "linux-x86_64", "win32": "windows-x86_64"}
+    host = host_tools.get(sys.platform)
+    if host is None:
+        parser.error(f"unsupported Android NDK host: {sys.platform}")
+    llvm = ndk / "toolchains" / "llvm" / "prebuilt" / host / "bin"
+    suffix = ".exe" if sys.platform == "win32" else ""
+    readelf, strip = llvm / f"llvm-readelf{suffix}", llvm / f"llvm-strip{suffix}"
+    if not readelf.is_file() or not strip.is_file():
+        parser.error(f"missing NDK LLVM host tools: {llvm}")
     for abi in args.abi or ("arm64-v8a", "x86_64"):
         build = args.build_dir.resolve() / abi
         output = args.output_dir.resolve() / abi
