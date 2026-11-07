@@ -5,6 +5,7 @@ import java.io.File
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.security.MessageDigest
 
 /** Bounded PCM16 WAV I/O. All model views use the same integer sample clock. */
 object PcmWave {
@@ -71,6 +72,26 @@ object PcmWave {
             }
             target.fd.sync()
         }
+    }
+
+    /** Hash exactly the canonical WAV crop bytes without materializing another audio file. */
+    fun cropSha256(input: File, from: Long, to: Long): String {
+        val info = inspect(input)
+        require(from >= 0 && to in from..info.sampleCount)
+        val digest = MessageDigest.getInstance("SHA-256")
+        digest.update(header(info.sampleRate, (to - from) * 2))
+        RandomAccessFile(input, "r").use { source ->
+            source.seek(info.dataOffset + from * 2)
+            val buffer = ByteArray(65536)
+            var remaining = (to - from) * 2
+            while (remaining > 0) {
+                val count = minOf(buffer.size.toLong(), remaining).toInt()
+                source.readFully(buffer, 0, count)
+                digest.update(buffer, 0, count)
+                remaining -= count
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     fun fromPcm(input: File, output: File, samples: Long) {
