@@ -33,7 +33,7 @@ class QwenAsrSelectorTest {
             assertTrue(args.contains("--no-context-shift"))
             calls += dir.name
             if (dir.name == "two") throw IOException("simulated native failure")
-            stdout.writeText("""{"tool":"select_asr_variant","chunk_id":"${dir.name}","source":"whisper"}""")
+            stdout.writeText(""""whisper"""")
             LocalNativeResult(10, 100)
         }
         val results = QwenAsrSelector(executor, model).selectAll(pairs, temp.root.resolve("selection"))
@@ -42,6 +42,16 @@ class QwenAsrSelectorTest {
         assertEquals(listOf(AsrSelectionStatus.SELECTED_BY_LLM, AsrSelectionStatus.UNRESOLVED,
             AsrSelectionStatus.SELECTED_BY_LLM), results.map { it.status })
         assertFalse(results[1].audit.selectedByLlm)
+        for (index in listOf(0, 2)) {
+            val chunkId = pairs[index].chunkId
+            val bound = temp.root.resolve("selection/$chunkId/bound-tool-call.json").readBytes()
+            val fields = Json.parseToJsonElement(bound.toString(Charsets.UTF_8)).jsonObject
+            assertEquals(chunkId, fields.getValue("chunk_id").jsonPrimitive.content)
+            assertEquals("whisper", fields.getValue("source").jsonPrimitive.content)
+            assertEquals(ScopedSourceResponseKind, results[index].audit.responseKind)
+            assertEquals(sha256(bound), results[index].audit.scopedToolCallSha256)
+        }
+        assertFalse(temp.root.resolve("selection/two/bound-tool-call.json").exists())
         pairs.forEach { it.gigaam!!.verifiedBytes(); it.whisper!!.verifiedBytes() }
     }
 

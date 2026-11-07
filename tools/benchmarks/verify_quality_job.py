@@ -218,10 +218,19 @@ def verify_job(job_dir, allow_legacy=False):
                 stdout = root / f"selection/{ident}/selector.stdout"
                 check(audit["selectedByLlm"] is True and audit["decision"] == "tool" and
                       audit["toolResponseSha256"] == sha(stdout), "llm_audit_sha_mismatch")
-                raw = stdout.read_text(encoding="utf-8").strip()
+                response_kind = audit.get("responseKind", "tool_json_v1")
+                check(response_kind in ("tool_json_v1", "scoped_source_v1"), "unknown_llm_response_kind")
+                raw = stdout.read_text(encoding="utf-8")
+                whitespace = " \t\r\n" if response_kind == "scoped_source_v1" else None
+                raw = raw.strip(whitespace)
                 if raw.endswith("[end of text]"):
-                    raw = raw[:-13].rstrip()
+                    raw = raw[:-13].rstrip(whitespace)
                 call = parse_json(raw)
+                if response_kind == "scoped_source_v1":
+                    check(type(call) is str and call in ("gigaam", "whisper") and call == ref["source"], "invalid_llm_scoped_source")
+                    bound = root / f"selection/{ident}/bound-tool-call.json"
+                    check(audit.get("scopedToolCallSha256") == sha(bound), "llm_scoped_call_sha_mismatch")
+                    call = document(bound)
                 check(call == {"tool": "select_asr_variant", "chunk_id": ident, "source": ref["source"]}, "invalid_llm_local_tool_call")
                 check(audit.get("qualityValidated", False) is False, "unsubstantiated_quality_claim")
                 llm += 1

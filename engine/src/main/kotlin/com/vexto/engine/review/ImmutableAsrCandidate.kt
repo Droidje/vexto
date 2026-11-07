@@ -161,6 +161,8 @@ data class SelectionAudit(
     val toolResponseSha256: String? = null,
     val selectedByLlm: Boolean = false,
     val qualityValidated: Boolean = false,
+    val responseKind: String = "tool_json_v1",
+    val scopedToolCallSha256: String? = null,
 )
 
 /** selectedArtifact is the display copy even if status is UNRESOLVED; it is not a quality verdict. */
