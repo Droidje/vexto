@@ -39,7 +39,6 @@ final class ReflectView extends ViewGroup {
         void play();
         void save();
         void transcribeReview();
-        void toggleSpeakerPreview();
         void openMicrophoneSettings();
         void refreshSpeakers();
         void closeSpeakerProfile();
@@ -50,7 +49,6 @@ final class ReflectView extends ViewGroup {
     private static final float WIDTH = 393, HEIGHT = 852;
     private static final float FINISH_LEFT = 172, FINISH_CENTER_X = 201.5f;
     private static final int BACKGROUND = 0xff040402, WHITE = Color.WHITE;
-    private static final int[] REVIEW_WAVE = {4,6,10,7,14,9,18,12,8,16,22,13,9,19,11,6,15,20,10,7,12,17,9,5,11,14,8,6,10,7,5,4};
     private static final String[] TAB_ICONS = {"tab_home", "tab_records", "tab_speakers", "tab_settings"};
     private static final String[] TAB_NAMES = {"Главная", "Записи", "Спикеры", "Настройки"};
     private static final float[] TAB_CENTERS = {56, 121.5f, 188.5f, 255.5f};
@@ -70,7 +68,6 @@ final class ReflectView extends ViewGroup {
     };
     private final Actions actions;
     private final String welcomeTitle;
-    private final boolean designPreview;
     private final ReflectArtwork artwork;
     private final ReflectPreferences preferences;
     private final ReflectSettingsView settings;
@@ -93,17 +90,17 @@ final class ReflectView extends ViewGroup {
     private float scale = 1, offsetX, offsetY, transition = 1, menuProgress;
     private float capsuleCenter = TAB_CENTERS[0], capsuleHalfWidth = 34;
     private float playProgress;
+    private int[] reviewWave;
     private long elapsedSeconds;
     private String elapsed = "0:00";
     private String duration = "+ 0:00";
     private boolean playing;
     private ValueAnimator animator;
 
-    ReflectView(Context context, Actions actions, boolean designPreview, ReflectPreferences preferences) {
+    ReflectView(Context context, Actions actions, ReflectPreferences preferences) {
         super(context);
         this.actions = actions;
         welcomeTitle = context.getString(R.string.welcome_title, context.getString(R.string.app_name));
-        this.designPreview = designPreview;
         this.preferences = preferences;
         artwork = new ReflectArtwork(context.getAssets());
         settings = new ReflectSettingsView(context, artwork, preferences, actions::openMicrophoneSettings);
@@ -138,7 +135,6 @@ final class ReflectView extends ViewGroup {
     void trimMemory(int level) { artwork.trimMemory(level); }
     ReflectPageStyle pageStyle() { return new ReflectPageStyle(getContext(), artwork, Math.max(1, Math.round(WIDTH * scale))); }
     void refreshSettings() { settings.refresh(); }
-    void manageSpeakers(boolean enabled) { speakers.manageSpeakers(enabled); }
     void setRecordings(List<ReflectCatalog.Recording> recordings) { records.setRecordings(recordings); }
     void setSpeakers(List<ReflectCatalog.Speaker> entries) { speakers.setSpeakers(entries); }
     void setConversations(List<ReflectCatalog.Conversation> entries) {
@@ -209,6 +205,11 @@ final class ReflectView extends ViewGroup {
         }
         if (screen == Screen.RECORDING) recordingVisuals.sample(peak, SystemClock.uptimeMillis());
         invalidate();
+    }
+
+    void setReviewWave(int[] bars) {
+        reviewWave = bars;
+        if (screen == Screen.REVIEW) invalidate();
     }
 
     void updatePlayback(String duration, boolean playing, float progress) {
@@ -297,16 +298,10 @@ final class ReflectView extends ViewGroup {
             control(screen == Screen.MENU ? "Закрыть меню" : "Добавить", 318, 765, 59, 59, actions::toggleMenu);
             control("Главная", 22, 771, 67, 47, () -> show(Screen.HOME)).setSelected(tab == Screen.HOME);
             control("Записи", 89, 771, 65, 47, () -> show(Screen.RECORDS)).setSelected(tab == Screen.RECORDS);
-            View speakerTab = control("Спикеры", 154, 771, 69, 47, () -> {
+            control("Спикеры", 154, 771, 69, 47, () -> {
                 show(Screen.SPEAKERS);
                 actions.refreshSpeakers();
-            });
-            speakerTab.setSelected(tab == Screen.SPEAKERS);
-            if (designPreview) speakerTab.setOnLongClickListener(v -> {
-                actions.toggleSpeakerPreview();
-                show(Screen.SPEAKERS);
-                return true;
-            });
+            }).setSelected(tab == Screen.SPEAKERS);
             control("Настройки", 223, 771, 68, 47, () -> show(Screen.SETTINGS)).setSelected(tab == Screen.SETTINGS);
             if (screen == Screen.MENU) {
                 control("Прикрепить файл", 175, 661, 202, 44, actions::attach);
@@ -490,7 +485,14 @@ final class ReflectView extends ViewGroup {
             rounded(c, 34, 595, 36.5f, 605, 1, WHITE);
             rounded(c, 39, 595, 41.5f, 605, 1, WHITE);
         } else c.drawPath(playGlyph, paint);
-        waveform(c, REVIEW_WAVE, 63, 306, 600, 0xff999999, 0, playProgress);
+        if (reviewWave != null && reviewWave.length > 1) {
+            waveform(c, reviewWave, 63, 306, 600, 0xff999999, 0, playProgress);
+        } else {
+            rounded(c, 63, 599, 306, 601, 1, 0xff4a4a49);
+            if (playProgress > 0) {
+                rounded(c, 63, 599, 63 + 243 * Math.min(1, playProgress), 601, 1, WHITE);
+            }
+        }
         rounded(c, 316, 588, 370, 612, 12, 0x1f767680);
         text(c, duration, 343, 604.7f, 13, WHITE, artwork.duration, true);
         text(c, "Расшифровка выполняется", 196.5f, 657.3f, 16, 0xff999999, artwork.medium, true);

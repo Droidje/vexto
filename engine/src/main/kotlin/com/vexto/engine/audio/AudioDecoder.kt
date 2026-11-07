@@ -20,11 +20,24 @@ import java.nio.ByteOrder
 internal object AudioDecoder {
 
     private const val TimeoutUs = 10_000L
+    const val PreviewLimitMs = 120_000
 
-    suspend fun decode(context: Context, uri: Uri, cacheDir: File, onProgress: (Float) -> Unit): PcmAudio {
+    suspend fun decode(context: Context, uri: Uri, cacheDir: File, onProgress: (Float) -> Unit): PcmAudio =
+        decode(context, uri, cacheDir, Long.MAX_VALUE, onProgress)
+
+    suspend fun previewWaveform(context: Context, uri: Uri): IntArray =
+        decode(context, uri, context.cacheDir, PreviewLimitMs.toLong() * SampleRate / 1000) {}
+            .use { it.previewWaveform() }
+
+    private suspend fun decode(context: Context, uri: Uri, cacheDir: File, maxSamples: Long,
+                               onProgress: (Float) -> Unit): PcmAudio {
         val extractor = MediaExtractor()
         val file = File.createTempFile("decoded", ".pcm", cacheDir)
         val writer = PcmWriter(file)
+        val write: (FloatArray, Int) -> Unit = if (maxSamples == Long.MAX_VALUE) writer::write else { samples, count ->
+            if (count > maxSamples - writer.sampleCount) throw IOException("Audio preview exceeds its sample limit")
+            writer.write(samples, count)
+        }
         var codec: MediaCodec? = null
         try {
             extractor.setDataSource(context, uri, null)
@@ -64,7 +77,7 @@ internal object AudioDecoder {
                     index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                         val changed = OutputFormat.of(codec.outputFormat)
                         if (changed.sampleRate != output.sampleRate) {
-                            resampler.flush(writer::write)
+                            resampler.flush(write)
                             resampler = Resampler(changed.sampleRate, SampleRate)
                         }
                         output = changed
@@ -76,13 +89,13 @@ internal object AudioDecoder {
                         val frames = info.size / output.bytesPerFrame
                         if (mono.size < frames) mono = FloatArray(frames)
                         output.downmix(buffer, frames, mono)
-                        resampler.process(mono, frames, writer::write)
+                        resampler.process(mono, frames, write)
                         codec.releaseOutputBuffer(index, false)
                         if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) break
                     }
                 }
             }
-            resampler.flush(writer::write)
+            resampler.flush(write)
             onProgress(1f)
             return writer.finish()
         } catch (e: Throwable) {

@@ -60,7 +60,7 @@ final class ReflectExportController {
         view.show(ReflectView.Screen.EXPORT);
         io.execute(() -> {
             try {
-                Map<String, String> resolved = recording == null || transcript == null
+                Map<String, String> resolved = transcript == null
                         ? Collections.emptyMap() : profiles.exportNames(recording, transcript);
                 deliver(current, () -> {
                     names = resolved;
@@ -115,7 +115,7 @@ final class ReflectExportController {
             String text;
             try {
                 if (format == RecordingExport.AUDIO) {
-                    text = details == null ? "Аудио недоступно в примере макета."
+                    text = details == null ? "Не удалось прочитать сведения об аудиофайле."
                             : heading + "\n\n" + details.format() + " · "
                             + Formatter.formatShortFileSize(activity, details.bytes())
                             + "\n\nИсходный аудиофайл без перекодирования.";

@@ -10,8 +10,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 final class ReflectCatalog {
     private static final Locale RUSSIAN = Locale.forLanguageTag("ru");
@@ -20,23 +23,22 @@ final class ReflectCatalog {
 
     static final class Recording {
         final File file;
-        final String title, date, time, length, status, search;
-        final boolean complete, waveCover;
-        final List<String> portraits;
+        final String title, date, time, length, preview, search;
+        final List<String> participants;
 
-        Recording(File file, String title, String date, String time, String length, String status,
-                  boolean complete, boolean waveCover, List<String> portraits, String search) {
+        Recording(File file, String title, String date, String time, String length, String preview,
+                  List<String> participants) {
             this.file = file;
             this.title = title;
             this.date = date;
             this.time = time;
             this.length = length;
-            this.status = status;
-            this.complete = complete;
-            this.waveCover = waveCover;
-            this.portraits = portraits;
-            this.search = title + " " + search;
+            this.preview = preview;
+            this.participants = participants;
+            this.search = title + " " + String.join(" ", participants);
         }
+
+        boolean hasTranscript() { return preview != null; }
     }
 
     static final class Speaker {
@@ -52,21 +54,19 @@ final class ReflectCatalog {
 
     static final class Conversation {
         final String title, time, preview;
-        final boolean roomCover;
         final Recording recording;
 
-        Conversation(String title, String time, String preview, boolean roomCover, Recording recording) {
+        Conversation(String title, String time, String preview, Recording recording) {
             this.title = title;
             this.time = time;
             this.preview = preview;
-            this.roomCover = roomCover;
             this.recording = recording;
         }
     }
 
     private ReflectCatalog() {}
 
-    static List<Recording> localRecordings(File directory, ReflectTranscriptStore transcripts) {
+    static List<Recording> localRecordings(File directory, ReflectTranscriptStore transcripts, SpeakerProfiles profiles) {
         File[] files = directory.listFiles(File::isFile);
         if (files == null) return Collections.emptyList();
         Arrays.sort(files, Comparator.comparingLong(File::lastModified).reversed()
@@ -74,6 +74,12 @@ final class ReflectCatalog {
         ZoneId zone = ZoneId.systemDefault();
         LocalDate today = LocalDate.now(zone);
         List<Recording> recordings = new ArrayList<>(files.length);
+        Map<String, String> profileNames = new HashMap<>();
+        try {
+            for (var profile : profiles.list()) profileNames.put(profile.id(), profile.name());
+        } catch (RuntimeException unavailable) {
+            // A profile database failure must not hide playable recordings or their transcripts.
+        }
         for (int i = 0; i < files.length; i++) {
             File file = files[i];
             int duration;
@@ -88,11 +94,49 @@ final class ReflectCatalog {
             int seconds = duration / 1000;
             String length = String.format(Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60);
             String title = transcripts.title(file, "Запись №" + (files.length - i));
-            recordings.add(new Recording(file, title, date,
-                    TIME.format(modified), length, "Сохранено", false, false,
-                    Collections.emptyList(), ""));
+            ReflectTranscript transcript = loadTranscript(transcripts, file);
+            String preview = transcript == null ? null : preview(transcript.lines.get(0).text);
+            List<String> participants = transcript == null ? List.of()
+                    : participants(profiles, file, transcript, profileNames);
+            recordings.add(new Recording(file, title, date, TIME.format(modified), length, preview, participants));
         }
         return Collections.unmodifiableList(recordings);
+    }
+
+    private static ReflectTranscript loadTranscript(ReflectTranscriptStore store, File recording) {
+        try {
+            ReflectTranscript transcript = store.load(recording);
+            return transcript == null || transcript.lines.isEmpty() ? null : transcript;
+        } catch (IOException | RuntimeException unavailable) {
+            return null;
+        }
+    }
+
+    private static String preview(String text) {
+        String flattened = text.replaceAll("\\s+", " ").trim();
+        int count = flattened.codePointCount(0, flattened.length());
+        return count > 240 ? flattened.substring(0, flattened.offsetByCodePoints(0, 240)) + "…" : flattened;
+    }
+
+    private static List<String> participants(SpeakerProfiles profiles, File recording, ReflectTranscript transcript,
+                                             Map<String, String> profileNames) {
+        Map<String, String> links;
+        try { links = profiles.links(recording, transcript); }
+        catch (IOException | RuntimeException unavailable) { links = Map.of(); }
+
+        Map<String, ReflectTranscript.Line> distinct = new LinkedHashMap<>();
+        for (var line : transcript.lines) {
+            String profile = links.get(line.speakerId);
+            String key = profile == null ? "local:" + line.speakerId : "profile:" + profile;
+            distinct.merge(key, line, (first, next) -> first.speakerName == null && next.speakerName != null
+                    ? next : first);
+        }
+        List<String> result = new ArrayList<>(distinct.size());
+        for (var line : distinct.values()) {
+            String fallback = line.speakerName == null ? line.speakerId : line.speakerName;
+            result.add(profileNames.getOrDefault(links.get(line.speakerId), fallback));
+        }
+        return List.copyOf(result);
     }
 
     static boolean matches(String fields, String query) {
@@ -107,7 +151,8 @@ final class ReflectCatalog {
         List<Conversation> conversations = new ArrayList<>(recordings.size());
         for (Recording recording : recordings) {
             conversations.add(new Conversation(recording.title, recording.time,
-                    "Локальная аудиозапись · " + recording.length, false, recording));
+                    recording.hasTranscript() ? recording.preview : "Локальная аудиозапись · " + recording.length,
+                    recording));
         }
         return Collections.unmodifiableList(conversations);
     }
