@@ -47,6 +47,8 @@ final class ReflectView extends ViewGroup {
     }
 
     private static final float WIDTH = 393, HEIGHT = 852;
+    static final int NAV_BOTTOM_CLEARANCE = 99;
+    private static final float LIBRARY_TOP = 83;
     private static final float FINISH_LEFT = 172, FINISH_CENTER_X = 201.5f;
     private static final int BACKGROUND = 0xff040402, WHITE = Color.WHITE;
     private static final String[] TAB_ICONS = {"tab_home", "tab_records", "tab_speakers", "tab_settings"};
@@ -54,17 +56,18 @@ final class ReflectView extends ViewGroup {
     private static final float[] TAB_CENTERS = {56, 121.5f, 188.5f, 255.5f};
     private static final PathInterpolator TAB_EASING = new PathInterpolator(.22f, .78f, .25f, 1);
     private static final Shader PILL_FILL = edge(0, 765, 0, 824, 0x19ffffff, 0x1cffffff);
+    private static final Shader NAV_FILL = edge(0, 765, 0, 824, 0xb32a2a2a, 0xb3303030);
     private static final Shader NAV_EDGE = edge(16, 765, 302, 824, 0x25ffffff, 0x0cffffff);
     private static final Shader PLUS_EDGE = edge(318, 765, 377, 824, 0x25ffffff, 0x0cffffff);
     private static final Shader MENU_EDGE = edge(175, 661, 377, 749, 0xff666765, 0xff525250);
     private static final Shader REVIEW_EDGE = edge(16, 578, 377, 622, 0xff696968, 0xff3c3c39);
     private static final Shader[] MENU_FILL = {
             new LinearGradient(0, 661, 0, 749,
-                    new int[]{0xff232323, 0xff272725, 0xff2c2c2a}, null, Shader.TileMode.CLAMP),
+                    new int[]{0xc2232323, 0xc2272725, 0xc22c2c2a}, null, Shader.TileMode.CLAMP),
             new RadialGradient(374, 708, 43,
-                    new int[]{0xff49534c, 0xff423b34, 0x0043413b}, new float[]{0, .46f, 1}, Shader.TileMode.CLAMP),
-            new RadialGradient(336, 660, 33, 0xff3a414d, 0x003a414d, Shader.TileMode.CLAMP),
-            new RadialGradient(232, 663, 38, 0xff373d43, 0x00373d43, Shader.TileMode.CLAMP)
+                    new int[]{0x8849534c, 0x66423b34, 0x0043413b}, new float[]{0, .46f, 1}, Shader.TileMode.CLAMP),
+            new RadialGradient(336, 660, 33, 0x883a414d, 0x003a414d, Shader.TileMode.CLAMP),
+            new RadialGradient(232, 663, 38, 0x88373d43, 0x00373d43, Shader.TileMode.CLAMP)
     };
     private final Actions actions;
     private final String welcomeTitle;
@@ -76,6 +79,7 @@ final class ReflectView extends ViewGroup {
     private final ReflectProcessingView processing;
     private final ReflectExportView export;
     private final ReflectLibraryView records, speakers, conversations;
+    private final View navigationGlass;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final List<RectF> childAreas = new ArrayList<>();
     private final Path stage = new Path();
@@ -113,6 +117,16 @@ final class ReflectView extends ViewGroup {
         records = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.RECORDS, actions);
         speakers = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.SPEAKERS, actions);
         conversations = new ReflectLibraryView(context, artwork, ReflectLibraryView.Page.CONVERSATIONS, actions);
+        navigationGlass = new View(context) {
+            @Override protected void onDraw(Canvas canvas) {
+                canvas.save();
+                canvas.scale(scale, scale);
+                if (transition < 1) canvas.translate(0, 8 * (1 - transition));
+                drawNavigation(canvas, menuProgress);
+                canvas.restore();
+            }
+        };
+        navigationGlass.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         setWillNotDraw(false);
         stage.addRoundRect(0, 0, WIDTH, HEIGHT, 47, 47, Path.Direction.CW);
         glass.addRoundRect(175, 661, 377, 749, 26, 26, Path.Direction.CW);
@@ -172,12 +186,15 @@ final class ReflectView extends ViewGroup {
         float startHalfWidth = capsuleHalfWidth, endHalfWidth = targetTab == 0 ? 34 : 35.5f;
         float stretch = Math.min(7, Math.abs(endCenter - startCenter) * .06f);
         transition = withinNavigation ? 1 : 0;
+        navigationGlass.setAlpha(transition);
         rebuildControls();
         if (preferences.reduceMotion() || withinRecorder) {
             transition = 1;
             menuProgress = endMenu;
             capsuleCenter = endCenter;
             capsuleHalfWidth = endHalfWidth;
+            navigationGlass.setAlpha(1);
+            navigationGlass.invalidate();
             invalidate();
             return;
         }
@@ -191,6 +208,8 @@ final class ReflectView extends ViewGroup {
             capsuleCenter = startCenter + (endCenter - startCenter) * progress;
             capsuleHalfWidth = startHalfWidth + (endHalfWidth - startHalfWidth) * progress
                     + stretch * 4 * progress * (1 - progress);
+            navigationGlass.setAlpha(transition);
+            navigationGlass.invalidate();
             invalidate();
         });
         animator.start();
@@ -282,13 +301,14 @@ final class ReflectView extends ViewGroup {
         } else if (screen == Screen.EXPORT) {
             place(export, 0, 0, WIDTH, HEIGHT);
         } else if (navigation(screen)) {
-            float contentHeight = screen == Screen.MENU ? 578 : 653;
-            if (tab == Screen.RECORDS) place(records, 0, 83, 393, contentHeight);
-            if (tab == Screen.SPEAKERS) place(speakers, 0, 83, 393, contentHeight);
-            if (tab == Screen.SETTINGS) place(settings, 0, 83, 393, contentHeight);
+            float contentHeight = HEIGHT - LIBRARY_TOP;
+            if (tab == Screen.RECORDS) place(records, 0, LIBRARY_TOP, WIDTH, contentHeight);
+            if (tab == Screen.SPEAKERS) place(speakers, 0, LIBRARY_TOP, WIDTH, contentHeight);
+            if (tab == Screen.SETTINGS) place(settings, 0, LIBRARY_TOP, WIDTH, contentHeight);
             if (tab == Screen.HOME && conversations.hasConversations()) {
-                place(conversations, 0, 83, 393, contentHeight);
+                place(conversations, 0, LIBRARY_TOP, WIDTH, contentHeight);
             }
+            place(navigationGlass, 0, 0, WIDTH, HEIGHT);
             if (screen == Screen.MENU) {
                 View outside = new View(getContext());
                 outside.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -357,14 +377,15 @@ final class ReflectView extends ViewGroup {
         rounded(canvas, 0, 0, WIDTH, HEIGHT, 47, BACKGROUND);
         canvas.clipPath(stage);
         if (transition < 1) {
-            drawScreen(canvas, departing, departing == Screen.MENU ? 1 : 0);
+            drawScreen(canvas, departing);
+            if (navigation(departing)) drawNavigation(canvas, departing == Screen.MENU ? 1 : 0);
             canvas.saveLayerAlpha(0, 0, WIDTH, HEIGHT, Math.round(255 * transition));
             canvas.drawColor(BACKGROUND);
             canvas.translate(0, 8 * (1 - transition));
-            drawScreen(canvas, screen, menuProgress);
+            drawScreen(canvas, screen);
             canvas.restore();
         } else {
-            drawScreen(canvas, screen, menuProgress);
+            drawScreen(canvas, screen);
         }
         canvas.restore();
         if (recordingScreen(screen) && recordingVisuals.needsFrame(SystemClock.uptimeMillis())) {
@@ -372,11 +393,25 @@ final class ReflectView extends ViewGroup {
         }
     }
 
-    private void drawScreen(Canvas canvas, Screen page, float menu) {
+    @Override protected void dispatchDraw(Canvas canvas) {
+        if (!navigation(screen) || scale <= 0) {
+            super.dispatchDraw(canvas);
+            return;
+        }
+        canvas.save();
+        canvas.translate(offsetX, offsetY);
+        canvas.scale(scale, scale);
+        canvas.clipPath(stage);
+        canvas.scale(1 / scale, 1 / scale);
+        canvas.translate(-offsetX, -offsetY);
+        super.dispatchDraw(canvas);
+        canvas.restore();
+    }
+
+    private void drawScreen(Canvas canvas, Screen page) {
         if (navigation(page)) {
             Screen active = page == Screen.MENU ? tab : page;
             if (active == Screen.HOME && !conversations.hasConversations()) drawHome(canvas);
-            drawNavigation(canvas, menu);
         }
         else if (page != Screen.TRANSCRIPT && page != Screen.PROCESSING && page != Screen.SPEAKER_PROFILE
                 && page != Screen.EXPORT) {
@@ -393,15 +428,15 @@ final class ReflectView extends ViewGroup {
     }
 
     private void drawNavigation(Canvas c, float menu) {
-        rounded(c, 0, 736, 393, 852, 0, (Math.round(3 * (1 - menu)) << 24) | 0xffffff);
-        pill(c, 16, 765, 302, 824, NAV_EDGE);
+        pill(c, 16, 765, 302, 824, NAV_FILL, NAV_EDGE);
         rounded(c, capsuleCenter - capsuleHalfWidth, 771, capsuleCenter + capsuleHalfWidth,
                 818, 24, 0x1affffff);
         for (int i = 0; i < TAB_NAMES.length; i++) {
             artwork.centeredIcon(c, TAB_ICONS[i], TAB_CENTERS[i], 787);
             text(c, TAB_NAMES[i], TAB_CENTERS[i], 811.3f, 10, WHITE, artwork.regular, true);
         }
-        closeButton(c, "plus", -45 * menu);
+        pill(c, 318, 765, 377, 824, NAV_FILL, PLUS_EDGE);
+        rotatedIcon(c, "plus", 347.5f, 794.5f, -45 * menu);
         if (menu > 0) {
             c.saveLayerAlpha(168, 650, 385, 761, Math.round(menu * 255));
             c.translate(0, 11 * (1 - menu));
@@ -528,8 +563,12 @@ final class ReflectView extends ViewGroup {
     }
 
     private void pill(Canvas c, float x, float y, float right, float bottom, Shader stroke) {
+        pill(c, x, y, right, bottom, PILL_FILL, stroke);
+    }
+
+    private void pill(Canvas c, float x, float y, float right, float bottom, Shader fill, Shader stroke) {
         paint.setColor(WHITE);
-        paint.setShader(PILL_FILL);
+        paint.setShader(fill);
         c.drawRoundRect(x, y, right, bottom, 29.5f, 29.5f, paint);
         paint.setShader(null);
         outline(c, x, y, right, bottom, 29.5f, stroke);

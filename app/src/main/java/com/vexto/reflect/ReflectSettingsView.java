@@ -45,7 +45,8 @@ final class ReflectSettingsView extends ScrollView {
         removeAllViews();
         ReflectPageStyle style = new ReflectPageStyle(getContext(), artwork, layoutWidth);
         LinearLayout root = style.column();
-        root.setPadding(style.px(16), style.px(8), style.px(16), style.px(28));
+        root.setPadding(style.px(16), style.px(8), style.px(16),
+                style.px(28 + ReflectView.NAV_BOTTOM_CLEARANCE));
         style.append(root, style.title("Настройки"), 0, 20);
 
         section(root, style, "Транскрипт");

@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -27,6 +28,9 @@ import java.util.List;
 
 /** Content above the shared navigation. Geometry follows the 393 dp design stage. */
 final class ReflectLibraryView extends ViewGroup {
+    private static final int SPEAKER_BUTTON_HEIGHT = 48;
+    private static final int SPEAKER_BUTTON_BOTTOM_INSET = 128;
+
     enum Page { RECORDS, SPEAKERS, CONVERSATIONS }
 
     interface Actions {
@@ -41,6 +45,7 @@ final class ReflectLibraryView extends ViewGroup {
     private final Actions actions;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final ListView scroller;
+    private final View scrollEndSpace;
     private final RowAdapter adapter;
     private final EditText search;
     private final Button addSpeaker;
@@ -61,11 +66,13 @@ final class ReflectLibraryView extends ViewGroup {
         scroller = new ListView(context);
         scroller.setDivider(null);
         scroller.setDividerHeight(0);
-        scroller.setPadding(0, 0, 0, 0);
         scroller.setSelector(new ColorDrawable(Color.TRANSPARENT));
         scroller.setItemsCanFocus(true);
         scroller.setVerticalScrollBarEnabled(false);
         scroller.setOverScrollMode(OVER_SCROLL_NEVER);
+        scrollEndSpace = new View(context);
+        scrollEndSpace.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        scroller.addFooterView(scrollEndSpace, null, false);
         adapter = new RowAdapter();
         scroller.setAdapter(adapter);
 
@@ -237,6 +244,10 @@ final class ReflectLibraryView extends ViewGroup {
         if (width != measuredWidth) {
             measuredWidth = width;
             scale = width / 393f;
+            int bottomInset = addSpeaker == null ? ReflectView.NAV_BOTTOM_CLEARANCE
+                    : SPEAKER_BUTTON_BOTTOM_INSET + SPEAKER_BUTTON_HEIGHT + 12;
+            scrollEndSpace.setLayoutParams(new AbsListView.LayoutParams(
+                    LayoutParams.MATCH_PARENT, px(bottomInset)));
             if (search != null) {
                 search.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16 * scale);
                 search.setPadding(px(48), 0, px(12), 0);
@@ -245,16 +256,18 @@ final class ReflectLibraryView extends ViewGroup {
         }
         if (search != null && search.getVisibility() != GONE) search.measure(exact(px(361)), exact(px(48)));
         if (scroller.getVisibility() != GONE) scroller.measure(exact(width),
-                exact(Math.max(0, height - px(scrollTop() + (addSpeaker != null ? 72 : 0)))));
-        if (addSpeaker != null) addSpeaker.measure(exact(px(195)), exact(px(48)));
+                exact(Math.max(0, height - px(scrollTop()))));
+        if (addSpeaker != null) addSpeaker.measure(exact(px(195)), exact(px(SPEAKER_BUTTON_HEIGHT)));
     }
 
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         if (search != null && search.getVisibility() != GONE) search.layout(px(16), px(51), px(377), px(99));
         if (scroller.getVisibility() != GONE) scroller.layout(0, px(scrollTop()), getWidth(),
-                Math.max(px(scrollTop()), getHeight() - px(addSpeaker != null ? 72 : 0)));
-        if (addSpeaker != null) addSpeaker.layout(px(100), emptySpeakers() ? px(446) : getHeight() - px(60),
-                px(295), emptySpeakers() ? px(494) : getHeight() - px(12));
+                Math.max(px(scrollTop()), getHeight()));
+        if (addSpeaker != null) {
+            int bottom = emptySpeakers() ? px(494) : getHeight() - px(SPEAKER_BUTTON_BOTTOM_INSET);
+            addSpeaker.layout(px(100), bottom - addSpeaker.getMeasuredHeight(), px(295), bottom);
+        }
     }
 
     private void styleSpeakerButton(Button button) {
