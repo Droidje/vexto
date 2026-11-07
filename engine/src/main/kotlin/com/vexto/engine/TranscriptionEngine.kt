@@ -24,6 +24,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import kotlinx.coroutines.CancellationException
@@ -40,7 +41,15 @@ class TranscriptionEngine(context: Context) {
         transcribe(audio, options, jobId)
 
     private fun transcribe(audio: Uri, options: TranscriptionOptions, jobId: String?): Flow<TranscriptionEvent> =
-        channelFlow { lock.withLock { run(audio, options, jobId) } }.flowOn(Dispatchers.Default)
+        channelFlow {
+            transcriptionRequests.incrementAndGet()
+            try {
+                LocalConversationSummary.cancelTitle()
+                lock.withLock { run(audio, options, jobId) }
+            } finally {
+                transcriptionRequests.decrementAndGet()
+            }
+        }.flowOn(Dispatchers.Default)
 
     private suspend fun ProducerScope<TranscriptionEvent>.run(uri: Uri, options: TranscriptionOptions, jobId: String?) {
         val started = SystemClock.elapsedRealtime()
@@ -303,5 +312,9 @@ class TranscriptionEngine(context: Context) {
         }.toMap()
     }
 
-    internal companion object { val lock = Mutex() }
+    internal companion object {
+        val lock = Mutex()
+        private val transcriptionRequests = AtomicInteger()
+        val isTranscriptionPending: Boolean get() = transcriptionRequests.get() > 0
+    }
 }

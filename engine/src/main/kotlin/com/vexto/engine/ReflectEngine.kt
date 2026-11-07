@@ -17,6 +17,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.util.function.BooleanSupplier
 import java.util.function.Consumer
 
 /** Фасад для Java-кода UI: колбэки приходят в главном потоке. */
@@ -41,6 +42,17 @@ object ReflectEngine {
         /** Remaining time is unknown (−1) until the first model response. */
         fun onProgress(done: Int, total: Int, remainingMs: Long)
         fun onDone(summary: String)
+        fun onError(error: Throwable)
+    }
+
+    interface SummaryWithTitleListener : SummaryListener {
+        /** Optional title from the still-loaded model; null means the attempt failed. */
+        fun onTitle(title: String?)
+    }
+
+    interface TitleListener {
+        fun onDone(title: String)
+        fun onBusy()
         fun onError(error: Throwable)
     }
 
@@ -90,14 +102,58 @@ object ReflectEngine {
     ): Task = listen(TranscriptionEngine(context).transcribeResumable(audio, options, jobId), listener)
 
     @JvmStatic
-    fun summarize(context: Context, transcript: String, listener: SummaryListener): Task = Task(scope.launch {
+    fun summarize(context: Context, transcript: String, listener: SummaryListener): Task =
+        summarizeInternal(context, transcript, null, listener)
+
+    /** The optional title gate runs on IO immediately before an extra request on the warm model. */
+    @JvmStatic
+    fun summarize(
+        context: Context,
+        transcript: String,
+        generateTitle: BooleanSupplier,
+        listener: SummaryWithTitleListener,
+    ): Task = summarizeInternal(context, transcript, generateTitle, listener)
+
+    private fun summarizeInternal(
+        context: Context,
+        transcript: String,
+        generateTitle: BooleanSupplier?,
+        listener: SummaryListener,
+    ): Task = Task(scope.launch {
         try {
-            val summary = withContext(Dispatchers.IO) {
-                LocalConversationSummary(context.applicationContext).run(transcript) { done, total, remaining ->
-                    withContext(Dispatchers.Main) { listener.onProgress(done, total, remaining) }
-                }
+            withContext(Dispatchers.IO) {
+                LocalConversationSummary(context.applicationContext).run(
+                    transcript,
+                    progress = { done, total, remaining ->
+                        withContext(Dispatchers.Main) { listener.onProgress(done, total, remaining) }
+                    },
+                    onSummary = { summary -> withContext(Dispatchers.Main) { listener.onDone(summary) } },
+                    generateTitle = generateTitle?.let { { it.asBoolean } },
+                    onTitle = { title ->
+                        withContext(Dispatchers.Main) { (listener as? SummaryWithTitleListener)?.onTitle(title) }
+                    },
+                )
             }
-            listener.onDone(summary)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            listener.onError(error)
+        }
+    })
+
+    /** Title generation is opportunistic: never queue behind other model work. */
+    @JvmStatic
+    fun tryGenerateTitle(
+        context: Context,
+        transcript: String,
+        eligible: BooleanSupplier,
+        listener: TitleListener,
+    ): Task = Task(scope.launch {
+        try {
+            val title = withContext(Dispatchers.IO) {
+                LocalConversationSummary(context.applicationContext).tryTitle(transcript, eligible::getAsBoolean)
+            }
+            if (title == null) listener.onBusy() else listener.onDone(title)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {

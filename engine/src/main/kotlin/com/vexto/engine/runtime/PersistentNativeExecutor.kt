@@ -34,6 +34,7 @@ class PersistentNativeExecutor internal constructor(
     private val directory = File(workDir, "native-session-${UUID.randomUUID()}").canonicalFile
     private val closed = AtomicBoolean()
     private val requests = Mutex()
+    private val processStart = Any()
     private val owner = Executors.newSingleThreadExecutor { task ->
         Thread(task, "vexto-native-session").apply { isDaemon = true }
     }
@@ -79,13 +80,16 @@ class PersistentNativeExecutor internal constructor(
             observe()
             executable = name
             configuration = stable
-            child = ProcessBuilder(listOf(binary.absolutePath, "--worker-dir", directory.absolutePath) + args)
-                .directory(directory).redirectOutput(File(directory, "worker.stdout"))
-                .redirectError(File(directory, "worker.stderr")).apply {
-                    environment()["LD_LIBRARY_PATH"] = runner.nativeDir.absolutePath
-                    environment()["HF_HUB_OFFLINE"] = "1"
-                    environment()["HF_HUB_DISABLE_TELEMETRY"] = "1"
-                }.start()
+            synchronized(processStart) {
+                check(!closed.get()) { "Persistent native session is closed" }
+                child = ProcessBuilder(listOf(binary.absolutePath, "--worker-dir", directory.absolutePath) + args)
+                    .directory(directory).redirectOutput(File(directory, "worker.stdout"))
+                    .redirectError(File(directory, "worker.stderr")).apply {
+                        environment()["LD_LIBRARY_PATH"] = runner.nativeDir.absolutePath
+                        environment()["HF_HUB_OFFLINE"] = "1"
+                        environment()["HF_HUB_DISABLE_TELEMETRY"] = "1"
+                    }.start()
+            }
         } else require(executable == name && configuration == stable) { "Model/session configuration changed" }
         stdout.parentFile?.mkdirs(); stderr.parentFile?.mkdirs()
         val response = File(directory, "response.json")
@@ -132,9 +136,9 @@ class PersistentNativeExecutor internal constructor(
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
-        child?.destroyForcibly()
+        val process = synchronized(processStart) { child?.also { it.destroyForcibly() } }
         owner.shutdownNow()
-        runCatching { child?.waitFor(2, TimeUnit.SECONDS) }
+        runCatching { process?.waitFor(2, TimeUnit.SECONDS) }
         ownedPids.forEach(runner::forgetSessionPid)
     }
 
