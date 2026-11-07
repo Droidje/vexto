@@ -115,19 +115,10 @@ final class SpeakerProfileView extends FrameLayout {
             return header;
         }
 
-        LinearLayout identity = new LinearLayout(getContext());
-        identity.setGravity(Gravity.CENTER_VERTICAL);
-        TextView name = style.title(detail.profile().name());
-        identity.addView(name, new LinearLayout.LayoutParams(0, WRAP_CONTENT, 1));
-        if (detail.profile().self()) {
-            TextView badge = style.text("Я", 14, Color.WHITE, artwork.semibold);
-            badge.setGravity(Gravity.CENTER);
-            badge.setBackground(style.rounded(0xff254f40, 15));
-            LinearLayout.LayoutParams badgeSize = new LinearLayout.LayoutParams(style.px(32), style.px(30));
-            badgeSize.leftMargin = style.px(12);
-            identity.addView(badge, badgeSize);
-        }
-        style.append(header, identity, 0, 22);
+        var profile = detail.profile();
+        TextView name = style.title(ReflectCatalog.speakerName(profile.name(), profile.self()));
+        if (profile.self()) name.setTextColor(ReflectPageStyle.SELF_ACCENT);
+        style.append(header, name, 0, 22);
 
         LinearLayout statistics = new LinearLayout(getContext());
         statistics.setBackground(style.rounded(ReflectPageStyle.CARD, 20));

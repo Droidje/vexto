@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.accessibility.AccessibilityNodeInfo;
 import java.io.File;
 import java.nio.file.Files;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
@@ -30,6 +31,15 @@ public class ReflectConversationsTest {
 
     @After public void cleanup() {
         context.deleteDatabase("conversations.db");
+    }
+
+    @Test public void listsShowTheDateOnlyOutsideTheCurrentDay() {
+        var recorded = ZonedDateTime.parse("2026-11-07T08:12:00+03:00");
+        var today = recorded.toLocalDate();
+
+        assertEquals("08:12", ReflectCatalog.timeLabel(recorded, today));
+        assertEquals("06.11 · 08:12", ReflectCatalog.timeLabel(recorded.minusDays(1), today));
+        assertEquals("07.11.25 · 08:12", ReflectCatalog.timeLabel(recorded.minusYears(1), today));
     }
 
     @Test public void numbersFollowRecordedFilesAcrossRenameReorderAndReopen() {

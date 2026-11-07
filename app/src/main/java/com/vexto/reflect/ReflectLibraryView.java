@@ -222,7 +222,7 @@ final class ReflectLibraryView extends ViewGroup {
             case RECORDS -> collectRecordings(query);
             case SPEAKERS -> {
                 for (ReflectCatalog.Speaker speaker : speakers) {
-                    if (ReflectCatalog.matches(speaker.name + " " + speaker.id, query)) {
+                    if (ReflectCatalog.matches(speaker.displayName() + " " + speaker.name + " " + speaker.id, query)) {
                         adapter.rows.add(speaker);
                     }
                 }
@@ -384,12 +384,6 @@ final class ReflectLibraryView extends ViewGroup {
     }
 
     private int px(float design) { return Math.round(design * scale); }
-    private int scrollTop() {
-        return switch (page) {
-            case RECORDS -> 125;
-            case SPEAKERS -> 131;
-            case CONVERSATIONS -> 125;
-        };
-    }
+    private int scrollTop() { return 108; }
     private static int exact(int size) { return MeasureSpec.makeMeasureSpec(size, MeasureSpec.EXACTLY); }
 }

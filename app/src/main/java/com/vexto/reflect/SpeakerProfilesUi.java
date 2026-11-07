@@ -51,8 +51,8 @@ final class SpeakerProfilesUi {
             List<ReflectCatalog.Speaker> rows = new ArrayList<>();
             for (var entry : entries) {
                 var profile = entry.profile();
-                String name = profile.self() ? profile.name() + " · Я" : profile.name();
-                rows.add(new ReflectCatalog.Speaker(profile.id(), name, speechMinutes(entry.speechMs()), null));
+                rows.add(new ReflectCatalog.Speaker(profile.id(), profile.name(), speechMinutes(entry.speechMs()),
+                        null, profile.self()));
             }
             view.setSpeakers(rows);
         });
@@ -119,7 +119,7 @@ final class SpeakerProfilesUi {
     void openMenu() {
         if (detail == null || !isOpen(detail.profile().id())) return;
         var profile = detail.profile();
-        ReflectActionSheet menu = view.actionSheet(activity, profile.name());
+        ReflectActionSheet menu = view.actionSheet(activity, ReflectCatalog.speakerName(profile.name(), profile.self()));
         menu.option("Переименовать", () -> {
             if (!isOpen(profile.id())) return;
             editName("Имя спикера", profile.name(), name -> {

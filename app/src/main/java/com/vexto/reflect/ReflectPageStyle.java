@@ -16,6 +16,8 @@ import android.widget.TextView;
 final class ReflectPageStyle {
     static final int MUTED = 0xffa4a4a4;
     static final int CARD = 0xff242424;
+    static final int SELF_ACCENT = 0xff7ae8c4;
+    static final int SELF_SURFACE = 0xff124d40;
     static final int ACCENT = 0xff0088ff;
     final ReflectArtwork art;
     private final Context context;

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,19 +20,22 @@ import java.util.Map;
 final class ReflectCatalog {
     private static final Locale RUSSIAN = Locale.forLanguageTag("ru");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMMM", RUSSIAN);
+    private static final DateTimeFormatter DATE_WITH_YEAR = DateTimeFormatter.ofPattern("d MMMM yyyy", RUSSIAN);
+    private static final DateTimeFormatter SHORT_DATE = DateTimeFormatter.ofPattern("dd.MM", RUSSIAN);
+    private static final DateTimeFormatter SHORT_DATE_WITH_YEAR = DateTimeFormatter.ofPattern("dd.MM.yy", RUSSIAN);
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm", RUSSIAN);
 
     static final class Recording {
         final File file;
-        final String title, date, time, length, preview, search;
+        final String title, date, timeLabel, length, preview, search;
         final List<String> participants;
 
-        Recording(File file, String title, String date, String time, String length, String preview,
+        Recording(File file, String title, String date, String timeLabel, String length, String preview,
                   List<String> participants) {
             this.file = file;
             this.title = title;
             this.date = date;
-            this.time = time;
+            this.timeLabel = timeLabel;
             this.length = length;
             this.preview = preview;
             this.participants = participants;
@@ -43,22 +47,25 @@ final class ReflectCatalog {
 
     static final class Speaker {
         final String id, name, duration, avatar;
+        final boolean self;
 
-        Speaker(String id, String name, String duration, String avatar) {
+        Speaker(String id, String name, String duration, String avatar, boolean self) {
             this.id = id;
             this.name = name;
             this.duration = duration;
             this.avatar = avatar;
+            this.self = self;
         }
+
+        String displayName() { return speakerName(name, self); }
     }
 
     static final class Conversation {
-        final String title, time, preview, search;
+        final String title, preview, search;
         final Recording recording;
 
-        Conversation(String title, String time, String preview, Recording recording) {
+        Conversation(String title, String preview, Recording recording) {
             this.title = title;
-            this.time = time;
             this.preview = preview;
             this.recording = recording;
             this.search = title + " " + recording.search;
@@ -66,6 +73,16 @@ final class ReflectCatalog {
     }
 
     private ReflectCatalog() {}
+
+    static String speakerName(String name, boolean self) { return self ? "Вы" : name; }
+
+    static String timeLabel(ZonedDateTime recorded, LocalDate today) {
+        LocalDate day = recorded.toLocalDate();
+        String time = TIME.format(recorded);
+        if (day.equals(today)) return time;
+        DateTimeFormatter format = day.getYear() == today.getYear() ? SHORT_DATE : SHORT_DATE_WITH_YEAR;
+        return format.format(day) + " · " + time;
+    }
 
     static List<Recording> localRecordings(File directory, ReflectTranscriptStore transcripts, SpeakerProfiles profiles) {
         File[] files = directory.listFiles(File::isFile);
@@ -91,7 +108,8 @@ final class ReflectCatalog {
             }
             var modified = Instant.ofEpochMilli(file.lastModified()).atZone(zone);
             LocalDate day = modified.toLocalDate();
-            String date = day.equals(today) ? "Сегодня" : DATE.format(day);
+            DateTimeFormatter headingFormat = day.getYear() == today.getYear() ? DATE : DATE_WITH_YEAR;
+            String date = day.equals(today) ? "Сегодня" : headingFormat.format(day);
             int seconds = duration / 1000;
             String length = String.format(Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60);
             String title = transcripts.title(file, "Запись №" + (files.length - i));
@@ -99,7 +117,7 @@ final class ReflectCatalog {
             String preview = transcript == null ? null : preview(transcript.lines.get(0).text);
             List<String> participants = transcript == null ? List.of()
                     : participants(profiles, file, transcript, profileNames);
-            recordings.add(new Recording(file, title, date, TIME.format(modified), length, preview, participants));
+            recordings.add(new Recording(file, title, date, timeLabel(modified, today), length, preview, participants));
         }
         return Collections.unmodifiableList(recordings);
     }
@@ -154,7 +172,7 @@ final class ReflectCatalog {
         catch (RuntimeException unavailable) { numbers = Map.of(); }
         List<Conversation> conversations = new ArrayList<>(recordings.size());
         for (Recording recording : recordings) {
-            conversations.add(new Conversation(ReflectConversationStore.title(numbers.get(recording.file.getName())), recording.time,
+            conversations.add(new Conversation(ReflectConversationStore.title(numbers.get(recording.file.getName())),
                     recording.hasTranscript() ? recording.preview : "Локальная аудиозапись · " + recording.length,
                     recording));
         }
