@@ -37,7 +37,7 @@ internal class LocalConversationSummary(private val context: Context) {
                 var done = 0
                 val summary = plan.run { input ->
                     val start = SystemClock.elapsedRealtime()
-                    val result = session.generate(summaryPrompt, input, 120_000)
+                    val result = SummaryPlan.finishSummary(session.generate(summaryPrompt, input, 120_000))
                     elapsed += SystemClock.elapsedRealtime() - start
                     done++
                     progress(done, plan.steps, elapsed * (plan.steps - done) / done)

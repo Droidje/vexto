@@ -27,8 +27,9 @@ class SummaryPlanTest {
         val question = "Краткий смысл всей истории:"
         val opening = "Начало разговора:\n" + "а".repeat(120) + "\n\nСодержание частей:"
         assertEquals(plan.chunks.map { "$it\n\n$question" }, prompts.take(3))
-        assertEquals("$opening\n1\n\n2\n\n$question", prompts[3])
-        assertEquals("$opening\n4\n\n3\n\n$question", prompts[4])
+        val mergeQuestion = "Какова общая тема и что выяснилось?"
+        assertEquals("$opening\n1\n\n2\n\n$mergeQuestion", prompts[3])
+        assertEquals("$opening\n4\n\n3\n\n$mergeQuestion", prompts[4])
         assertTrue(prompts.all { it.toByteArray().size <= 1400 })
         assertEquals("5", output)
     }
@@ -36,6 +37,12 @@ class SummaryPlanTest {
     @Test fun `UI speaker labels stay out of prompts`() {
         val plan = SummaryPlan("Участник 1: Собирает груши.\nУчастник 2: Забрал корзину.")
         assertEquals("Собирает груши.\nЗабрал корзину.", plan.chunks.single())
+    }
+
+    @Test fun `near the output cap the incomplete last sentence is omitted`() {
+        val text = "Выставка состоится. " + "а".repeat(294)
+        assertEquals("Выставка состоится.", SummaryPlan.finishSummary(text))
+        assertEquals("Краткий итог", SummaryPlan.finishSummary("Краткий итог"))
     }
 
     @Test fun `blank padding does not create a generation request`() {

@@ -15,12 +15,14 @@ internal class SummaryPlan(transcript: String) {
         val opening = prefix(chunks.first(), 240).trimEnd()
         val context = if (language.usesCyrillic) "Начало разговора:\n$opening\n\nСодержание частей:"
             else "Conversation opening:\n$opening\n\nSummaries of its parts:"
+        val mergeQuestion = if (language.usesCyrillic) "Какова общая тема и что выяснилось?"
+            else "What was the common topic and what did the conversation establish?"
         while (level.size > 1) {
             level = level.chunked(2).map { pair ->
                 if (pair.size == 1) pair.single()
                 else {
                     val combined = pair.joinToString("\n\n") { prefix(it, 500).trimEnd() }
-                    summarize("$context\n$combined\n\n$question")
+                    summarize("$context\n$combined\n\n$mergeQuestion")
                 }
             }
         }
@@ -30,6 +32,14 @@ internal class SummaryPlan(transcript: String) {
     companion object {
         const val OutputBytes = 640
         private const val ChunkBytes = 1300
+        private val sentenceEnd = Regex("[.!?…](?=\\s|$)")
+
+        /** A byte-capped response may end halfway through a sentence. Keep its complete part. */
+        fun finishSummary(text: String): String {
+            if (text.toByteArray(Charsets.UTF_8).size < OutputBytes - 16) return text
+            val end = sentenceEnd.findAll(text).lastOrNull()?.range?.last ?: return text
+            return text.substring(0, end + 1)
+        }
 
         fun prefix(text: String, maxBytes: Int): String {
             var index = 0
