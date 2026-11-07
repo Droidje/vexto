@@ -9,6 +9,8 @@ import com.vexto.engine.model.ProcessingStats;
 import com.vexto.engine.model.Stage;
 import com.vexto.engine.model.Transcript;
 import com.vexto.engine.model.TranscriptionOptions;
+import com.vexto.engine.model.Utterance;
+import com.vexto.engine.model.Word;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -161,11 +163,21 @@ final class UtteranceRecheckSession {
     private static List<UtteranceRecheck.Piece> pieces(Transcript result, int offsetMs) {
         List<UtteranceRecheck.Piece> pieces = new ArrayList<>();
         if (result == null) return pieces;
-        ReflectTranscript converted = ReflectTranscriptionService.convert(result);
-        for (ReflectTranscript.Line line : converted.lines) {
+        for (Utterance utterance : result.getUtterances()) {
+            if (utterance.getText() == null || utterance.getText().trim().isEmpty()) continue;
             try {
-                pieces.add(new UtteranceRecheck.Piece(Math.addExact(line.startMs, offsetMs),
-                        Math.addExact(line.endMs, offsetMs), line.text, line.emotionProbabilities, line.overlapDetected));
+                List<UtteranceRecheck.TimedWord> words = new ArrayList<>();
+                for (Word word : utterance.getWords()) {
+                    if (word.getText() == null || word.getText().isBlank()) continue;
+                    words.add(new UtteranceRecheck.TimedWord(
+                            Math.toIntExact(Math.addExact(word.getStartMs(), offsetMs)),
+                            Math.toIntExact(Math.addExact(word.getEndMs(), offsetMs)),
+                            word.getText()));
+                }
+                pieces.add(new UtteranceRecheck.Piece(
+                        Math.toIntExact(Math.addExact(utterance.getStartMs(), offsetMs)),
+                        Math.toIntExact(Math.addExact(utterance.getEndMs(), offsetMs)),
+                        utterance.getText(), utterance.getEmotionProbabilities(), words, utterance.getOverlapDetected()));
             } catch (ArithmeticException overflow) {
                 return List.of();
             }

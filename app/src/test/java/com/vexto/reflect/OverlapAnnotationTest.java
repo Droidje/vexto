@@ -102,6 +102,44 @@ public class OverlapAnnotationTest {
         assertEquals(Boolean.TRUE, ReflectTranscriptionService.convert(result).lines.get(0).overlapDetected);
     }
 
+    @Test public void wordTrimmingKeepsNeighborsAndInvalidatesEvidenceForALargerInterval() {
+        var selected = new ReflectTranscript.Line("speaker_1", 1000, 5000, "Выбрано");
+        var neighbor = new ReflectTranscript.Line("speaker_2", 5000, 6000, "Сосед", null, null, true);
+        var firstWords = List.of(new UtteranceRecheck.TimedWord(1000, 3000, "Первое"),
+                new UtteranceRecheck.TimedWord(3000, 5000, "второе"));
+        var extendedWords = new java.util.ArrayList<>(firstWords);
+        extendedWords.add(new UtteranceRecheck.TimedWord(5000, 6000, "Сосед"));
+        var original = new ReflectTranscript(List.of(selected, neighbor));
+        var cropped = UtteranceRecheck.apply(original, selected, 0, 6500, List.of(
+                new UtteranceRecheck.Piece(1000, 6000, "Первое второе Сосед", null, extendedWords, true)));
+        assertEquals("Первое второе", cropped.lines.get(0).text);
+        assertEquals(5000, cropped.lines.get(0).endMs);
+        assertNull(cropped.lines.get(0).overlapDetected);
+        assertSame(neighbor, cropped.lines.get(1));
+        var exact = UtteranceRecheck.apply(original, selected, 0, 6500, List.of(
+                new UtteranceRecheck.Piece(1000, 5000, "Первое второе", null, firstWords, false)));
+        assertEquals(Boolean.FALSE, exact.lines.get(0).overlapDetected);
+        assertSame(neighbor, exact.lines.get(1));
+    }
+
+    @Test public void removingRepeatedWordsKeepsEvidenceOnlyWhenAudioBoundsStayTheSame() {
+        var earlier = new ReflectTranscript.Line("speaker_2", 0, 1100, "слово");
+        var selected = new ReflectTranscript.Line("speaker_1", 1000, 5000, "Выбрано");
+        var changedText = UtteranceRecheck.apply(new ReflectTranscript(List.of(earlier, selected)), selected,
+                0, 6000, List.of(new UtteranceRecheck.Piece(1000, 5000, "слово продолжение", null, true)));
+        assertEquals("продолжение", changedText.lines.get(1).text);
+        assertEquals(Boolean.TRUE, changedText.lines.get(1).overlapDetected);
+
+        var first = new ReflectTranscript.Line("speaker_1", 0, 4000, "Выбрано");
+        var next = new ReflectTranscript.Line("speaker_2", 3800, 7000, "слово дальше", null, null, true);
+        var changedBounds = UtteranceRecheck.apply(new ReflectTranscript(List.of(first, next)), first,
+                0, 7000, List.of(new UtteranceRecheck.Piece(0, 4000, "фраза слово", null, false)));
+        assertEquals("дальше", changedBounds.lines.get(1).text);
+        assertEquals(4000, changedBounds.lines.get(1).startMs);
+        assertNull(changedBounds.lines.get(1).overlapDetected);
+        assertEquals(Boolean.FALSE, changedBounds.lines.get(0).overlapDetected);
+    }
+
     @Test public void recycledAvatarShowsOnlyConfirmedAlertsAndUsesTheCurrentLine() {
         var context = org.robolectric.Robolectric.buildActivity(android.app.Activity.class).setup().get();
         var clicked = new AtomicReference<ReflectTranscript.Line>();
