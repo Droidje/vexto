@@ -17,7 +17,7 @@ class QwenAsrSelector(
         require(pairs.map { it.chunkId }.distinct().size == pairs.size) { "duplicate_chunk_id" }
         pairs.forEach { require(it.chunkId.matches(Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,95}"))) }
         workDir.mkdirs()
-        // Each child is awaited/reaped before the next one; every input chunk produces a decision.
+        // Requests are serial; the stage-owned executor retains and ultimately closes its model/context.
         return pairs.map { pair -> selectOne(pair, File(workDir, pair.chunkId)) }
     }
 

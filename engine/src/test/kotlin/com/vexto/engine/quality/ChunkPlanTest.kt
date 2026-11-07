@@ -11,6 +11,19 @@ import java.io.File
 class ChunkPlanTest {
     @get:Rule val temporary = TemporaryFolder()
 
+    @Test fun silenceGapsKeepOriginalClockAndDeclaredCoverage() = runBlocking {
+        val directory = temporary.newFolder("speech-only")
+        val source = File(directory, "source.wav")
+        PcmWave.Writer(source).use { it.write(FloatArray(20 * 16000) { 0.1f }) }
+        val plan = ChunkPlan.create(source, directory, listOf(PipelineTurn(0, 2000, 4000), PipelineTurn(1, 12000, 14000)))
+        plan.validate()
+        assertEquals(listOf(1700L, 11700L), plan.chunks.map { it.startMs })
+        assertEquals(14800L, plan.skippedSamples / 16)
+        assertEquals(3, plan.omittedRanges.size)
+        assertTrue(ChunkPlan.speechRegions(320000, emptyList()).isEmpty())
+        assertEquals(listOf(SampleRange(0, 320000)), ChunkPlan.speechRegions(320000, null))
+    }
+
     @Test fun terminalOneToFifteenSamplesAreRetainedWithoutZeroDurationChunks() = runBlocking {
         for (tail in 1..15) {
             val directory = temporary.newFolder()

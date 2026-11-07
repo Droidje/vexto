@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Prepare a SHA256-verified offline quality pack; weights are never embedded in the APK.
+"""Prepare the SHA256-verified offline pack for both processing modes.
+
+The distribution pack includes quality and fast weights; build_phone_apk.py embeds
+every artifact into one offline APK. The application never downloads models.
 
 --sources-json maps model IDs to existing files (keep it in .agents/local/ or .agents/work/).
 --download fetches only pinned downloadable artifacts. Nemotron F32 must be converted

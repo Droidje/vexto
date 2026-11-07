@@ -2,6 +2,7 @@ package com.vexto.reflect;
 
 import android.content.Context;
 import android.util.AtomicFile;
+import com.vexto.engine.model.ProcessingMode;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -12,12 +13,16 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /** The app's durable pointer to one saved recording and its engine checkpoint directory. */
-record PendingTranscription(File recording, String jobId) {
+record PendingTranscription(File recording, String jobId, ProcessingMode processingMode) {
     private static final int MAX_BYTES = 4096;
+
+    PendingTranscription(File recording, String jobId) {
+        this(recording, jobId, ProcessingMode.AUTO);
+    }
 
     static PendingTranscription create(Context context, File recording) throws IOException {
         return new PendingTranscription(checkedRecording(context, recording.getName(), recording),
-                UUID.randomUUID().toString());
+                UUID.randomUUID().toString(), new ReflectPreferences(context).processingMode());
     }
 
     static PendingTranscription read(Context context) throws IOException {
@@ -34,7 +39,8 @@ record PendingTranscription(File recording, String jobId) {
             JSONObject json = new JSONObject(new String(data, 0, length, StandardCharsets.UTF_8));
             String jobId = json.getString("jobId");
             if (!UUID.fromString(jobId).toString().equals(jobId)) throw new IOException("Invalid job id");
-            return new PendingTranscription(checkedRecording(context, json.getString("recording"), null), jobId);
+            ProcessingMode mode = ProcessingMode.valueOf(json.optString("processingMode", ProcessingMode.AUTO.name()));
+            return new PendingTranscription(checkedRecording(context, json.getString("recording"), null), jobId, mode);
         } catch (FileNotFoundException absent) {
             if (file.getBaseFile().exists()) throw absent;
             return null;
@@ -47,7 +53,8 @@ record PendingTranscription(File recording, String jobId) {
         AtomicFile file = file(context);
         FileOutputStream output = file.startWrite();
         try {
-            JSONObject data = new JSONObject().put("recording", recording.getName()).put("jobId", jobId);
+            JSONObject data = new JSONObject().put("recording", recording.getName()).put("jobId", jobId)
+                    .put("processingMode", processingMode.name());
             output.write(data.toString().getBytes(StandardCharsets.UTF_8));
             output.getFD().sync();
             file.finishWrite(output);

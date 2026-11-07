@@ -129,7 +129,7 @@ public final class ReflectTranscriptionService extends Service {
         File recording = request.recording();
         changed(started);
         started.task = ReflectEngine.transcribeResumable(getApplicationContext(), Uri.fromFile(recording),
-                new TranscriptionOptions(), request.jobId(), new ReflectEngine.DetailedListener() {
+                new TranscriptionOptions(null, true, request.processingMode()), request.jobId(), new ReflectEngine.DetailedListener() {
             @Override public void onProgress(Stage stage, float fraction) {
                 if (job != started) return;
                 int percent = Math.round(fraction * 100);

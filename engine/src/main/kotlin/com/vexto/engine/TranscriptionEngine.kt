@@ -56,17 +56,15 @@ class TranscriptionEngine(context: Context) {
             times[name] = (times[name] ?: 0L) + SystemClock.elapsedRealtime() - t0
             return value
         }
-        val models = stage(Stage.Preparing) { QualityModelStore.prepare(context, it) }
+        val manifest = QualityModelStore.manifest(context)
         val jobRoot = File(context.filesDir, "inference/jobs")
         val checkpoint = jobId?.let {
             require(uri.scheme == "file") { "Resumable transcription requires a saved recording" }
-            JobCheckpoint.open(jobRoot, it, File(requireNotNull(uri.path)), models.manifest, options.speakerCount)
+            JobCheckpoint.open(jobRoot, it, File(requireNotNull(uri.path)), manifest,
+                options.speakerCount, options.processingMode)
         }
         val job = checkpoint?.directory ?: File(jobRoot, UUID.randomUUID().toString()).apply { check(mkdirs()) }
         checkpoint?.finished()?.let { send(TranscriptionEvent.Done(it.transcript, it.stats)); return }
-        JobFiles.save(File(job, "job.json"), mapOf("source_uri" to uri.toString(), "profile" to models.manifest.version,
-            "memory_budget_bytes" to AppRss.BudgetBytes.toString(), "reserve_bytes" to AppRss.ReserveBytes.toString()))
-        JobFiles.save(File(job, "models.json"), models.manifest)
         if (options.speakerCount != null) warnings += "Nemotron automatically determines speakers; requested fixed count is not applied"
         val original = File(job, "original.wav")
         val originalHash = checkpoint?.decodedHash() ?: stage(Stage.Decoding) { progress ->
@@ -81,6 +79,19 @@ class TranscriptionEngine(context: Context) {
             } finally { decoded.delete() }
         }
         val audioMs = PcmWave.inspect(original).sampleCount * 1000 / 16000
+        // Resolve AUTO from decoded samples, never from an untrusted container duration estimate.
+        val profile = ProcessingProfile.resolve(options.processingMode, audioMs)
+        val profileFile = File(job, "processing-profile.json")
+        if (checkpoint != null && profileFile.isFile) require(ProcessingProfile.read(job) == profile) {
+            "Processing profile changed since this transcription was started"
+        }
+        JobFiles.save(profileFile, profile)
+        val profileKey = sha256(JobFiles.json.encodeToString(profile).toByteArray(Charsets.UTF_8))
+        val models = stage(Stage.Preparing) { QualityModelStore.prepare(context, profile.fast, it) }
+        JobFiles.save(File(job, "job.json"), mapOf("source_uri" to uri.toString(), "profile" to models.manifest.version,
+            "requested_mode" to profile.requestedMode.name, "effective_mode" to profile.mode.name,
+            "memory_budget_bytes" to AppRss.BudgetBytes.toString(), "reserve_bytes" to AppRss.ReserveBytes.toString()))
+        JobFiles.save(File(job, "models.json"), models.manifest)
         val client = StageClient(context)
         val results = mutableListOf<WorkerResult>()
         suspend fun worker(
@@ -91,7 +102,7 @@ class TranscriptionEngine(context: Context) {
             dependencies: List<String> = emptyList(),
             plan: ChunkPlan? = null,
         ): WorkerResult {
-            val (request, saved) = checkpoint?.worker(kind, input, inputHash, dependencies, plan)
+            val (request, saved) = checkpoint?.worker(kind, input, inputHash, listOf(profileKey) + dependencies, plan)
                 ?: (WorkerRequest(kind, job.absolutePath, input) to null)
             val result = if (saved?.completed == true) {
                 times[name] = saved.elapsedMs
@@ -114,14 +125,16 @@ class TranscriptionEngine(context: Context) {
             if (!result.completed) warnings += "${kind.name}: ${result.error ?: "incomplete"}"
             return result
         }
-        val denoise = worker(WorkerStage.DENOISE, Stage.Denoising, "original.wav")
-        val cleaned = File(job, "denoised.wav")
-        val view = if (denoise.completed && cleaned.isFile &&
-            PcmWave.inspect(cleaned).sampleCount == PcmWave.inspect(original).sampleCount) "denoised.wav" else {
-            warnings += "ASR uses original audio because denoising did not produce a valid aligned-length view"
-            "original.wav"
-        }
-        val viewHash = if (view == "denoised.wav") denoise.outputSha256.orEmpty() else originalHash
+        val denoise = if (profile.denoise) worker(WorkerStage.DENOISE, Stage.Denoising, "original.wav") else null
+        val view = if (denoise != null) {
+            val cleaned = File(job, "denoised.wav")
+            if (denoise.completed && cleaned.isFile &&
+                PcmWave.inspect(cleaned).sampleCount == PcmWave.inspect(original).sampleCount) "denoised.wav" else {
+                warnings += "ASR uses original audio because denoising did not produce a valid aligned-length view"
+                "original.wav"
+            }
+        } else "original.wav"
+        val viewHash = if (view == "denoised.wav") denoise?.outputSha256.orEmpty() else originalHash
         // Language id stays in this process: the inference worker accepts one stage at a time.
         val languageFile = File(job, "language.json")
         val (diarization, languageResult) = coroutineScope {
@@ -157,7 +170,17 @@ class TranscriptionEngine(context: Context) {
                 ?.removePrefix("speaker_")?.toIntOrNull()?.minus(1)
             speaker.copy(voice = acousticId?.let(voices::get))
         })
-        val plan = checkpoint?.chunks(view, viewHash) ?: ChunkPlan.create(File(job, view), job)
+        // The speech mask is a dependency of the plan, including whether diarization completed.
+        val planDependency = sha256((JobFiles.sha256(turnsFile) + ":" + diarization.completed + ":" +
+            (diarization.error == null)).toByteArray(Charsets.UTF_8))
+        val planBinding = File(job, "chunk-diarization.sha256")
+        val cachedPlan = checkpoint?.chunks(view, viewHash)?.takeIf {
+            runCatching { planBinding.readText() == planDependency }.getOrDefault(false)
+        }
+        val plan = cachedPlan ?: ChunkPlan.create(File(job, view), job,
+            turns.takeIf { diarization.completed && diarization.error == null }).also {
+            JobFiles.write(planBinding, planDependency.toByteArray(Charsets.US_ASCII))
+        }
         val planHash = if (checkpoint != null) JobFiles.sha256(File(job, "chunks.json")) else ""
         val assembler = CandidateTranscriptAssembler()
         if (!slavic) warnings += "ASR_ROUTE:whisper_only:${recordingLanguage.code}"
@@ -235,15 +258,20 @@ class TranscriptionEngine(context: Context) {
             all.values.count { it.source == AsrSource.GIGAAM }, all.values.count { it.source == AsrSource.WHISPER },
             selected.size, choices.values.count { it.status == AsrSelectionStatus.SELECTED_BY_LLM.name }, unresolved)
         val withinBudget = peak + AppRss.ReserveBytes <= AppRss.BudgetBytes
-        val allStagesSucceeded = results.map { it.stage }.toSet() == WorkerStage.entries.toSet() &&
+        val expectedStages = WorkerStage.entries.toSet() -
+            (if (profile.denoise) emptySet() else setOf(WorkerStage.DENOISE)) -
+            (if (slavic) emptySet() else setOf(WorkerStage.GIGAAM, WorkerStage.SELECT))
+        val allStagesSucceeded = results.map { it.stage }.toSet() == expectedStages &&
             results.all { it.completed && it.error == null }
         val fullProfile = coverage.fullProfileCompleted(allStagesSucceeded, warnings, withinBudget)
         val export = File(job, "transcript.json")
         val metadata = File(job, "transcript.metadata.json")
         JobFiles.write(export, TranscriptExport.submissionJson(transcript).toByteArray(Charsets.UTF_8))
         JobFiles.write(metadata, TranscriptExport.jsonWithMetadata(transcript).toByteArray(Charsets.UTF_8))
-        val asrModel = if (slavic) "GigaAM-v3-e2e+Whisper-large-v3-q5_0; selection-only Qwen3-1.7B-Q4_K_M"
-            else "Whisper-large-v3-q5_0; language=${recordingLanguage.code}; gigaam_skipped"
+        val whisperName = if (profile.fast) "Whisper-small-q5_1" else "Whisper-large-v3-q5_0"
+        val gigaName = if (profile.fast) "GigaAM-v3-e2e-ctc-int8" else "GigaAM-v3-e2e-rnnt-int8"
+        val asrModel = if (slavic) "$gigaName+$whisperName; selection-only Qwen3-1.7B-Q4_K_M"
+            else "$whisperName; language=${recordingLanguage.code}; gigaam_skipped"
         val stats = ProcessingStats(audioMs, SystemClock.elapsedRealtime() - started, times,
             peak / (1024 * 1024), asrModel, 4,
             artifactDirectory = job.absolutePath, warnings = warnings.distinct(), complete = coverage.complete,
@@ -253,7 +281,9 @@ class TranscriptionEngine(context: Context) {
             fullProfileCompleted = fullProfile, selectionResolved = coverage.selectionResolved,
             peakRssBytes = peak, reserveBytes = AppRss.ReserveBytes, budgetBytes = AppRss.BudgetBytes,
             stageMs = times.mapKeys { it.key.name }, stages = results.toList(),
-            transcriptSha256 = JobFiles.sha256(export), metadataSha256 = JobFiles.sha256(metadata), warnings = stats.warnings, modelVerificationReused = models.verificationReused))
+            transcriptSha256 = JobFiles.sha256(export), metadataSha256 = JobFiles.sha256(metadata), warnings = stats.warnings,
+            modelVerificationReused = models.verificationReused, processingProfile = profile,
+            skippedSilenceMs = plan.skippedSamples / 16))
         checkpoint?.saveFinished(transcript, stats)
         send(TranscriptionEvent.Done(transcript, stats))
     }

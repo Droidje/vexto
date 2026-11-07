@@ -26,6 +26,9 @@ class JobCheckpointTest {
         assertThrows(IOException::class.java) {
             JobCheckpoint.open(jobs, id, audio, manifest.copy(version = "another"), null)
         }
+        assertThrows(IOException::class.java) {
+            JobCheckpoint.open(jobs, id, audio, manifest, null, com.vexto.engine.model.ProcessingMode.FAST)
+        }
         audio.writeText("other") // Same length, different content.
         assertThrows(IOException::class.java) {
             JobCheckpoint.open(jobs, id, audio, manifest, null)

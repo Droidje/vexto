@@ -31,7 +31,7 @@ data class ComparisonChunk(val id: String, val wav: File, val inputSha256: Strin
 data class WhisperComparisonAttempt(val chunkId: String, val candidate: ImmutableAsrCandidate?,
     val failureCode: String? = null, val nativeResult: LocalNativeResult? = null)
 
-/** Serial native children, whole candidates. Root adapts LocalNativeExecutor to NativeProcessRunner. */
+/** One worker's serial requests, whole candidates. Its executor can retain a native model/context. */
 class WhisperComparisonProvider(
     private val executor: LocalNativeExecutor,
     private val modelFile: File,

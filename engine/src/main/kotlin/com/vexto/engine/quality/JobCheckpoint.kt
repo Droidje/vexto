@@ -1,6 +1,7 @@
 package com.vexto.engine.quality
 
 import com.vexto.engine.audio.PcmWave
+import com.vexto.engine.model.ProcessingMode
 import com.vexto.engine.model.ProcessingStats
 import com.vexto.engine.model.Transcript
 import com.vexto.engine.model.export.TranscriptExport
@@ -27,6 +28,7 @@ internal class JobCheckpoint private constructor(val directory: File) {
         val audioSha256: String,
         val models: QualityManifest,
         val speakerCount: Int?,
+        val processingMode: ProcessingMode = ProcessingMode.QUALITY,
     )
 
     fun decodedHash(): String? = runCatching {
@@ -116,7 +118,8 @@ internal class JobCheckpoint private constructor(val directory: File) {
                 val refs = result.candidates.distinctBy { it.chunkId }.filter { ref ->
                     ref.source == source.wireName && chunks[ref.chunkId]?.let { verifyCandidate(ref, it) } == true
                 }
-                result.copy(candidates = refs, completed = completed && refs.size == result.candidates.size)
+                result.copy(candidates = refs, completed = completed && refs.size == chunks.size &&
+                    refs.size == result.candidates.size)
             }
             WorkerStage.SELECT -> {
                 val chunks = requireNotNull(plan).chunks.associateBy { it.id }
@@ -124,7 +127,8 @@ internal class JobCheckpoint private constructor(val directory: File) {
                     val chunk = chunks[choice.chunkId]
                     chunk != null && choice.candidate.chunkId == choice.chunkId && verifyChoice(choice, chunk)
                 }
-                result.copy(choices = choices, completed = completed && choices.size == result.choices.size)
+                result.copy(choices = choices, completed = completed && choices.size == chunks.size &&
+                    choices.size == result.choices.size)
             }
             WorkerStage.EMOTION -> {
                 val targets = JobFiles.load<List<UtteranceEmotionTarget>>(File(directory, "emotion-targets.json"))
@@ -162,12 +166,13 @@ internal class JobCheckpoint private constructor(val directory: File) {
             Files.move(output.toPath(), archive.toPath(), StandardCopyOption.ATOMIC_MOVE)
         }
 
-        fun open(root: File, jobId: String, source: File, models: QualityManifest, speakerCount: Int?): JobCheckpoint {
+        fun open(root: File, jobId: String, source: File, models: QualityManifest, speakerCount: Int?,
+                 processingMode: ProcessingMode = ProcessingMode.QUALITY): JobCheckpoint {
             require(UUID.fromString(jobId).toString() == jobId) { "Invalid transcription job ID" }
             val directory = File(root.canonicalFile, jobId)
             require(directory == directory.canonicalFile) { "Invalid transcription job path" }
             require(source.isFile) { "Recording file is unavailable" }
-            val identity = Identity(audioSha256 = JobFiles.sha256(source), models = models, speakerCount = speakerCount)
+            val identity = Identity(audioSha256 = JobFiles.sha256(source), models = models, speakerCount = speakerCount, processingMode = processingMode)
             val journal = File(directory, "resume.json")
             if (journal.exists()) {
                 if (JobFiles.load<Identity>(journal) != identity) {

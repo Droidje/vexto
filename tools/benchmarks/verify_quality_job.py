@@ -73,13 +73,7 @@ def pcm(path, joined=None):
         return source.getnframes(), digest.hexdigest()
 
 
-def canonical_chunk_sha(source_path, start, end, joined):
-    """Match Android PcmWave.cropSha256: canonical 44-byte header + exact PCM slice."""
-    size = (end - start) * 2
-    check(0 < size <= 0xffffffff - 36, "invalid_virtual_chunk_length")
-    header = struct.pack("<4sI4s4sIHHIIHH4sI", b"RIFF", size + 36, b"WAVE", b"fmt ",
-                         16, 1, 1, 16000, 32000, 2, 16, b"data", size)
-    digest = hashlib.sha256(header)
+def pcm_span(source_path, start, end, *digests):
     with wave.open(str(source_path), "rb") as source:
         check((source.getnchannels(), source.getsampwidth(), source.getframerate(), source.getcomptype()) ==
               (1, 2, 16000, "NONE") and 0 <= start < end <= source.getnframes(), "invalid_virtual_chunk_range")
@@ -89,10 +83,61 @@ def canonical_chunk_sha(source_path, start, end, joined):
             count = min(8192, remaining)
             block = source.readframes(count)
             check(len(block) == count * 2, "truncated_virtual_chunk_pcm")
-            digest.update(block)
-            joined.update(block)
+            for digest in digests:
+                digest.update(block)
             remaining -= count
+
+
+def canonical_chunk_sha(source_path, start, end, joined):
+    """Match Android PcmWave.cropSha256: canonical 44-byte header + exact PCM slice."""
+    size = (end - start) * 2
+    check(0 < size <= 0xffffffff - 36, "invalid_virtual_chunk_length")
+    header = struct.pack("<4sI4s4sIHHIIHH4sI", b"RIFF", size + 36, b"WAVE", b"fmt ",
+                         16, 1, 1, 16000, 32000, 2, 16, b"data", size)
+    digest = hashlib.sha256(header)
+    pcm_span(source_path, start, end, digest, joined)
     return digest.hexdigest()
+
+
+def processing_profile(root, report, audio_ms):
+    if report.get("schemaVersion") != 3:
+        return None
+    value = document(root / "processing-profile.json")
+    fields = {"requestedMode", "mode", "denoise", "gigaWorkers", "whisperWorkers", "gigaThreads", "whisperThreads"}
+    check(isinstance(value, dict) and set(value) == fields and report.get("processingProfile") == value,
+          "processing_profile_journal_mismatch")
+    requested = value["requestedMode"]
+    check(requested in ("AUTO", "FAST", "QUALITY"), "invalid_requested_processing_mode")
+    expected = ("FAST" if audio_ms > 300_000 else "QUALITY") if requested == "AUTO" else requested
+    check(value["mode"] == expected and type(value["denoise"]) is bool and
+          value["denoise"] is (expected == "QUALITY"), "processing_mode_or_denoise_mismatch")
+    for source in ("giga", "whisper"):
+        workers, threads = value[source + "Workers"], value[source + "Threads"]
+        check(integer(workers, 1) and workers <= 2 and integer(threads, 1) and threads <= 4 and
+              workers * threads <= 4, "invalid_processing_worker_budget")
+    check(expected == "FAST" or value["whisperWorkers"] == 1, "parallel_large_whisper_exceeds_profile")
+    return value
+
+
+def verify_omitted_speech(root, omitted, frames):
+    if not omitted:
+        return
+    turns = document(root / "turns.json")
+    check(isinstance(turns, list), "invalid_diarization_turns")
+    check(turns == document(root / "stages/DIARIZE.result.json").get("turns"),
+          "diarization_turns_journal_mismatch")
+    speech = []
+    for turn in turns:
+        check(isinstance(turn, dict) and integer(turn["speaker"]) and integer(turn["startMs"]) and
+              integer(turn["endMs"], 1) and turn["startMs"] < turn["endMs"] <= (frames + 15) // 16,
+              "invalid_diarization_turns")
+        speech.append((turn["startMs"] * 16, turn["endMs"] * 16))
+    speech.sort()
+    index = 0
+    for start, end in sorted(omitted):
+        while index < len(speech) and speech[index][1] <= start:
+            index += 1
+        check(index == len(speech) or speech[index][0] >= end, "omitted_range_overlaps_diarized_speech")
 
 
 def language_record(root):
@@ -126,10 +171,12 @@ def verify_job(job_dir, allow_legacy=False):
         summary["audio_samples"] = frames
         summary["hashes"]["original_wav"] = sha(root / "original.wav")
         report = document(root / "completion.json")
-        modern = type(report.get("schemaVersion")) is int and report["schemaVersion"] == 2
+        modern = type(report.get("schemaVersion")) is int and report["schemaVersion"] in (2, 3)
         check(modern or (allow_legacy and set(report) == {"complete", "warnings", "peak_rss_bytes"}
                          and all(isinstance(value, str) for value in report.values())), "legacy_report_requires_explicit_opt_in")
-        summary["source_report_version"] = 2 if modern else "legacy"
+        summary["source_report_version"] = report["schemaVersion"] if modern else "legacy"
+        profile = processing_profile(root, report, frames // 16)
+        fast = profile is not None and profile["mode"] == "FAST"
         plan = document(root / "chunks.json")
         check(type(plan["sampleCount"]) is int and plan["sampleCount"] == frames, "plan_sample_count_mismatch")
         request_path = root / "stages/GIGAAM.request.json"
@@ -154,28 +201,63 @@ def verify_job(job_dir, allow_legacy=False):
             source_path = inside(root, view)
         view_frames, view_pcm = pcm(source_path)
         check(view_frames == frames, "input_view_sample_count_mismatch")
-        chunks, cursor, joined = {}, 0, hashlib.sha256()
+        chunks, cursor, joined, coverage = {}, 0, hashlib.sha256(), []
         for index, chunk in enumerate(plan["chunks"]):
             ident = chunk["id"]
             check(ident == f"chunk_{index:06d}" and ident not in chunks, "invalid_chunk_id")
             check(integer(chunk["fromSample"]) and integer(chunk["toSample"]) and
-                  chunk["fromSample"] == cursor < chunk["toSample"] <= cursor + 160000, "chunk_coverage_gap_or_overlap")
+                  cursor <= chunk["fromSample"] < chunk["toSample"] <= frames and
+                  chunk["toSample"] - chunk["fromSample"] <= 480000, "chunk_coverage_gap_or_overlap")
             path = inside(root, chunk["wav"])
+            retained_pcm = None
             if path.is_file():
-                count, _ = pcm(path, joined)
-                check(count == chunk["toSample"] - cursor and sha(path) == chunk["inputSha256"], "chunk_audio_hash_or_length_mismatch")
+                count, retained_pcm = pcm(path)
+                check(count == chunk["toSample"] - chunk["fromSample"] and sha(path) == chunk["inputSha256"], "chunk_audio_hash_or_length_mismatch")
                 summary["materialized_chunk_wavs"] += 1
             else:
                 check(storage is not None and not path.exists(), "missing_chunk_wav_without_on_demand_policy")
-                check(canonical_chunk_sha(source_path, cursor, chunk["toSample"], joined) == chunk["inputSha256"],
-                      "virtual_chunk_canonical_sha_mismatch")
+            coverage.append((chunk["fromSample"], chunk["toSample"], chunk, retained_pcm))
             chunks[ident], cursor = chunk, chunk["toSample"]
-        check(cursor == frames and chunks, "incomplete_sample_coverage")
+        omitted = plan.get("omittedRanges", [])
+        check(isinstance(omitted, list), "invalid_omitted_ranges")
+        gaps = []
+        for gap in omitted:
+            check(isinstance(gap, dict) and set(gap) == {"fromSample", "toSample"} and
+                  integer(gap["fromSample"]) and integer(gap["toSample"], 1) and
+                  gap["fromSample"] < gap["toSample"] <= frames, "invalid_omitted_range")
+            start, end = gap["fromSample"], gap["toSample"]
+            gaps.append((start, end))
+            coverage.append((start, end, None, None))
+        verify_omitted_speech(root, gaps, frames)
+        cursor = 0
+        for start, end, chunk, retained_pcm in sorted(coverage, key=lambda item: item[0]):
+            check(start == cursor, "chunk_coverage_gap_or_overlap")
+            if chunk is None:
+                pcm_span(source_path, start, end, joined)
+            elif retained_pcm is not None:
+                digest = hashlib.sha256()
+                pcm_span(source_path, start, end, joined, digest)
+                check(digest.hexdigest() == retained_pcm, "chunk_pcm_not_exact_input_view")
+            else:
+                check(canonical_chunk_sha(source_path, start, end, joined) == chunk["inputSha256"],
+                      "virtual_chunk_canonical_sha_mismatch")
+            cursor = end
+        check(cursor == frames and (chunks or (profile is not None and gaps)), "incomplete_sample_coverage")
+        skipped_samples = sum(end - start for start, end in gaps)
+        if profile is not None:
+            check(integer(report.get("skippedSilenceMs")) and report["skippedSilenceMs"] == skipped_samples // 16,
+                  "report_skipped_silence_mismatch")
+            summary["processing_mode"] = profile["mode"]
+        summary["skipped_silence_ms"] = skipped_samples // 16
         summary["counts"]["expected_chunks"] = len(chunks)
         check(view_pcm == joined.hexdigest(), "chunk_pcm_not_exact_input_view")
         recorded = language_record(root)
         whisper_only = recorded is not None and recorded["route"] == "whisper_only"
-        required_stages = tuple(name for name in STAGES if name not in (("GIGAAM", "SELECT") if whisper_only else ()))
+        excluded = ({"GIGAAM", "SELECT"} if whisper_only else set()) | ({"DENOISE"} if fast else set())
+        required_stages = tuple(name for name in STAGES if name not in excluded)
+        if fast:
+            check(not (root / "stages/DENOISE.result.json").exists() and view == "original.wav",
+                  "denoise_present_in_fast_mode")
         if whisper_only:
             check(not (root / "stages/GIGAAM.result.json").exists() and not (root / "stages/SELECT.result.json").exists(),
                   "gigaam_present_for_foreign_language")
@@ -298,7 +380,8 @@ def verify_job(job_dir, allow_legacy=False):
                 check(f"ASR_ROUTE:whisper_only:{recorded['code']}" in report["warnings"], "missing_whisper_only_route_warning")
             else:
                 expected = dict(expectedChunks=len(chunks), gigaamChunks=len(chunks), whisperChunks=len(chunks), selectedChunks=len(selected), llmSelectedChunks=llm, unresolvedChunks=unresolved)
-                check(report["complete"] is True and report["selectionResolved"] is True and report["fullProfileCompleted"] is True, "reported_profile_incomplete")
+                check(report["complete"] is True and report["selectionResolved"] is True and
+                      report["fullProfileCompleted"] is bool(chunks), "reported_profile_incomplete")
             check(all(type(value) is int for value in report["coverage"].values()) and report["coverage"] == expected, "report_coverage_mismatch")
             summary["processing_ms"] = report["processingMs"]
             check(not any("_FAILED:" in warning or warning.startswith(("ASR_MISSING:", "INVALID_")) for warning in report["warnings"]), "report_contains_failure_warning")
@@ -311,7 +394,7 @@ def verify_job(job_dir, allow_legacy=False):
         else:
             check(llm == len(chunks), "llm_selection_not_fully_confirmed")
         summary["valid"] = True
-        summary["quality_success"] = summary["submission_export_verified"] and (not modern or summary["metadata_verified"])
+        summary["quality_success"] = bool(chunks) and summary["submission_export_verified"] and (not modern or summary["metadata_verified"])
     except InvalidJob as error:
         summary["errors"] = [str(error)]
     except (OSError, ValueError, KeyError, TypeError, IndexError, AttributeError, wave.Error):

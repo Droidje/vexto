@@ -54,6 +54,7 @@ data class TranscriptionOptions @JvmOverloads constructor(
     val speakerCount: Int? = null,
     /** Legacy API flag. Selection-only profile always preserves recognizer punctuation verbatim. */
     val punctuation: Boolean = true,
+    val processingMode: ProcessingMode = ProcessingMode.AUTO,
 )
 
 const val SampleRate = 16_000

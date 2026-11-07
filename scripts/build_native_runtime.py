@@ -114,13 +114,13 @@ def main() -> int:
                     "-DWHISPER_BUILD_TESTS=OFF", "-DWHISPER_BUILD_EXAMPLES=ON", "-DWHISPER_BUILD_SERVER=OFF",
                     "-DWHISPER_CURL=OFF", "-DWHISPER_BUILD_IS_DEV=OFF", "-DWHISPER_BUILD_NUMBER=0",
                     "-DWHISPER_BUILD_COMMIT=" + pins["whisper"]["revision"]]
-                target, binary = "whisper-cli", target_dir / "bin/whisper-cli"
+                target, binary = "vexto_whisper_exec", target_dir / "bin/vexto_whisper_exec"
             else:
                 configure = [cmake, "-S", sources["llama"], "-B", target_dir] + common + [
                     f"-DCMAKE_PROJECT_INCLUDE={NATIVE / 'GuardCli.cmake'}",
                     "-DLLAMA_BUILD_TESTS=OFF", "-DLLAMA_BUILD_EXAMPLES=ON", "-DLLAMA_BUILD_SERVER=OFF",
                     "-DLLAMA_CURL=OFF", "-DLLAMA_OPENSSL=OFF", "-DLLAMA_BUILD_COMMON=ON"]
-                target, binary = "llama-completion", target_dir / "bin/llama-completion"
+                target, binary = "vexto_llama_exec", target_dir / "bin/vexto_llama_exec"
             run(configure, log)
             run([cmake, "--build", target_dir, "--target", target, "--parallel", args.jobs], log)
             destination = output / f"libvexto_{component}_exec.so"
@@ -143,6 +143,9 @@ def main() -> int:
         manifest = {"status": "cross_compiled_not_executed", "abi": abi, "api": 28, "ndk": "r28c",
                     "x86_avx2": args.avx2 and abi == "x86_64", "sources": pins,
                     "frontend_sha256": digest(NATIVE / "nemotron_main.cpp"),
+                    "persistent_whisper_sha256": digest(NATIVE / "whisper_main.cpp"),
+                    "persistent_llama_sha256": digest(NATIVE / "llama_main.cpp"),
+                    "worker_mailbox_sha256": digest(NATIVE / "worker_mailbox.h"),
                     "parent_death_sha256": digest(NATIVE / "parent_death.cpp"),
                     "build_recipe_sha256": digest(Path(__file__)), "artifacts": artifacts}
         (build / "runtime-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
