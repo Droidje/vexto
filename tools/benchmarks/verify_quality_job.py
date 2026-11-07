@@ -95,6 +95,22 @@ def canonical_chunk_sha(source_path, start, end, joined):
     return digest.hexdigest()
 
 
+def language_record(root):
+    path = root / "language.json"
+    if not path.is_file():
+        return None
+    value = document(path)
+    check(set(value) == {"code", "route", "samples", "detected"}, "invalid_language_record")
+    code, route = value["code"], value["route"]
+    check(isinstance(code, str) and re.fullmatch(r"[a-z]{2,3}", code) is not None, "invalid_language_code")
+    check(route in ("slavic", "whisper_only") and type(value["detected"]) is bool and integer(value["samples"]), "invalid_language_route")
+    if route == "whisper_only":
+        check(code not in ("ru", "be") and value["detected"] is True, "whisper_only_route_inconsistent")
+    else:
+        check(code in ("ru", "be") or value["detected"] is False, "slavic_route_inconsistent")
+    return value
+
+
 def verify_job(job_dir, allow_legacy=False):
     root = Path(job_dir).resolve()
     summary = {"schema_version": 1, "valid": False, "quality_success": False,
@@ -157,8 +173,14 @@ def verify_job(job_dir, allow_legacy=False):
         check(cursor == frames and chunks, "incomplete_sample_coverage")
         summary["counts"]["expected_chunks"] = len(chunks)
         check(view_pcm == joined.hexdigest(), "chunk_pcm_not_exact_input_view")
+        recorded = language_record(root)
+        whisper_only = recorded is not None and recorded["route"] == "whisper_only"
+        required_stages = tuple(name for name in STAGES if name not in (("GIGAAM", "SELECT") if whisper_only else ()))
+        if whisper_only:
+            check(not (root / "stages/GIGAAM.result.json").exists() and not (root / "stages/SELECT.result.json").exists(),
+                  "gigaam_present_for_foreign_language")
         stages = {}
-        for name in STAGES:
+        for name in required_stages:
             stage = document(root / f"stages/{name}.result.json")
             request_file = root / f"stages/{name}.request.json"
             if request_file.exists():
@@ -193,16 +215,24 @@ def verify_job(job_dir, allow_legacy=False):
             return path, value
 
         originals = {}
-        for stage, source in (("GIGAAM", "gigaam"), ("WHISPER", "whisper")):
+        asr_stages = (("WHISPER", "whisper"),) if whisper_only else (("GIGAAM", "gigaam"), ("WHISPER", "whisper"))
+        for stage, source in asr_stages:
             for ref in stages[stage]["candidates"]:
                 path, value = candidate(ref)
                 key = (ref["chunkId"], ref["source"])
                 check(ref["source"] == source and key not in originals, "duplicate_or_wrong_source_candidate")
                 originals[key] = (path, ref["sha256"])
             summary["counts"][source + "_chunks"] = sum(key[1] == source for key in originals)
-        check(len(originals) == 2 * len(chunks), "missing_raw_asr_candidate")
+        if whisper_only:
+            summary["counts"]["gigaam_chunks"] = 0
+        check(len(originals) == (len(chunks) if whisper_only else 2 * len(chunks)), "missing_raw_asr_candidate")
         choices = document(root / "selection.json")
-        check(choices == stages["SELECT"]["choices"], "selection_journal_mismatch")
+        if whisper_only:
+            check(all(choice["status"] == "ONE_AVAILABLE" and choice["reason"] == "language_route_whisper_only"
+                      and choice["candidate"]["source"] == "whisper" for choice in choices),
+                  "foreign_language_selection_not_whisper_only")
+        else:
+            check(choices == stages["SELECT"]["choices"], "selection_journal_mismatch")
         selected, llm, unresolved, one_available = {}, 0, 0, 0
         for choice in choices:
             ident, ref = choice["chunkId"], choice["candidate"]
@@ -262,16 +292,24 @@ def verify_job(job_dir, allow_legacy=False):
             summary["metadata_verified"] = True
             summary["hashes"]["metadata"] = sha(metadata)
             check(integer(report["audioMs"]) and report["audioMs"] == frames // 16 and integer(report["processingMs"], 1), "invalid_report_timings")
-            expected = dict(expectedChunks=len(chunks), gigaamChunks=len(chunks), whisperChunks=len(chunks), selectedChunks=len(selected), llmSelectedChunks=llm, unresolvedChunks=unresolved)
+            if whisper_only:
+                expected = dict(expectedChunks=len(chunks), gigaamChunks=0, whisperChunks=len(chunks), selectedChunks=len(selected), llmSelectedChunks=0, unresolvedChunks=0)
+                check(report["complete"] is True and report["selectionResolved"] is True and report["fullProfileCompleted"] is False, "foreign_language_profile_flags")
+                check(f"ASR_ROUTE:whisper_only:{recorded['code']}" in report["warnings"], "missing_whisper_only_route_warning")
+            else:
+                expected = dict(expectedChunks=len(chunks), gigaamChunks=len(chunks), whisperChunks=len(chunks), selectedChunks=len(selected), llmSelectedChunks=llm, unresolvedChunks=unresolved)
+                check(report["complete"] is True and report["selectionResolved"] is True and report["fullProfileCompleted"] is True, "reported_profile_incomplete")
             check(all(type(value) is int for value in report["coverage"].values()) and report["coverage"] == expected, "report_coverage_mismatch")
             summary["processing_ms"] = report["processingMs"]
             check(not any("_FAILED:" in warning or warning.startswith(("ASR_MISSING:", "INVALID_")) for warning in report["warnings"]), "report_contains_failure_warning")
-            check(report["complete"] is True and report["selectionResolved"] is True and report["fullProfileCompleted"] is True, "reported_profile_incomplete")
-            check({stage["stage"] for stage in report["stages"]} == set(STAGES) and len(report["stages"]) == len(STAGES), "report_stage_set_mismatch")
+            check({stage["stage"] for stage in report["stages"]} == set(required_stages) and len(report["stages"]) == len(required_stages), "report_stage_set_mismatch")
             check(all(stage["requestId"] == stages[stage["stage"]]["requestId"] and stage["completed"] is True and stage.get("error") is None for stage in report["stages"]), "report_stage_outcome_mismatch")
         else:
             check(report["complete"] == "true" and not any(marker in report["warnings"] for marker in ("_FAILED:", "ASR_MISSING:", "INVALID_")), "legacy_incomplete")
-        check(llm == len(chunks), "llm_selection_not_fully_confirmed")
+        if whisper_only:
+            check(llm == 0 and one_available == len(chunks) and unresolved == 0, "foreign_language_selection_not_whisper_only")
+        else:
+            check(llm == len(chunks), "llm_selection_not_fully_confirmed")
         summary["valid"] = True
         summary["quality_success"] = summary["submission_export_verified"] and (not modern or summary["metadata_verified"])
     except InvalidJob as error:

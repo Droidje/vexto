@@ -167,6 +167,51 @@ class QualityJobTests(unittest.TestCase):
         self.assertFalse(report["valid"])
         self.assertEqual(report["errors"], ["missing_or_malformed_job_artifact"])
 
+    def test_russian_and_belarusian_records_keep_the_full_profile(self):
+        for code in ("ru", "be"):
+            self.put("language.json", dict(code=code, route="slavic", samples=6400, detected=True))
+            report = validator.verify_job(self.job)
+            self.assertTrue(report["valid"], report["errors"])
+
+    def test_foreign_language_accepts_whisper_only_without_claiming_the_full_profile(self):
+        self.put("language.json", dict(code="en", route="whisper_only", samples=6400, detected=True))
+        for name in ("GIGAAM", "SELECT"):
+            self.path(f"stages/{name}.result.json").unlink()
+            self.path(f"stages/{name}.request.json").unlink()
+        whisper = json.loads(self.path("stages/WHISPER.result.json").read_text(encoding="utf-8"))
+        choices, rows = [], []
+        for index, ref in enumerate(whisper["candidates"]):
+            ident = ref["chunkId"]
+            original = json.loads(self.path(ref["file"]).read_text(encoding="utf-8"))
+            copy = f"selection/{ident}/display-candidate.json"
+            self.path(copy).write_bytes(self.path(ref["file"]).read_bytes())
+            selected = dict(ref, file=copy, sha256=validator.sha(self.path(copy)))
+            choices.append(dict(chunkId=ident, candidate=selected, status="ONE_AVAILABLE", reason="language_route_whisper_only"))
+            self.put(f"selection/{ident}/audit.json", dict(chunkId=ident, source="whisper", decision="unconfirmed_display_fallback",
+                reason="language_route_whisper_only", inputSha256=original["input_sha256"], candidateSha256=ref["sha256"],
+                selectedSha256=selected["sha256"], selectedByLlm=False, qualityValidated=False))
+            rows.append(dict(speaker_id="speaker_1", start_ms=index * 100, end_ms=(index + 1) * 100, text=f"whisper-{index}. "))
+        self.put("selection.json", choices)
+        self.put("transcript.json", dict(transcript=rows))
+        self.put("transcript.metadata.json", dict(transcript=[dict(row, emotion_probabilities=[1, 0, 0, 0]) for row in rows]))
+        self.report["stages"] = [stage for stage in self.report["stages"] if stage["stage"] not in ("GIGAAM", "SELECT")]
+        self.report["coverage"] = dict(expectedChunks=4, gigaamChunks=0, whisperChunks=4, selectedChunks=4, llmSelectedChunks=0, unresolvedChunks=0)
+        self.report.update(fullProfileCompleted=False, warnings=["LANGUAGE:en", "ASR_ROUTE:whisper_only:en"],
+                           transcriptSha256=validator.sha(self.path("transcript.json")),
+                           metadataSha256=validator.sha(self.path("transcript.metadata.json")))
+        self.put("completion.json", self.report)
+        report = validator.verify_job(self.job)
+        self.assertTrue(report["valid"], report["errors"])
+        self.assertTrue(report["quality_success"])
+        self.assertEqual(report["counts"]["whisper_chunks"], 4)
+        self.assertEqual(report["counts"]["gigaam_chunks"], 0)
+        self.assertEqual(report["counts"]["one_available_chunks"], 4)
+        self.assertNotIn("whisper-0. ", json.dumps(report))
+
+    def test_russian_cannot_be_marked_whisper_only(self):
+        self.put("language.json", dict(code="ru", route="whisper_only", samples=6400, detected=True))
+        self.assertIn("whisper_only_route_inconsistent", validator.verify_job(self.job)["errors"])
+
     def test_cli_returns_nonzero_and_writes_sanitized_failure_report(self):
         self.path("selection/chunk_000000/audit.json").unlink()
         output = Path(self.tmp.name) / "validation.json"

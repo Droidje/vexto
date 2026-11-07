@@ -19,7 +19,7 @@ data class QualityManifest(val version: String, val artifacts: Map<String, Quali
         artifacts.values.forEach { require(it.bytes > 0 && it.sha256.matches(Regex("[0-9a-f]{64}"))) }
     }
     companion object {
-        val Required = setOf("gtcrn", "nemotron", "giga_encoder", "giga_decoder", "giga_joiner", "giga_tokens", "whisper", "qwen", "emotion", "voiceprint_embedding")
+        val Required = setOf("gtcrn", "nemotron", "giga_encoder", "giga_decoder", "giga_joiner", "giga_tokens", "whisper", "qwen", "emotion", "voiceprint_embedding", "lid_encoder", "lid_decoder")
     }
 }
 

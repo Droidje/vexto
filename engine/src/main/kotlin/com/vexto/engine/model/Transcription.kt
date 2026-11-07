@@ -6,6 +6,7 @@ enum class Stage(val title: String) {
     Decoding("Декодирую аудио"),
     Denoising("Убираю шум"),
     Diarization("Разделяю голоса"),
+    Language("Определяю язык"),
     Voiceprints("Сохраняю голоса"),
     Recognition("Распознаю речь"),
     Comparison("Распознаю Whisper"),

@@ -41,6 +41,7 @@ class WhisperComparisonProvider(
     private val flashAttention: Boolean = true,
     private val timeoutMs: Long = 600_000,
     private val audioContext: Int = 768,
+    private val language: String = "ru",
 ) {
     suspend fun generate(chunk: ComparisonChunk, artifactFile: File): ImmutableAsrCandidate {
         val capacityMs = minOf(10_000L, audioContext * 20L)
@@ -99,6 +100,7 @@ class WhisperComparisonProvider(
         require(sha256(chunk.wav.readBytes()) == chunk.inputSha256) { "chunk_input_hash_mismatch" }
         require(modelFile.isFile) { "whisper_model_missing" }
         require(threads in 1..8 && beamSize >= 1 && bestOf >= 1)
+        require(language.matches(Regex("[a-z]{2,3}"))) { "invalid_whisper_language" }
         require(!artifactFile.exists()) { "candidate_artifact_already_exists" }
         val dir = requireNotNull(artifactFile.parentFile)
         dir.mkdirs()
@@ -106,7 +108,7 @@ class WhisperComparisonProvider(
         val original = File(prefix.absolutePath + ".json")
         require(!original.exists()) { "native_artifact_already_exists" }
         val arguments = mutableListOf("-m", modelFile.absolutePath, "-f", chunk.wav.absolutePath,
-            "-of", prefix.absolutePath, "-ojf", "-l", "ru", "-ng", "-t", threads.toString(),
+            "-of", prefix.absolutePath, "-ojf", "-l", language, "-ng", "-t", threads.toString(),
             "-bs", beamSize.toString(), "-bo", bestOf.toString(), "-ac", audioContext.toString())
         if (flashAttention) arguments += "-fa"
         val result = executor.run("libvexto_whisper_exec.so", arguments, dir,
@@ -124,7 +126,7 @@ class WhisperComparisonProvider(
             put("audio_context_frames", audioContext); put("encoder_frame_ms", 20)
             put("audio_context_capacity_ms", audioContext * 20L); put("input_duration_ms", chunk.durationMs)
             put("threads", threads); put("beam_size", beamSize); put("best_of", bestOf)
-            put("flash_attention", flashAttention); put("use_gpu", false); put("language", "ru")
+            put("flash_attention", flashAttention); put("use_gpu", false); put("language", language)
             put("elapsed_ms", result.elapsedMs); put("peak_combined_rss_bytes", result.peakCombinedRssBytes)
         }
         writeImmutableArtifact(File(dir, artifactFile.nameWithoutExtension + ".profile-audit.json"),

@@ -31,6 +31,12 @@ class PipelineReportTest {
         assertTrue(one.selectionResolved)
         assertFalse(one.fullProfileCompleted(true,emptyList(),true))
     }
+    @Test fun whisperOnlyRouteStaysCompleteWithoutTheFullProfile() {
+        val foreign = PipelineCoverage(4, 0, 4, 4, 0, 0)
+        assertTrue(foreign.complete)
+        assertTrue(foreign.selectionResolved)
+        assertFalse(foreign.fullProfileCompleted(false, listOf("ASR_ROUTE:whisper_only:en"), true))
+    }
     @Test fun emptyInputDoesNotClaimTheLocalLlmWasUsed() {
         assertFalse(PipelineCoverage(0,0,0,0,0,0).fullProfileCompleted(true,emptyList(),true))
     }

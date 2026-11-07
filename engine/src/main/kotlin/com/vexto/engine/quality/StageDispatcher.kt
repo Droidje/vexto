@@ -84,7 +84,9 @@ internal object StageDispatcher {
                 val refs = mutableListOf<CandidateRef>()
                 val warnings = mutableListOf<String>()
                 // 512 encoder frames cover 10.24s. Longer GigaAM chunks are windowed inside the provider.
-                val provider = WhisperComparisonProvider(executor, models.file("whisper"), audioContext = 512)
+                val recorded = runCatching { JobFiles.load<RecordingLanguage>(File(job, "language.json")) }.getOrNull()
+                val provider = WhisperComparisonProvider(executor, models.file("whisper"), audioContext = 512,
+                    language = recorded?.whisperLanguage ?: "ru")
                 val plan = chunkPlan()
                 val waves = ChunkWaveMaterializer(job, plan, input) { warnings += it }
                 val tasks = plan.chunks

@@ -4,6 +4,8 @@
 --sources-json maps model IDs to existing files (keep it in .agents/local/ or .agents/work/).
 --download fetches only pinned downloadable artifacts. Nemotron F32 must be converted
 from the pinned official .nemo, not obtained by expanding a quantized Q8 file.
+The language-id pair has no URL: build it with tools/benchmarks/distill_whisper_lid.py
+and pass lid_encoder/lid_decoder through --sources-json.
 """
 from __future__ import annotations
 import argparse

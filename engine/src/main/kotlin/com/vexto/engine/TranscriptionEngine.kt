@@ -10,9 +10,13 @@ import com.vexto.engine.model.export.TranscriptExport
 import com.vexto.engine.models.QualityModelStore
 import com.vexto.engine.quality.*
 import com.vexto.engine.review.*
+import com.vexto.engine.pipeline.RecordingLanguage
+import com.vexto.engine.pipeline.SpokenLanguageIdentifier
 import com.vexto.engine.pipeline.UtteranceEmotionAnnotations
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.ProducerScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
@@ -21,7 +25,7 @@ import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.util.UUID
 
-/** Sequential, file-backed full profile. A fresh worker process owns each model lifetime. */
+/** File-backed profile. Each heavy model gets a fresh `:inference` process. Language id overlaps diarization in the app process. */
 class TranscriptionEngine(context: Context) {
     private val context = context.applicationContext
 
@@ -70,7 +74,24 @@ class TranscriptionEngine(context: Context) {
             warnings += "ASR uses original audio because denoising did not produce a valid aligned-length view"
             "original.wav"
         }
-        val diarization = worker(WorkerStage.DIARIZE, Stage.Diarization, "original.wav")
+        // Language id stays in this process: the inference worker accepts one stage at a time.
+        val (diarization, languageResult) = coroutineScope {
+            val identified = async {
+                val t0 = SystemClock.elapsedRealtime()
+                val value = runCatching {
+                    SpokenLanguageIdentifier.identifyRecording(
+                        models.file("lid_encoder"), models.file("lid_decoder"), original)
+                }
+                value to (SystemClock.elapsedRealtime() - t0)
+            }
+            worker(WorkerStage.DIARIZE, Stage.Diarization, "original.wav") to identified.await()
+        }
+        val (detected, languageMs) = languageResult
+        times[Stage.Language] = languageMs
+        val recordingLanguage = detected.getOrElse { RecordingLanguage.undetected() }
+        if (detected.isFailure) warnings += "LANGUAGE_ID_UNAVAILABLE" else warnings += "LANGUAGE:${recordingLanguage.code}"
+        JobFiles.save(File(job, "language.json"), recordingLanguage)
+        val slavic = recordingLanguage.route == RecordingLanguage.SLAVIC
         val turns = diarization.turns
         JobFiles.save(File(job, "turns.json"), turns)
         // Signature extraction uses original audio and its own model lifetime, never clustering again.
@@ -82,9 +103,11 @@ class TranscriptionEngine(context: Context) {
         })
         val plan = ChunkPlan.create(File(job, view), job)
         val assembler = CandidateTranscriptAssembler()
-        val giga = worker(WorkerStage.GIGAAM, Stage.Recognition, view)
-        val gigaCandidates = loadCandidates(job, plan, giga.candidates, warnings)
-        if (gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
+        if (!slavic) warnings += "ASR_ROUTE:whisper_only:${recordingLanguage.code}"
+        val giga = if (slavic) worker(WorkerStage.GIGAAM, Stage.Recognition, view) else null
+        val gigaCandidates: Map<String, ImmutableAsrCandidate> = if (giga == null) emptyMap()
+            else loadCandidates(job, plan, giga.candidates, warnings)
+        if (slavic && gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
             val core = attachVoices(AcousticTurnTranscript.place(
                 assembler.assemble(plan, gigaCandidates, turns).transcript, turns))
             // Originals are already durable before this callback. Refinement never destroys this checkpoint.
@@ -93,18 +116,30 @@ class TranscriptionEngine(context: Context) {
             send(TranscriptionEvent.CoreReady(core, job.absolutePath))
         }
         val whisper = worker(WorkerStage.WHISPER, Stage.Comparison, view)
-        val reviewed = worker(WorkerStage.SELECT, Stage.Selection, view)
-        val choices = reviewed.choices.associateBy { it.chunkId }.toMutableMap()
+        val reviewedChoices = if (slavic) worker(WorkerStage.SELECT, Stage.Selection, view).choices else emptyList()
+        val choices = reviewedChoices.associateBy { it.chunkId }.toMutableMap()
         // Failure is explicitly unresolved, never interpreted as a quality win for either recognizer.
-        val all = loadCandidates(job, plan, giga.candidates + whisper.candidates, warnings, allowMultiple = true)
+        val all = loadCandidates(job, plan, giga?.candidates.orEmpty() + whisper.candidates, warnings, allowMultiple = true)
+        if (!slavic) {
+            val whisperCandidates = all.values.filter { it.source == AsrSource.WHISPER }.associateBy { it.chunkId }
+            if (whisperCandidates.size == plan.chunks.size && whisperCandidates.isNotEmpty()) {
+                val core = attachVoices(AcousticTurnTranscript.place(
+                    assembler.assemble(plan, whisperCandidates, turns).transcript, turns))
+                JobFiles.write(File(job, "core.txt"), plan.chunks.joinToString("\n") { whisperCandidates.getValue(it.id).text }.toByteArray())
+                JobFiles.write(File(job, "core.json"), TranscriptExport.json(core).toByteArray(Charsets.UTF_8))
+                send(TranscriptionEvent.CoreReady(core, job.absolutePath))
+            }
+        }
         val selectionTool = AsrSelectionTool()
+        val fallbackReason = if (slavic) "selector_stage_failed" else "language_route_whisper_only"
         plan.chunks.filter { it.id !in choices }.forEach { chunk ->
             val candidates = all.values.filter { it.chunkId == chunk.id }
             if (candidates.isEmpty()) { warnings += "ASR_MISSING:${chunk.id}"; return@forEach }
             val pair = AsrCandidatePair(chunk.id, chunk.inputSha256,
                 candidates.firstOrNull { it.source == AsrSource.GIGAAM }, candidates.firstOrNull { it.source == AsrSource.WHISPER })
             val output = File(job, "selected/fallback-${chunk.id}.json")
-            val selection = selectionTool.fallback(pair, output, "selector_stage_failed")
+            val selection = selectionTool.fallback(pair, output, fallbackReason)
+            if (!slavic) JobFiles.save(File(job, "selection/${chunk.id}/audit.json"), selection.audit)
             choices[chunk.id] = ChoiceRef(chunk.id, CandidateRef(chunk.id, selection.displayCandidate.source.wireName,
                 output.relativeTo(job).invariantSeparatorsPath, selection.displayCandidate.artifactSha256),
                 selection.status.name, selection.audit.reason)
@@ -144,8 +179,10 @@ class TranscriptionEngine(context: Context) {
         val metadata = File(job, "transcript.metadata.json")
         JobFiles.write(export, TranscriptExport.submissionJson(transcript).toByteArray(Charsets.UTF_8))
         JobFiles.write(metadata, TranscriptExport.jsonWithMetadata(transcript).toByteArray(Charsets.UTF_8))
+        val asrModel = if (slavic) "GigaAM-v3-e2e+Whisper-large-v3-q5_0; selection-only Qwen3-1.7B-Q4_K_M"
+            else "Whisper-large-v3-q5_0; language=${recordingLanguage.code}; gigaam_skipped"
         val stats = ProcessingStats(audioMs, SystemClock.elapsedRealtime() - started, times,
-            peak / (1024 * 1024), "GigaAM-v3-e2e+Whisper-large-v3-q5_0; selection-only Qwen3-1.7B-Q4_K_M", 4,
+            peak / (1024 * 1024), asrModel, 4,
             artifactDirectory = job.absolutePath, warnings = warnings.distinct(), complete = coverage.complete,
             fullProfileCompleted = fullProfile, selectionResolved = coverage.selectionResolved)
         JobFiles.save(File(job, "completion.json"), PipelineReport(audioMs = audioMs, processingMs = stats.processingMs,
