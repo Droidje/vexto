@@ -29,7 +29,7 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
     private final File recordings;
 
     SpeakerProfiles(Context context) {
-        super(context.getApplicationContext(), "speaker-profiles.db", null, 2);
+        super(context.getApplicationContext(), "speaker-profiles.db", null, 3);
         recordings = new File(context.getFilesDir(), "recordings");
         setWriteAheadLoggingEnabled(true);
     }
@@ -42,6 +42,7 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
                 + "automatic INTEGER NOT NULL DEFAULT 0 CHECK(automatic IN (0,1)))");
         db.execSQL("CREATE TABLE links (recording TEXT NOT NULL, revision TEXT NOT NULL, local_id TEXT NOT NULL, "
                 + "profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE, "
+                + "origin TEXT NOT NULL DEFAULT 'manual' CHECK(origin IN ('manual','pending','automatic')), "
                 + "PRIMARY KEY(recording, revision, local_id))");
         db.execSQL("CREATE INDEX links_profile ON links(profile_id)");
         db.execSQL("CREATE TABLE embeddings (recording TEXT NOT NULL, revision TEXT NOT NULL, local_id TEXT NOT NULL, "
@@ -53,10 +54,14 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        if (oldVersion != 1 || newVersion != 2) throw new IllegalStateException("Unsupported profile schema upgrade");
-        db.execSQL("ALTER TABLE profiles ADD COLUMN is_self INTEGER NOT NULL DEFAULT 0 CHECK(is_self IN (0,1))");
-        db.execSQL("ALTER TABLE profiles ADD COLUMN automatic INTEGER NOT NULL DEFAULT 0 CHECK(automatic IN (0,1))");
-        createDirectorySchema(db);
+        if (oldVersion < 1 || oldVersion > 2 || newVersion != 3)
+            throw new IllegalStateException("Unsupported profile schema upgrade");
+        if (oldVersion == 1) {
+            db.execSQL("ALTER TABLE profiles ADD COLUMN is_self INTEGER NOT NULL DEFAULT 0 CHECK(is_self IN (0,1))");
+            db.execSQL("ALTER TABLE profiles ADD COLUMN automatic INTEGER NOT NULL DEFAULT 0 CHECK(automatic IN (0,1))");
+            createDirectorySchema(db);
+        }
+        SpeakerLinkPolicy.upgrade(db);
     }
 
     private static void createDirectorySchema(SQLiteDatabase db) {
@@ -143,6 +148,7 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
             Profile from = get(db, source);
             get(db, target);
             db.execSQL("UPDATE links SET profile_id=? WHERE profile_id=?", new Object[]{target, source});
+            SpeakerLinkPolicy.confirmProfile(db, target);
             db.delete("profiles", "id=?", new String[]{source});
             if (from.self) setSelf(db, target);
             db.setTransactionSuccessful();
@@ -206,6 +212,9 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
         db.beginTransaction();
         try {
             migrateLegacyRevision(db, key, revision, transcript);
+            // A split also protects the other side: it must not retry back into the new identity.
+            String previous = readLinks(db, key, revision).get(localId);
+            if (previous != null) SpeakerLinkPolicy.confirmProfile(db, previous);
             db.delete("links", "recording=? AND revision=? AND local_id=?", new String[]{key, revision, localId});
             insertLink(db, key, revision, localId, profileId);
             db.setTransactionSuccessful();
@@ -213,8 +222,13 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
     }
 
     private static void insertLink(SQLiteDatabase db, String recording, String revision, String local, String profile) {
+        insertLink(db, recording, revision, local, profile, SpeakerLinkPolicy.MANUAL);
+    }
+
+    private static void insertLink(SQLiteDatabase db, String recording, String revision, String local, String profile,
+                                   String origin) {
         ContentValues values = new ContentValues(); values.put("recording", recording); values.put("revision", revision);
-        values.put("local_id", local); values.put("profile_id", profile);
+        values.put("local_id", local); values.put("profile_id", profile); values.put("origin", origin);
         db.insertOrThrow("links", null, values);
     }
 
@@ -243,18 +257,33 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
                     new Object[]{revision, key, revision});
             Map<String, String> linked = readLinks(db, key, revision);
             localIds.removeAll(linked.keySet());
+            Map<String, String> pending = SpeakerLinkPolicy.retryable(db, key, revision);
+            localIds.addAll(pending.keySet());
             if (!localIds.isEmpty()) {
-                var matches = SpeakerIdentityMatcher.match(db, key, revision, localIds, new HashSet<>(linked.values()));
+                Set<String> reserved = new HashSet<>();
+                linked.forEach((local, profile) -> { if (!pending.containsKey(local)) reserved.add(profile); });
+                var matches = SpeakerIdentityMatcher.match(db, key, revision, localIds, reserved,
+                        new HashSet<>(pending.values()));
                 Set<String> names = matches.size() == localIds.size() ? Set.of() : profileNames();
                 Map<String, String> imported = importedNames(transcript);
                 if (matches.size() != localIds.size()) names.addAll(imported.values());
                 for (String local : localIds) {
                     String id = matches.get(local);
+                    if (pending.containsKey(local)) {
+                        if (id != null) {
+                            db.execSQL("UPDATE links SET profile_id=?,origin='automatic' "
+                                            + "WHERE recording=? AND revision=? AND local_id=? AND origin='pending'",
+                                    new Object[]{id, key, revision, local});
+                            linked.put(local, id);
+                        }
+                        continue;
+                    }
+                    String origin = id == null ? SpeakerLinkPolicy.PENDING : SpeakerLinkPolicy.AUTOMATIC;
                     if (id == null) {
                         String suppliedName = imported.get(local);
                         id = insertProfile(db, suppliedName != null ? suppliedName : nextName(names), true).id;
                     }
-                    insertLink(db, key, revision, local, id);
+                    insertLink(db, key, revision, local, id, origin);
                     linked.put(local, id);
                 }
             }
@@ -285,8 +314,8 @@ final class SpeakerProfiles extends SQLiteOpenHelper {
         db.beginTransaction();
         try {
             for (String localId : localIds) {
-                db.execSQL("INSERT OR IGNORE INTO links(recording, revision, local_id, profile_id) "
-                                + "SELECT recording, ?, local_id, profile_id FROM links "
+                db.execSQL("INSERT OR IGNORE INTO links(recording, revision, local_id, profile_id, origin) "
+                                + "SELECT recording, ?, local_id, profile_id, origin FROM links "
                                 + "WHERE recording=? AND revision=? AND local_id=?",
                         new Object[]{after, key, before, localId});
             }

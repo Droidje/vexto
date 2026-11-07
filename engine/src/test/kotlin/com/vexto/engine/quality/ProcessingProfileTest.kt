@@ -6,14 +6,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ProcessingProfileTest {
-    @Test fun fastSkipsAnnotationsAndTheirWeightsButKeepsQwen() {
+    @Test fun fastKeepsIdentityAndQwenWhileSkippingEmotionsAndDenoising() {
         val fast = ProcessingProfile.resolve(ProcessingMode.AUTO, 300_001)
-        assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.GIGAAM, WorkerStage.WHISPER, WorkerStage.SELECT),
+        assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.VOICEPRINT, WorkerStage.GIGAAM, WorkerStage.WHISPER, WorkerStage.SELECT),
             fast.expectedStages(slavic = true))
-        assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.WHISPER, WorkerStage.SELECT), fast.expectedStages(slavic = false))
+        assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.VOICEPRINT, WorkerStage.WHISPER, WorkerStage.SELECT), fast.expectedStages(slavic = false))
         assertFalse(fast.speakerAnnotations)
         assertTrue("qwen" in QualityManifest.FastRequired)
-        assertTrue(QualityManifest.FastRequired.intersect(setOf("gtcrn", "emotion", "voiceprint_embedding")).isEmpty())
+        assertTrue("voiceprint_embedding" in QualityManifest.FastRequired)
+        assertTrue(QualityManifest.FastRequired.intersect(setOf("gtcrn", "emotion")).isEmpty())
 
         val quality = ProcessingProfile.resolve(ProcessingMode.AUTO, 300_000)
         assertTrue(quality.speakerAnnotations)
