@@ -109,7 +109,7 @@ class TranscriptionEngine(context: Context) {
         } else requestedProfile
         JobFiles.save(profileFile, profile)
         val profileKey = sha256(JobFiles.json.encodeToString(profile).toByteArray(Charsets.UTF_8))
-        val models = stage(Stage.Preparing) { QualityModelStore.prepare(context, profile.fast, it) }
+        val models = stage(Stage.Preparing) { QualityModelStore.preparePipeline(context, profile.fast, it) }
         JobFiles.save(File(job, "job.json"), mapOf("source_uri" to uri.toString(), "profile" to models.manifest.version,
             "requested_mode" to profile.requestedMode.name, "effective_mode" to profile.mode.name,
             "memory_budget_bytes" to AppRss.BudgetBytes.toString(), "reserve_bytes" to AppRss.ReserveBytes.toString()))
@@ -201,8 +201,11 @@ class TranscriptionEngine(context: Context) {
             val clean = cleaned.await()
             val detected = identified.await()
             JobFiles.save(languageFile, detected.first)
+            if (detected.first.usesWhisper) stage(Stage.Preparing) { progress ->
+                QualityModelStore.prepareWhisper(context, profile.fast, progress)
+            }
             if (live) earlyAsr.putAll(StreamingRecognition.run(job, original, diarized,
-                detected.first.route == RecordingLanguage.SLAVIC) { kind, initial ->
+                detected.first.route == RecordingLanguage.SLAVIC, withWhisper = detected.first.usesWhisper) { kind, initial ->
                 worker(kind, if (kind == WorkerStage.GIGAAM) Stage.Recognition else Stage.Comparison,
                     "original.wav", originalHash,
                     if (kind == WorkerStage.WHISPER) listOf("", detected.first.whisperLanguage) else listOf(""),
@@ -232,6 +235,8 @@ class TranscriptionEngine(context: Context) {
         warnings += if (recordingLanguage.detected) "LANGUAGE:${recordingLanguage.code}" else "LANGUAGE_ID_UNAVAILABLE"
         JobFiles.save(languageFile, recordingLanguage)
         val slavic = recordingLanguage.route == RecordingLanguage.SLAVIC
+        val withWhisper = recordingLanguage.usesWhisper
+        if (!withWhisper) warnings += "ASR_ROUTE:gigaam_only:ru"
         val turns = diarization.turns
         val turnsFile = File(job, "turns.json")
         JobFiles.save(turnsFile, turns)
@@ -258,8 +263,8 @@ class TranscriptionEngine(context: Context) {
         var gigaCandidates: Map<String, ImmutableAsrCandidate> = emptyMap()
         val (giga, whisper) = coroutineScope {
             val giga = async { if (slavic) worker(WorkerStage.GIGAAM, Stage.Recognition, view, viewHash, listOf(planHash), plan) else null }
-            val whisper = async { worker(WorkerStage.WHISPER, Stage.Comparison, view, viewHash,
-            listOf(planHash, recordingLanguage.whisperLanguage), plan) }
+            val whisper = async { if (withWhisper) worker(WorkerStage.WHISPER, Stage.Comparison, view, viewHash,
+            listOf(planHash, recordingLanguage.whisperLanguage), plan) else null }
             val first = giga.await()
             gigaCandidates = first?.let { loadCandidates(job, plan, it.candidates, warnings) }.orEmpty()
             if (slavic && gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
@@ -373,7 +378,7 @@ class TranscriptionEngine(context: Context) {
             selected.size, choices.values.count { it.status == AsrSelectionStatus.SELECTED_BY_LLM.name }, unresolved,
             choices.values.count { it.status == AsrSelectionStatus.EQUIVALENT.name })
         val withinBudget = peak + AppRss.ReserveBytes <= AppRss.BudgetBytes
-        val expectedStages = profile.expectedStages(slavic) + if (refinement.ids.isEmpty()) emptySet()
+        val expectedStages = profile.expectedStages(slavic, withWhisper) + if (refinement.ids.isEmpty()) emptySet()
             else setOfNotNull(WorkerStage.GIGAAM_REFINE.takeIf { slavic }, WorkerStage.WHISPER_REFINE)
         val requiredResults = results.filter { it.stage != WorkerStage.OVERLAP }
         val allStagesSucceeded = requiredResults.map { it.stage }.toSet() == expectedStages &&
@@ -387,7 +392,8 @@ class TranscriptionEngine(context: Context) {
         JobFiles.write(metadata, TranscriptExport.jsonWithMetadata(transcript).toByteArray(Charsets.UTF_8))
         val whisperName = if (profile.fast) "Whisper-small-q5_1" else "Whisper-large-v3-q5_0"
         val gigaName = if (profile.fast) "GigaAM-v3-e2e-ctc-int8" else "GigaAM-v3-e2e-rnnt-int8"
-        val asrModel = if (slavic) "$gigaName+$whisperName; adaptive=${profile.fast}; selection + context names Qwen3-1.7B-Q4_K_M"
+        val asrModel = if (!withWhisper) "$gigaName; language=ru; whisper_skipped; context names Qwen3-1.7B-Q4_K_M"
+            else if (slavic) "$gigaName+$whisperName; adaptive=false; selection + context names Qwen3-1.7B-Q4_K_M"
             else "$whisperName; language=${recordingLanguage.code}; gigaam_skipped; context names Qwen3-1.7B-Q4_K_M"
         val stats = ProcessingStats(audioMs, SystemClock.elapsedRealtime() - started, times,
             peak / (1024 * 1024), asrModel, 4,

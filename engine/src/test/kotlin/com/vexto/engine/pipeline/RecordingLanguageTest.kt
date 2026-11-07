@@ -15,6 +15,8 @@ class RecordingLanguageTest {
         assertEquals("ru", russian.whisperLanguage)
         assertEquals("ru", belarusian.whisperLanguage)
         assertTrue(russian.detected)
+        assertFalse(russian.usesWhisper)
+        assertTrue(belarusian.usesWhisper)
     }
 
     @Test fun otherLanguagesDisableTheSlavicRoute() {
@@ -22,6 +24,7 @@ class RecordingLanguageTest {
             val language = RecordingLanguage.fromDetection(code, RecordingLanguage.WINDOW_SAMPLES)
             assertEquals(RecordingLanguage.WHISPER_ONLY, language.route)
             assertEquals(code, language.whisperLanguage)
+            assertTrue(language.usesWhisper)
         }
     }
 
@@ -31,6 +34,7 @@ class RecordingLanguageTest {
         assertEquals(RecordingLanguage.SLAVIC, missed.route)
         assertEquals("ru", missed.whisperLanguage)
         assertFalse(missed.detected)
+        assertTrue(missed.usesWhisper)
     }
 
     @Test fun codesThatAreNotWhisperLanguagesAreRejected() {

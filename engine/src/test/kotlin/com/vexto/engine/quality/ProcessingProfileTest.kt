@@ -13,6 +13,8 @@ class ProcessingProfileTest {
         assertEquals(setOf(WorkerStage.DIARIZE, WorkerStage.VOICEPRINT, WorkerStage.WHISPER, WorkerStage.SELECT, WorkerStage.EMOTION), fast.expectedStages(slavic = false))
         assertEquals(1, fast.whisperWorkers)
         assertEquals(4, fast.whisperThreads)
+        assertFalse(WorkerStage.WHISPER in fast.expectedStages(slavic = true, withWhisper = false))
+        assertTrue(WorkerStage.GIGAAM in fast.expectedStages(slavic = true, withWhisper = false))
         assertTrue(fast.voiceprints)
         assertTrue(fast.backgroundEmotions)
         assertTrue("qwen" in QualityManifest.FastRequired)

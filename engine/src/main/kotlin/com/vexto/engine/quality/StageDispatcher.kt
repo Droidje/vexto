@@ -110,7 +110,10 @@ internal object StageDispatcher {
                         val pair = AsrCandidatePair(chunk.id, chunk.inputSha256, originals.firstOrNull { it.source == AsrSource.GIGAAM },
                             originals.firstOrNull { it.source == AsrSource.WHISPER })
                         prepareOutput(File(job, "selection/${chunk.id}"))
-                        val selected = selector.selectAll(listOf(pair), File(job, "selection")).single()
+                        val selected = if (!JobFiles.load<RecordingLanguage>(File(job, "language.json")).usesWhisper) {
+                            AsrSelectionTool().fallback(pair, File(job, "selection/${chunk.id}/display-candidate.json").also { it.parentFile?.mkdirs() },
+                                "language_route_gigaam_only")
+                        } else selector.selectAll(listOf(pair), File(job, "selection")).single()
                         val ref = CandidateRef(chunk.id, selected.displayCandidate.source.wireName,
                             selected.selectedArtifact.relativeTo(job).invariantSeparatorsPath, selected.audit.selectedSha256)
                         choices += ChoiceRef(chunk.id, ref, selected.status.name, selected.audit.reason)

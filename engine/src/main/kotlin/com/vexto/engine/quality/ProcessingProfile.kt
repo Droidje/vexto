@@ -21,9 +21,10 @@ data class ProcessingProfile(
     val voiceprints: Boolean get() = true
     val backgroundEmotions: Boolean get() = fast
 
-    fun expectedStages(slavic: Boolean): Set<WorkerStage> = WorkerStage.entries.toSet() - setOf(WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE, WorkerStage.OVERLAP) -
+    fun expectedStages(slavic: Boolean, withWhisper: Boolean = true): Set<WorkerStage> = WorkerStage.entries.toSet() - setOf(WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE, WorkerStage.OVERLAP) -
         (if (denoise) emptySet() else setOf(WorkerStage.DENOISE)) -
-        (if (slavic) emptySet() else setOf(WorkerStage.GIGAAM))
+        (if (slavic) emptySet() else setOf(WorkerStage.GIGAAM)) -
+        (if (withWhisper) emptySet() else setOf(WorkerStage.WHISPER))
 
     fun validate() {
         require(mode != ProcessingMode.AUTO)

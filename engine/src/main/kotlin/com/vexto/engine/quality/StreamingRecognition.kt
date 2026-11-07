@@ -52,7 +52,7 @@ internal class StreamingChunkPublisher(private val job: File, private val input:
 
 /** Starts ASR before long-file diarization ends, without independent diarizer sessions. */
 internal object StreamingRecognition {
-    suspend fun run(job: File, input: File, diarization: Deferred<WorkerResult>, slavic: Boolean,
+    suspend fun run(job: File, input: File, diarization: Deferred<WorkerResult>, slavic: Boolean, withWhisper: Boolean = true,
                     recognize: suspend (WorkerStage, ChunkPlan) -> WorkerResult): Map<WorkerStage, WorkerResult> {
         val publisher = StreamingChunkPublisher(job, input)
         var first: ChunkPlan? = null
@@ -65,7 +65,7 @@ internal object StreamingRecognition {
         return coroutineScope {
             // Admit the slower autoregressive branch first. A parked CTC worker would
             // otherwise reserve the remaining RAM/CPU while Whisper waits for diarization.
-            val stages = listOfNotNull(WorkerStage.WHISPER, WorkerStage.GIGAAM.takeIf { slavic })
+            val stages = listOfNotNull(WorkerStage.WHISPER.takeIf { withWhisper }, WorkerStage.GIGAAM.takeIf { slavic })
             val jobs = stages.associateWith { kind -> async(start = CoroutineStart.UNDISPATCHED) { recognize(kind, initial) } }
             try {
                 while (!diarization.isCompleted) {

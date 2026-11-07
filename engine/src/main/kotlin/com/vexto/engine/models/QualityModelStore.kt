@@ -58,6 +58,15 @@ object QualityModelStore {
     suspend fun prepare(context: Context, fast: Boolean, progress: (Float) -> Unit): QualityModels =
         prepare(context, if (fast) QualityManifest.FastRequired else QualityManifest.Required, progress = progress)
 
+    /** Determine the recording language before extracting or hashing either Whisper model. */
+    suspend fun preparePipeline(context: Context, fast: Boolean, progress: (Float) -> Unit): QualityModels =
+        prepare(context, (if (fast) QualityManifest.FastRequired else QualityManifest.Required) -
+            setOf("whisper", "whisper_fast"), progress = progress)
+
+    /** Called only for routes that use Whisper; all weights remain bundled in the offline APK. */
+    suspend fun prepareWhisper(context: Context, fast: Boolean, progress: (Float) -> Unit): QualityModels =
+        prepare(context, setOf(if (fast) "whisper_fast" else "whisper"), progress = progress)
+
     suspend fun prepareRefinement(context: Context, slavic: Boolean, progress: (Float) -> Unit): QualityModels =
         prepare(context, setOf("whisper") + if (slavic)
             setOf("giga_encoder", "giga_decoder", "giga_joiner", "giga_tokens") else emptySet(), progress = progress)
