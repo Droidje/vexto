@@ -68,6 +68,43 @@ class CandidateTranscriptAssemblerTest {
         assertTrue(result.estimatedTimingChunks.isEmpty())
     }
 
+    @Test fun sameSpeakerOnBothSidesOfASilenceProducesSeparateBoundedRows() {
+        val text = " Первое, второе. "
+        val raw = candidate(text, listOf(Word("Первое,", 50, 800), Word("второе.", 1250, 1950)))
+        val result = CandidateTranscriptAssembler().assemble(plan, mapOf(id to raw),
+            listOf(PipelineTurn(0, 100, 600), PipelineTurn(0, 1300, 1800)))
+        val rows = TranscriptExport.parseJson(TranscriptExport.json(result.transcript))
+        assertEquals(listOf("speaker_1", "speaker_1"), rows.map { it.speakerId })
+        assertEquals(listOf(100L to 600L, 1300L to 1800L), rows.map { it.startMs to it.endMs })
+        assertEquals(text, rows.joinToString("") { it.text })
+        assertEquals(50L, raw.words.first().startMs)
+    }
+
+    @Test fun estimatedTimesUseSpeechIslandsInsteadOfFillingPauses() {
+        val text = "раз два три"
+        val raw = candidate(text)
+        val result = CandidateTranscriptAssembler().assemble(plan, mapOf(id to raw),
+            listOf(PipelineTurn(0, 200, 500), PipelineTurn(0, 1400, 1700)))
+        val rows = result.transcript.utterances
+        assertEquals(listOf(id), result.estimatedTimingChunks)
+        assertEquals(2, rows.size)
+        assertTrue(rows[0].startMs >= 200 && rows[0].endMs <= 500)
+        assertTrue(rows[1].startMs >= 1400 && rows[1].endMs <= 1700)
+        assertEquals(text, rows.joinToString("") { it.text })
+    }
+
+    @Test fun overlappingCandidatesKeepWordOrderWhenClippingWouldMoveAWordBackward() {
+        val text = "один два"
+        val raw = candidate(text, listOf(Word("один", 0, 1600), Word("два", 200, 400)))
+        val result = CandidateTranscriptAssembler().assemble(plan, mapOf(id to raw),
+            listOf(PipelineTurn(0, 100, 400), PipelineTurn(1, 800, 1600)))
+        val rows = TranscriptExport.parseJson(TranscriptExport.json(result.transcript))
+        assertEquals(text, rows.joinToString("") { it.text })
+        assertTrue(rows.zipWithNext().all { (a, b) -> a.startMs <= b.startMs })
+        assertEquals(listOf("speaker_2", "speaker_unknown"), rows.map { it.speakerId })
+        assertEquals(listOf(id), result.estimatedTimingChunks)
+    }
+
     @Test fun anotherChunkOrChangedOriginalIsRejectedAtAssemblyBoundary() {
         val foreign = candidate("чужой текст", chunkId = "chunk_000001")
         assertThrows(IllegalStateException::class.java) {
