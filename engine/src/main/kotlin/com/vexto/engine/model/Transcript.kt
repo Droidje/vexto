@@ -1,6 +1,9 @@
 package com.vexto.engine.model
 
+import kotlinx.serialization.Serializable
+
 /** Слово с таймкодами в миллисекундах от начала записи. */
+@Serializable
 data class Word(
     val text: String,
     val startMs: Long,
@@ -15,6 +18,7 @@ data class SpeakerTurn(
 )
 
 /** Реплика: непрерывная речь одного говорящего. */
+@Serializable
 data class Utterance(
     val speakerId: String,
     val startMs: Long,
@@ -25,6 +29,7 @@ data class Utterance(
 )
 
 /** Участник разговора. [id] стабилен и уходит в экспорт, [name] задаёт пользователь. */
+@Serializable
 data class Speaker(
     val id: String,
     val name: String? = null,
@@ -33,6 +38,7 @@ data class Speaker(
     fun displayName(): String = name ?: "Спикер ${id.substringAfterLast('_')}"
 }
 
+@Serializable
 data class Transcript(
     val utterances: List<Utterance>,
     val speakers: List<Speaker>,

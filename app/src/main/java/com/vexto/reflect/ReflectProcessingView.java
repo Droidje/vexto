@@ -229,9 +229,8 @@ final class ReflectProcessingView extends ViewGroup {
             case Preparing -> part(0, 5, percent);
             case Decoding -> part(5, 10, percent);
             case Denoising -> part(10, 13, percent);
-            case Diarization -> part(13, 20, percent);
-            case Language -> part(20, 21, percent);
-            case Voiceprints -> part(21, 25, percent);
+            case Diarization, Language -> part(13, 20, percent);
+            case Voiceprints -> part(20, 25, percent);
             case Recognition -> part(25, 40, percent);
             case Comparison -> part(40, 70, percent);
             case Selection -> part(70, 93, percent);

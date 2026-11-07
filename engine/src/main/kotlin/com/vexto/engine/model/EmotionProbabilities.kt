@@ -1,8 +1,10 @@
 package com.vexto.engine.model
 
 import kotlin.math.abs
+import kotlinx.serialization.Serializable
 
 /** Estimated from one utterance's audio. Storage and design order: neutral, joy, sadness, anger. */
+@Serializable
 data class EmotionProbabilities(val neutral: Double, val joy: Double, val sadness: Double, val anger: Double) {
     init {
         require(neutral in 0.0..1.0 && joy in 0.0..1.0 && sadness in 0.0..1.0 && anger in 0.0..1.0 &&

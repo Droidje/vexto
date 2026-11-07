@@ -44,14 +44,16 @@ internal class ChunkWaveMaterializer(
         val file = checkedPath(chunk)
         var created = false
         try {
-            check(file.parentFile.mkdirs() || file.parentFile.isDirectory)
+            val parent = requireNotNull(file.parentFile)
+            check(parent.mkdirs() || parent.isDirectory)
             require(checkedPath(chunk) == file)
             if (Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
                 // A killed previous worker may have left the exact verified chunk behind.
                 // Reuse it for fallback ASR, retaining this non-owned file for audit.
                 require(Files.isRegularFile(file.toPath(), NOFOLLOW_LINKS) && !Files.isSymbolicLink(file.toPath()))
-                require(JobFiles.sha256(file) == chunk.inputSha256) { "Retained chunk hash mismatch" }
-            } else {
+                if (JobFiles.sha256(file) != chunk.inputSha256) JobCheckpoint.archiveRetryOutput(job, file)
+            }
+            if (!Files.exists(file.toPath(), NOFOLLOW_LINKS)) {
                 Files.createFile(file.toPath()) // Reserve a fresh path; never overwrite another file.
                 created = true
                 PcmWave.crop(input, file, chunk.fromSample, chunk.toSample)

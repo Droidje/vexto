@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.util.function.Consumer
 
@@ -68,10 +69,22 @@ object ReflectEngine {
         audio: Uri,
         options: TranscriptionOptions = TranscriptionOptions(),
         listener: Listener,
-    ): Task = Task(
+    ): Task = listen(TranscriptionEngine(context).transcribe(audio, options), listener)
+
+    /** Reopens the same private checkpoint directory when called again with the same job ID. */
+    @JvmStatic
+    fun transcribeResumable(
+        context: Context,
+        audio: Uri,
+        options: TranscriptionOptions,
+        jobId: String,
+        listener: DetailedListener,
+    ): Task = listen(TranscriptionEngine(context).transcribeResumable(audio, options, jobId), listener)
+
+    private fun listen(events: Flow<TranscriptionEvent>, listener: Listener): Task = Task(
         scope.launch {
             try {
-                TranscriptionEngine(context).transcribe(audio, options).collect { event ->
+                events.collect { event ->
                     when (event) {
                         is TranscriptionEvent.Progress -> listener.onProgress(event.stage, event.fraction)
                         is TranscriptionEvent.Partial -> listener.onPartial(event.transcript)

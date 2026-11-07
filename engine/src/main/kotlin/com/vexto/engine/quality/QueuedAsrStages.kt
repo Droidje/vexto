@@ -7,6 +7,7 @@ import com.vexto.engine.pipeline.RecordingLanguage
 import com.vexto.engine.pipeline.WhisperComparisonProvider
 import com.vexto.engine.review.ImmutableAsrCandidate
 import com.vexto.engine.review.LocalNativeExecutor
+import com.vexto.engine.review.AsrSource
 import com.vexto.engine.runtime.NativeProcessRunner
 import java.io.Closeable
 import java.io.File
@@ -34,21 +35,46 @@ internal object QueuedAsrStages {
         val profile = ProcessingProfile.read(job)
         val plan = JobFiles.load<ChunkPlan>(File(job, "chunks.json")).also { it.validate() }
         val warnings = ConcurrentLinkedQueue<String>()
-        val references = mutableListOf<CandidateRef>()
-        var completed = 0
-        val peak = AtomicLong()
+        val saved = if (request.resumeKey == null) null else
+            JobFiles.load<WorkerResult>(request.stage.resultFile(job)).takeIf {
+                it.requestId == request.requestId && it.stage == request.stage
+            }
         val giga = request.stage == WorkerStage.GIGAAM
         val workers = if (giga) profile.gigaWorkers else profile.whisperWorkers
         val source = if (giga) "gigaam" else "whisper"
-        val waves = ChunkWaveMaterializer(job, plan, input) { warnings.add(it) }
-        val language = runCatching { JobFiles.load<RecordingLanguage>(File(job, "language.json")) }
-            .getOrNull()?.whisperLanguage ?: "ru"
+        val chunks = plan.chunks.associateBy { it.id }
+        val expectedSource = if (giga) AsrSource.GIGAAM else AsrSource.WHISPER
+        // Recheck artifacts at the worker boundary; a resume never trusts a path alone.
+        val references = saved?.candidates.orEmpty().distinctBy { it.chunkId }.filter { ref ->
+            val chunk = chunks[ref.chunkId]
+            chunk != null && ref.source == source && runCatching {
+                ImmutableAsrCandidate.load(JobFiles.inside(job, ref.file), ref.sha256)
+                    .verifyIdentity(chunk.id, chunk.inputSha256, expectedSource)
+            }.isSuccess
+        }.toMutableList()
+        val known = references.mapTo(mutableSetOf()) { it.chunkId }
+        val pending = plan.chunks.filter { it.id !in known }
+        var completed = known.size
+        val peak = AtomicLong(saved?.peakCombinedRssBytes ?: 0L)
 
         fun result() = WorkerResult(request.stage, requestId = request.requestId,
             candidates = references.sortedBy { it.chunkId }, warnings = warnings.toList(),
             peakCombinedRssBytes = peak.get())
 
-        StageTaskQueue.run(plan.chunks, workers, stopOnFailure = !giga, open = { index ->
+        if (completed > 0) onProgress(completed.toFloat() / plan.chunks.size.coerceAtLeast(1))
+        if (pending.isEmpty()) {
+            onProgress(1f)
+            return result()
+        }
+        val waves = ChunkWaveMaterializer(job, plan, input) { warnings.add(it) }
+        val language = runCatching { JobFiles.load<RecordingLanguage>(File(job, "language.json")) }
+            .getOrNull()?.whisperLanguage ?: "ru"
+        fun prepareOutput(output: File): File {
+            if (request.resumeKey != null) JobCheckpoint.archiveRetryOutput(job, output)
+            return output
+        }
+
+        StageTaskQueue.run(pending, workers, stopOnFailure = !giga, open = { index ->
             if (giga) {
                 val files = if (profile.fast) GigaAmCandidateProvider.Models.ctc(
                     models.file("giga_fast_model"), models.file("giga_fast_tokens"))
@@ -68,8 +94,10 @@ internal object QueuedAsrStages {
                 Recognizer(provider::generate, session)
             }
         }, process = { recognizer, chunk ->
-            val output = if (giga) File(job, "raw/gigaam/${chunk.id}.json")
-                else File(job, "raw/whisper/${chunk.id}/whisper.json")
+            val output = if (giga) {
+                prepareOutput(File(job, "raw/gigaam/${chunk.id}.native.json"))
+                prepareOutput(File(job, "raw/gigaam/${chunk.id}.json"))
+            } else File(prepareOutput(File(job, "raw/whisper/${chunk.id}")), "whisper.json")
             waves.withChunk(chunk) { recognizer.generate(it, output) }
         }, collect = { chunk, attempt ->
             attempt.fold(onSuccess = { candidate ->

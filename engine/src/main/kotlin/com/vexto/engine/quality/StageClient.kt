@@ -10,7 +10,8 @@ import kotlin.coroutines.resumeWithException
 
 /** A stage completes only after its exact worker Binder dies, releasing its model heap. */
 internal class StageClient(private val context: Context) {
-    suspend fun run(request: WorkerRequest, onProgress: (Float) -> Unit = {}): WorkerResult {
+    suspend fun run(request: WorkerRequest, checkpoint: WorkerResult? = null,
+                    onProgress: (Float) -> Unit = {}): WorkerResult {
         withContext(Dispatchers.Main) {
             blockedLease?.let {
                 if (!it.dead.isCompleted) throw IOException("PREVIOUS_WORKER_TERMINATION_UNCONFIRMED")
@@ -19,8 +20,15 @@ internal class StageClient(private val context: Context) {
         }
         val job = File(request.jobDir)
         val path = request.stage.requestFile(job)
+        if (checkpoint != null) {
+            require(checkpoint.requestId == request.requestId && checkpoint.stage == request.stage)
+            // The prior watchdog used the same request ID. Preserve its partial results, but
+            // retire the terminal marker before starting a new worker lease.
+            java.nio.file.Files.deleteIfExists(File(job, "stages/${request.stage.name}.terminal.json").toPath())
+        }
         JobFiles.save(path, request)
-        JobFiles.save(request.stage.resultFile(job), WorkerResult(request.stage, requestId = request.requestId, error = "WORKER_RUNNING"))
+        JobFiles.save(request.stage.resultFile(job), checkpoint?.copy(completed = false, error = "WORKER_RUNNING")
+            ?: WorkerResult(request.stage, requestId = request.requestId, error = "WORKER_RUNNING"))
         val plan = runCatching { JobFiles.load<ChunkPlan>(File(job, "chunks.json")) }.getOrNull()
         val audioMs = com.vexto.engine.audio.PcmWave.inspect(JobFiles.inside(job, request.inputWav)).sampleCount / 16
         val speakers = runCatching { JobFiles.load<List<PipelineTurn>>(File(job, "turns.json")).map { it.speaker }.distinct().size }.getOrDefault(1)

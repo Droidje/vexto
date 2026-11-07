@@ -1,5 +1,7 @@
 package com.vexto.engine.model
 
+import kotlinx.serialization.Serializable
+
 /** Этапы обработки в порядке выполнения. */
 enum class Stage(val title: String) {
     Preparing("Готовлю модели"),
@@ -28,6 +30,7 @@ sealed interface TranscriptionEvent {
     data class Done(val transcript: Transcript, val stats: ProcessingStats) : TranscriptionEvent
 }
 
+@Serializable
 data class ProcessingStats(
     val audioMs: Long,
     val processingMs: Long,

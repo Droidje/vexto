@@ -412,12 +412,12 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     @Override public void transcribeReview() {
-        if (view.screen() != REVIEW) return;
+        if (view.screen() != REVIEW || !transcripts.canStartBackground()) return;
         cancelReviewWaveform();
         File saved = saveAudio();
         if (saved == null) return;
         stopPlayer();
-        transcripts.open(saved, "Разговор", time(duration), duration, false, true);
+        transcripts.open(saved, "Разговор", time(duration), duration, false, true, true);
         loadConversationWaveform(saved, duration);
     }
 
@@ -453,7 +453,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         catch (IOException | RuntimeException error) { notice("Не удалось открыть запись"); }
     }
 
-    private void openLocalDetail(File file, String title, boolean recordingDetails, boolean startImmediately)
+    private void openLocalDetail(File file, String title, boolean recordingDetails, boolean showProcessing)
             throws IOException {
         int length = RecordingSession.duration(file);
         cancelReviewWaveform();
@@ -461,7 +461,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         discardDraft();
         audio = file;
         duration = length;
-        transcripts.open(file, title, time(length), length, recordingDetails, startImmediately);
+        transcripts.open(file, title, time(length), length, recordingDetails, showProcessing, false);
         loadConversationWaveform(file, length);
     }
 
@@ -580,6 +580,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     @Override protected void onResume() {
         super.onResume();
+        transcripts.resumeProcessing();
         refreshSpeakers();
         transcripts.refreshSpeakerNames();
     }

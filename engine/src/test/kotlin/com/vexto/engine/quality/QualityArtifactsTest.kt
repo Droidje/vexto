@@ -16,7 +16,7 @@ class QualityArtifactsTest {
     @Test fun chunksCoverAllSamplesExactlyOnceAndShareExactPcm() = runBlocking {
         val root = temporary.newFolder()
         val source = File(root, "source.wav")
-        val samples = FloatArray(16000 * 21 + 7) { ((it % 1500) - 750) / 32768f }
+        val samples = FloatArray(2 * ChunkPlan.MaxSamples.toInt() + 7) { ((it % 1500) - 750) / 32768f }
         PcmWave.Writer(source).use { it.write(samples) }
         val original = source.readBytes()
         val plan = ChunkPlan.create(source, root)
