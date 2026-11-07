@@ -65,7 +65,6 @@ final class ReflectView extends ViewGroup {
     private static final Shader NAV_EDGE = edge(16, 765, 302, 824, 0x25ffffff, 0x0cffffff);
     private static final Shader PLUS_EDGE = edge(318, 765, 377, 824, 0x25ffffff, 0x0cffffff);
     private static final Shader MENU_EDGE = edge(175, 661, 377, 749, 0xff666765, 0xff525250);
-    private static final Shader REVIEW_EDGE = edge(16, 578, 377, 622, 0xff696968, 0xff3c3c39);
     private static final Shader[] MENU_FILL = {
             new LinearGradient(0, 661, 0, 749,
                     new int[]{0xc2232323, 0xc2272725, 0xc22c2c2a}, null, Shader.TileMode.CLAMP),
@@ -88,28 +87,32 @@ final class ReflectView extends ViewGroup {
     private final ReflectGlassBackdrop navigationBackdrop = new ReflectGlassBackdrop();
     private final ReflectGlassBackdrop plusBackdrop = new ReflectGlassBackdrop();
     private final ReflectGlassBackdrop menuBackdrop = new ReflectGlassBackdrop();
-    private final ReflectGlassBackdrop.Source navigationSource = this::drawNavigationContent;
+    private final ReflectGlassBackdrop.Source navigationSource = this::drawPageContents;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
+    private final Paint snapshotPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
+    private final RectF snapshotBounds = new RectF(0, 0, WIDTH, HEIGHT);
     private final List<RectF> childAreas = new ArrayList<>();
     private final Path stage = new Path();
     private final Path glass = new Path();
-    private final Path playGlyph = new Path();
     private final RecordingVisuals recordingVisuals = new RecordingVisuals();
     private RecordingOrb recordingOrb;
     private Bitmap orbEdgeShade;
     private Screen screen = Screen.HOME;
     private Screen tab = Screen.HOME;
-    private float scale = 1, offsetX, offsetY, transition = 1, menuProgress;
+    private float scale = 1, offsetX, offsetY, pageProgress = 1, menuProgress;
     private float capsuleLeft = TAB_LEFT, capsuleRight = TAB_LEFT + TAB_WIDTH;
-    private int entranceDirection = 1;
+    private int pageDirection = 1;
+    private Screen departingScreen;
+    private Bitmap departingPage;
     private View pageContent;
-    private float playProgress;
+    private ReflectConversationPlayer reviewPlayer;
+    private int reviewPosition, reviewDuration;
     private int[] reviewWave;
     private long elapsedSeconds;
     private String elapsed = "0:00";
-    private String duration = "+ 0:00";
-    private boolean playing;
-    private ValueAnimator animator;
+    private String reviewLength = "0:00";
+    private boolean reviewPlaying;
+    private ValueAnimator pageAnimator, navigationAnimator;
 
     ReflectView(Context context, Actions actions, ReflectPreferences preferences) {
         super(context);
@@ -131,7 +134,7 @@ final class ReflectView extends ViewGroup {
             @Override protected void onDraw(Canvas canvas) {
                 canvas.save();
                 canvas.scale(scale, scale);
-                drawNavigation(canvas, menuProgress);
+                drawNavigationOverlay(canvas);
                 canvas.restore();
             }
         };
@@ -139,13 +142,6 @@ final class ReflectView extends ViewGroup {
         setWillNotDraw(false);
         stage.addRoundRect(0, 0, WIDTH, HEIGHT, 47, 47, Path.Direction.CW);
         glass.addRoundRect(175, 661, 377, 749, 26, 26, Path.Direction.CW);
-        playGlyph.moveTo(34, 596);
-        playGlyph.quadTo(34, 594.6f, 35.2f, 595.3f);
-        playGlyph.lineTo(42.5f, 599.2f);
-        playGlyph.quadTo(43.8f, 600, 42.5f, 600.8f);
-        playGlyph.lineTo(35.2f, 604.7f);
-        playGlyph.quadTo(34, 605.4f, 34, 604);
-        playGlyph.close();
         rebuildControls();
     }
 
@@ -180,62 +176,113 @@ final class ReflectView extends ViewGroup {
 
     void show(Screen next) {
         if (next == screen) return;
-        if (animator != null) animator.cancel();
-        if (screen == Screen.HOME) conversations.dismissKeyboard();
-        if (screen == Screen.RECORDS) records.dismissKeyboard();
-        if (screen == Screen.SPEAKERS) speakers.dismissKeyboard();
-        boolean withinNavigation = navigation(screen) && navigation(next);
-        boolean withinRecorder = recordingScreen(screen) && recordingScreen(next);
-        Screen previousTab = tab;
-        if (isTab(next)) tab = next;
-        boolean pageChanged = !withinNavigation || previousTab != tab;
+        Screen previous = screen;
+        Screen targetTab = isTab(next) ? next : tab;
+        boolean withinNavigation = navigation(previous) && navigation(next);
+        boolean withinRecorder = recordingScreen(previous) && recordingScreen(next);
+        boolean pageChanged = !withinRecorder && (!withinNavigation || tab != targetTab);
         boolean motion = preferences.motionEnabled();
+        boolean animate = motion && isLaidOut() && scale > 0;
+        if (pageChanged) {
+            if (departingPage != null) {
+                finishPageTransition();
+                applyPagePosition();
+            }
+            Bitmap snapshot = animate ? capturePage() : null;
+            pageDirection = withinNavigation ? Integer.compare(tabIndex(targetTab), tabIndex(tab))
+                    : returnTransition(previous, next) ? -1 : 1;
+            departingPage = snapshot;
+            departingScreen = snapshot == null ? null : previous;
+            pageProgress = snapshot == null ? 1 : 0;
+        } else if (!animate) {
+            finishPageTransition();
+        }
+        if (tab == Screen.HOME && navigation(previous)) conversations.dismissKeyboard();
+        if (tab == Screen.RECORDS && navigation(previous)) records.dismissKeyboard();
+        if (tab == Screen.SPEAKERS && navigation(previous)) speakers.dismissKeyboard();
         long now = SystemClock.uptimeMillis();
         if (next == Screen.RECORDING) recordingVisuals.start(now, motion);
         else if (next == Screen.PAUSED) recordingVisuals.pause(now);
-        else if (screen == Screen.RECORDING || screen == Screen.PAUSED) recordingVisuals.reset();
+        else if (previous == Screen.RECORDING || previous == Screen.PAUSED) recordingVisuals.reset();
+        tab = targetTab;
         screen = next;
+        rebuildControls();
+        applyPagePosition();
+        navigationGlass.invalidate();
+        invalidate();
+        if (pageChanged && departingPage != null) startPageTransition();
+        if (!withinRecorder) animateNavigation(animate);
+    }
+
+    private static boolean returnTransition(Screen previous, Screen next) {
+        return navigation(next) || previous == Screen.EXPORT
+                || (previous == Screen.TRANSCRIPT && next == Screen.SPEAKER_PROFILE)
+                || (previous == Screen.REVIEW && recordingScreen(next));
+    }
+
+    private void animateNavigation(boolean animate) {
+        if (navigationAnimator != null) navigationAnimator.cancel();
         float startMenu = menuProgress;
-        float endMenu = next == Screen.MENU ? 1 : 0;
+        float endMenu = screen == Screen.MENU ? 1 : 0;
         float startLeft = capsuleLeft, startRight = capsuleRight;
         float targetLeft = TAB_LEFT + TAB_WIDTH * tabIndex(tab);
         float targetRight = targetLeft + TAB_WIDTH;
         boolean movingRight = targetLeft > startLeft;
-        entranceDirection = withinNavigation && tabIndex(tab) < tabIndex(previousTab) ? -1 : 1;
-        rebuildControls();
-
-        if (!motion || withinRecorder || !isLaidOut()) {
+        if (!animate || (startMenu == endMenu && startLeft == targetLeft && startRight == targetRight)) {
             menuProgress = endMenu;
             capsuleLeft = targetLeft;
             capsuleRight = targetRight;
-            applyEntrance(1, withinNavigation);
+            navigationGlass.invalidate();
+            invalidate();
             return;
         }
-        applyEntrance(pageChanged ? 0 : 1, withinNavigation);
-        animator = ValueAnimator.ofFloat(0, 1);
-        animator.setDuration(pageChanged ? 380 : 300);
-        animator.addUpdateListener(value -> {
+        navigationAnimator = ValueAnimator.ofFloat(0, 1);
+        navigationAnimator.setDuration(300);
+        navigationAnimator.addUpdateListener(value -> {
             float time = (float) value.getAnimatedValue();
             float eased = ReflectMotion.EASE.getInterpolation(time);
             float leading = ReflectMotion.EASE.getInterpolation(Math.min(1, time * 1.18f));
             menuProgress = lerp(startMenu, endMenu, eased);
             capsuleLeft = lerp(startLeft, targetLeft, movingRight ? eased : leading);
             capsuleRight = lerp(startRight, targetRight, movingRight ? leading : eased);
-            applyEntrance(pageChanged ? ReflectMotion.PAGE.getInterpolation(time) : 1, withinNavigation);
+            navigationGlass.invalidate();
+            invalidate();
         });
-        animator.setInterpolator(LINEAR);
-        animator.start();
+        navigationAnimator.setInterpolator(LINEAR);
+        navigationAnimator.start();
     }
 
-    private void applyEntrance(float progress, boolean withinNavigation) {
-        transition = progress;
-        if (pageContent != null) {
-            pageContent.setAlpha(.22f + .78f * progress);
-            pageContent.setTranslationX(withinNavigation ? 18 * scale * entranceDirection * (1 - progress) : 0);
-            pageContent.setTranslationY(withinNavigation ? 0 : 22 * scale * (1 - progress));
+    private void startPageTransition() {
+        pageAnimator = ValueAnimator.ofFloat(0, 1);
+        pageAnimator.setDuration(380);
+        pageAnimator.setInterpolator(ReflectMotion.PAGE);
+        pageAnimator.addUpdateListener(value -> {
+            pageProgress = (float) value.getAnimatedValue();
+            if (pageProgress >= 1) finishPageTransition();
+            applyPagePosition();
+            navigationGlass.invalidate();
+            invalidate();
+        });
+        pageAnimator.start();
+    }
+
+    private void finishPageTransition() {
+        if (pageAnimator != null && pageAnimator.isRunning() && pageProgress < 1) pageAnimator.cancel();
+        departingPage = null;
+        departingScreen = null;
+        pageProgress = 1;
+    }
+
+    private float incomingOffset() { return pageDirection * WIDTH * (1 - pageProgress); }
+
+    private boolean isPageChild(View child) { return !navigation(screen) || child == pageContent; }
+
+    private void applyPagePosition() {
+        float translation = incomingOffset() * scale;
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+            if (isPageChild(child)) child.setTranslationX(translation);
         }
-        navigationGlass.invalidate();
-        invalidate();
     }
 
     private static int tabIndex(Screen tab) {
@@ -264,14 +311,15 @@ final class ReflectView extends ViewGroup {
 
     void setReviewWave(int[] bars) {
         reviewWave = bars;
-        if (screen == Screen.REVIEW) invalidate();
+        if (reviewPlayer != null) reviewPlayer.waveform(bars);
     }
 
-    void updatePlayback(String duration, boolean playing, float progress) {
-        this.duration = "+ " + duration;
-        this.playing = playing;
-        this.playProgress = progress;
-        if (screen == Screen.REVIEW) invalidate();
+    void updateReviewPlayback(String length, boolean playing, int position, int duration) {
+        reviewLength = length;
+        reviewPlaying = playing;
+        reviewPosition = position;
+        reviewDuration = duration;
+        if (reviewPlayer != null) reviewPlayer.update(playing, position, duration);
     }
 
     static boolean isTab(Screen page) {
@@ -307,11 +355,13 @@ final class ReflectView extends ViewGroup {
             int x = Math.round(offsetX + area.left * scale), y = Math.round(offsetY + area.top * scale);
             control.layout(x, y, x + control.getMeasuredWidth(), y + control.getMeasuredHeight());
         }
+        applyPagePosition();
     }
 
     private void rebuildControls() {
         removeAllViews();
         childAreas.clear();
+        reviewPlayer = null;
         if (pageContent != null) {
             pageContent.setAlpha(1);
             pageContent.setTranslationX(0);
@@ -378,7 +428,11 @@ final class ReflectView extends ViewGroup {
                 case RECORDING -> recordingControls("Поставить запись на паузу", actions::pauseRecording);
                 case PAUSED -> recordingControls("Продолжить запись", actions::startRecording);
                 case REVIEW -> {
-                    control("Воспроизвести или приостановить", 16, 578, 361, 44, actions::play);
+                    reviewPlayer = new ReflectConversationPlayer(getContext(), artwork, preferences, reviewLength,
+                            "запись", actions::play, actions::seekPlayback);
+                    reviewPlayer.waveform(reviewWave);
+                    reviewPlayer.update(reviewPlaying, reviewPosition, reviewDuration);
+                    place(reviewPlayer, 16, 578, 361, 44);
                     control("Расшифровать в фоне", 84, 75, 222, 48, actions::save);
                     control("Расшифровать сейчас", 245, 765, 59, 59, actions::transcribeReview);
                 }
@@ -445,38 +499,36 @@ final class ReflectView extends ViewGroup {
 
     @Override protected void onDraw(Canvas canvas) {
         canvas.drawColor(0xff1e1e1e);
-        canvas.save();
+        int save = canvas.save();
         canvas.translate(offsetX, offsetY);
         canvas.scale(scale, scale);
         rounded(canvas, 0, 0, WIDTH, HEIGHT, 47, BACKGROUND);
         canvas.clipPath(stage);
-        if (transition < 1) {
-            canvas.saveLayerAlpha(0, 0, WIDTH, HEIGHT, Math.round(255 * (.22f + .78f * transition)));
-            canvas.translate(0, 22 * (1 - transition));
-            drawScreen(canvas, screen);
-            canvas.restore();
-        } else {
-            drawScreen(canvas, screen);
-        }
-        canvas.restore();
+        drawPageCanvas(canvas);
+        canvas.restoreToCount(save);
         if (recordingScreen(screen) && recordingVisuals.needsFrame(SystemClock.uptimeMillis())) {
             postInvalidateOnAnimation();
         }
     }
 
     @Override protected void dispatchDraw(Canvas canvas) {
-        if (!navigation(screen) || scale <= 0) {
+        if (scale <= 0) {
             super.dispatchDraw(canvas);
             return;
         }
-        canvas.save();
+        int save = canvas.save();
         canvas.translate(offsetX, offsetY);
         canvas.scale(scale, scale);
         canvas.clipPath(stage);
+        int local = canvas.save();
         canvas.scale(1 / scale, 1 / scale);
         canvas.translate(-offsetX, -offsetY);
         super.dispatchDraw(canvas);
-        canvas.restore();
+        canvas.restoreToCount(local);
+        if (!navigation(screen) && departingScreen != null && navigation(departingScreen)) {
+            drawNavigationOverlay(canvas);
+        }
+        canvas.restoreToCount(save);
     }
 
     @Override public void onDescendantInvalidated(View child, View target) {
@@ -486,17 +538,62 @@ final class ReflectView extends ViewGroup {
         }
     }
 
-    private void drawNavigationContent(Canvas canvas) {
-        if (pageContent == null) return;
+    private Bitmap capturePage() {
+        // One small opaque snapshot is enough. Outgoing views can be detached immediately.
+        float resolution = Math.min(1, scale);
+        int width = Math.max(1, Math.round(WIDTH * resolution));
+        int height = Math.max(1, Math.round(HEIGHT * resolution));
+        Bitmap snapshot = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(snapshot);
+        canvas.drawColor(BACKGROUND);
+        canvas.scale(width / WIDTH, height / HEIGHT);
+        drawPageContents(canvas);
+        return snapshot;
+    }
+
+    private void drawPageCanvas(Canvas canvas) {
+        if (departingPage != null) {
+            int save = canvas.save();
+            canvas.translate(-pageDirection * WIDTH * pageProgress, 0);
+            canvas.drawBitmap(departingPage, null, snapshotBounds, snapshotPaint);
+            canvas.restoreToCount(save);
+        }
+        int save = canvas.save();
+        canvas.translate(incomingOffset(), 0);
+        drawScreen(canvas, screen);
+        canvas.restoreToCount(save);
+    }
+
+    private void drawPageContents(Canvas canvas) {
+        drawPageCanvas(canvas);
         int save = canvas.save();
         canvas.translate(-offsetX / scale, -offsetY / scale);
         canvas.scale(1 / scale, 1 / scale);
-        drawChild(canvas, pageContent, getDrawingTime());
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+            if (isPageChild(child)) drawChild(canvas, child, getDrawingTime());
+        }
+        canvas.restoreToCount(save);
+    }
+
+    private void drawNavigationOverlay(Canvas canvas) {
+        boolean crossedNavigation = departingScreen != null
+                && navigation(departingScreen) != navigation(screen);
+        if (!crossedNavigation) {
+            drawNavigation(canvas, menuProgress);
+            return;
+        }
+        float visibility = navigation(screen) ? pageProgress : 1 - pageProgress;
+        if (visibility <= 0) return;
+        int save = canvas.saveLayerAlpha(0, 649, WIDTH, 825, Math.round(visibility * 255));
+        drawNavigation(canvas, menuProgress);
         canvas.restoreToCount(save);
     }
 
     @Override protected void onDetachedFromWindow() {
-        if (animator != null) animator.end();
+        finishPageTransition();
+        if (navigationAnimator != null) navigationAnimator.end();
+        applyPagePosition();
         super.onDetachedFromWindow();
     }
 
@@ -532,7 +629,7 @@ final class ReflectView extends ViewGroup {
                 // Undo the menu transform to sample the scene in stage coordinates.
                 sample.scale(1 / stretchX, 1 / stretchY, 359, 744);
                 sample.translate(0, -shift);
-                drawNavigationContent(sample);
+                drawPageContents(sample);
                 drawNavigationBar(sample, menu, false);
             });
             drawMenu(c);
@@ -563,7 +660,7 @@ final class ReflectView extends ViewGroup {
 
     private void drawNavigationBackdrop(Canvas canvas, ReflectGlassBackdrop backdrop,
                                         float left, float right, boolean capture) {
-        if (pageContent == null) return;
+        if (pageContent == null && departingPage == null && navigation(screen)) return;
         if (capture) backdrop.draw(canvas, left, 765, right, 824, 29.5f, 10, navigationSource);
         else backdrop.replay(canvas, left, 765, right, 824, 29.5f, 10);
     }
@@ -636,37 +733,8 @@ final class ReflectView extends ViewGroup {
     private void drawReview(Canvas c) {
         rounded(c, 84, 75, 306, 123, 24, 0xff2c2c2a);
         text(c, "Расшифровать в фоне", 195, 104.8f, 16, WHITE, artwork.medium, true);
-        rounded(c, 16, 578, 377, 622, 22, 0xff090908);
-        outline(c, 16, 578, 377, 622, 22, REVIEW_EDGE);
-        rounded(c, 23, 585, 53, 615, 15, 0x1f767680);
-        paint.setColor(WHITE);
-        if (playing) {
-            rounded(c, 34, 595, 36.5f, 605, 1, WHITE);
-            rounded(c, 39, 595, 41.5f, 605, 1, WHITE);
-        } else c.drawPath(playGlyph, paint);
-        if (reviewWave != null && reviewWave.length > 1) {
-            waveform(c, reviewWave, 63, 306, 600, 0xff999999, 0, playProgress);
-        } else {
-            rounded(c, 63, 599, 306, 601, 1, 0xff4a4a49);
-            if (playProgress > 0) {
-                rounded(c, 63, 599, 63 + 243 * Math.min(1, playProgress), 601, 1, WHITE);
-            }
-        }
-        rounded(c, 316, 588, 370, 612, 12, 0x1f767680);
-        text(c, duration, 343, 604.7f, 13, WHITE, artwork.duration, true);
         text(c, "Расшифровка выполняется", 196.5f, 657.3f, 16, 0xff999999, artwork.medium, true);
         text(c, "на устройстве", 196.5f, 678.3f, 16, 0xff999999, artwork.medium, true);
-    }
-
-    private void waveform(Canvas c, int[] bars, float left, float right, float center, int color,
-                          float level, float progress) {
-        for (int i = 0; i < bars.length; i++) {
-            float fraction = (float) i / (bars.length - 1);
-            float x = left + fraction * (right - left - 2);
-            float h = bars[i] * (1 + level * .22f);
-            rounded(c, x, center - h / 2, x + 2, center + h / 2, 1,
-                    fraction < progress ? WHITE : color);
-        }
     }
 
     private void closeButton(Canvas c, String asset, float angle) {

@@ -48,6 +48,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     private File audio;
     private int duration;
     private MediaPlayer player;
+    private int inFlightSeek = -1, seekTarget = -1;
     private AlertDialog recordingExit;
     private boolean importing;
     private boolean transcriptFromSpeaker;
@@ -57,7 +58,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
                 view.updateRecording(session.elapsedMillis(), session.peakAmplitude());
                 handler.postDelayed(this, RecordingVisuals.sampleInterval());
             } else if (player != null && player.isPlaying()) {
-                updatePlayback(true, player.getCurrentPosition());
+                if (inFlightSeek < 0) updatePlayback(true, player.getCurrentPosition());
                 handler.postDelayed(this, 65);
             }
         }
@@ -233,11 +234,11 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         discardDraft();
         boolean processing = view.screen() == PROCESSING;
         boolean transcript = view.screen() == TRANSCRIPT;
-        if (processing || transcript) transcripts.close();
         String returnProfile = transcript && transcriptFromSpeaker ? profilesUi.profileId() : null;
         transcriptFromSpeaker = false;
         if (returnProfile != null) profilesUi.openProfile(returnProfile);
         else view.show(processing ? HOME : view.tab());
+        if (processing || transcript) transcripts.close();
     }
 
     @Override public void attach() {
@@ -290,7 +291,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         view.setReviewWave(null);
         audio = file;
         duration = length;
-        view.updatePlayback(time(duration), false, 0);
+        view.updateReviewPlayback(time(duration), false, 0, duration);
         view.show(REVIEW);
         reviewWaveform = ReflectEngine.previewWaveform(this, Uri.fromFile(file), length, bars -> {
             if (file.equals(audio) && view.screen() == REVIEW && !isDestroyed()) view.setReviewWave(bars);
@@ -311,7 +312,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
             handler.removeCallbacks(heartbeat);
             if (player.isPlaying()) {
                 player.pause();
-                updatePlayback(false, player.getCurrentPosition());
+                updatePlayback(false, seekTarget >= 0 ? seekTarget : player.getCurrentPosition());
             } else {
                 player.start();
                 handler.post(heartbeat);
@@ -326,10 +327,15 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         if (player != null) return;
         player = new MediaPlayer();
         player.setDataSource(audio.getAbsolutePath());
-        player.setOnCompletionListener(completed -> stopPlayer());
+        player.setOnCompletionListener(completed -> {
+            if (completed == player && inFlightSeek < 0) stopPlayer();
+        });
+        player.setOnSeekCompleteListener(this::seekCompleted);
         player.setOnErrorListener((failed, what, extra) -> {
-            stopPlayer();
-            notice("Не удалось воспроизвести запись");
+            if (failed == player) {
+                stopPlayer();
+                notice("Не удалось воспроизвести запись");
+            }
             return true;
         });
         player.prepare();
@@ -339,13 +345,61 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         if (audio == null) return;
         try {
             preparePlayer();
-            player.seekTo(Math.min(millis, Math.max(0, duration - 1)), MediaPlayer.SEEK_CLOSEST);
+            requestSeek(millis);
             player.start();
+            publishSeek(true);
             handler.removeCallbacks(heartbeat);
             handler.post(heartbeat);
         } catch (IOException | RuntimeException error) {
             stopPlayer();
             notice("Не удалось воспроизвести запись");
+        }
+    }
+
+    @Override public void seekPlayback(float fraction) {
+        if (audio == null || duration <= 0 || !Float.isFinite(fraction)) return;
+        seekPlaybackMillis(Math.round(fraction * duration));
+    }
+
+    @Override public void seekPlaybackMillis(int millis) {
+        if (audio == null || duration <= 0) return;
+        try {
+            preparePlayer();
+            requestSeek(millis);
+            publishSeek(player.isPlaying());
+        } catch (IOException | RuntimeException error) {
+            stopPlayer();
+            notice("Не удалось перемотать запись");
+        }
+    }
+
+    private void requestSeek(int millis) {
+        seekTarget = Math.max(0, Math.min(millis, duration - 1));
+        if (inFlightSeek < 0) startPendingSeek();
+    }
+
+    private void startPendingSeek() {
+        inFlightSeek = seekTarget;
+        player.seekTo(inFlightSeek, MediaPlayer.SEEK_CLOSEST);
+    }
+
+    private void publishSeek(boolean playing) {
+        view.updateReviewPlayback(time(duration), playing, seekTarget, duration);
+        view.transcriptView().playbackSeeked(playing, seekTarget);
+    }
+
+    private void seekCompleted(MediaPlayer source) {
+        if (source != player || inFlightSeek < 0) return;
+        try {
+            if (seekTarget != inFlightSeek) {
+                startPendingSeek();
+                return;
+            }
+            inFlightSeek = seekTarget = -1;
+            updatePlayback(source.isPlaying(), source.getCurrentPosition());
+        } catch (RuntimeException error) {
+            stopPlayer();
+            notice("Не удалось перемотать запись");
         }
     }
 
@@ -363,7 +417,6 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         File saved = saveAudio();
         if (saved == null) return;
         stopPlayer();
-        view.show(HOME);
         transcripts.open(saved, "Разговор", time(duration), duration, false, true);
         loadConversationWaveform(saved, duration);
     }
@@ -409,7 +462,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
         audio = file;
         duration = length;
         transcripts.open(file, title, time(length), length, recordingDetails, startImmediately);
-        if (!recordingDetails) loadConversationWaveform(file, length);
+        loadConversationWaveform(file, length);
     }
 
     private void loadConversationWaveform(File file, int length) {
@@ -490,6 +543,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
 
     private void stopPlayer() {
         handler.removeCallbacks(heartbeat);
+        inFlightSeek = seekTarget = -1;
         if (player != null) {
             player.release();
             player = null;
@@ -498,7 +552,7 @@ public final class MainActivity extends Activity implements ReflectView.Actions 
     }
 
     private void updatePlayback(boolean playing, int position) {
-        view.updatePlayback(time(duration), playing, position / (float) Math.max(1, duration));
+        view.updateReviewPlayback(time(duration), playing, position, duration);
         view.transcriptView().playback(playing, position);
     }
 

@@ -4,9 +4,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
+import android.os.Bundle;
+import android.view.accessibility.AccessibilityNodeInfo;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,6 +79,41 @@ public class ReflectConversationsTest {
         assertEquals(-1, timeline.at(400));
         assertEquals(2, timeline.at(600));
         assertEquals(-1, timeline.at(900));
+    }
+
+    @Test public void seekingInSilenceFollowsTheUpcomingLineOrLastAtTheEnd() {
+        var timeline = new ReflectPlaybackTimeline(List.of(
+                new ReflectTranscript.Line("first", 100, 400, "один"),
+                new ReflectTranscript.Line("second", 200, 300, "два"),
+                new ReflectTranscript.Line("third", 600, 900, "три")));
+        assertEquals(-1, new ReflectPlaybackTimeline(List.of()).atSeek(0));
+        assertEquals(0, timeline.atSeek(0));
+        assertEquals(1, timeline.atSeek(200));
+        assertEquals(0, timeline.atSeek(301));
+        assertEquals(2, timeline.atSeek(400));
+        assertEquals(2, timeline.atSeek(900));
+    }
+
+    @Test public void waveformAccessibilityReportsRangeAndSeeksWithoutTogglingPlayback() {
+        var target = new AtomicReference<Float>();
+        var player = new ReflectConversationPlayer(context, new ReflectArtwork(context.getAssets()),
+                new ReflectPreferences(context), "0:30", "разговор", () -> {
+                    throw new AssertionError("Seeking must preserve playback state");
+                }, target::set);
+        player.update(false, 6_000, 30_000);
+        var waveform = player.getChildAt(1);
+        var info = waveform.createAccessibilityNodeInfo();
+        assertEquals("android.widget.SeekBar", info.getClassName());
+        assertEquals(30f, info.getRangeInfo().getMax(), 0f);
+        assertEquals(6f, info.getRangeInfo().getCurrent(), 0f);
+
+        Bundle args = new Bundle();
+        args.putFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE, 12f);
+        assertTrue(waveform.performAccessibilityAction(
+                AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(), args));
+        assertEquals(.4f, target.get(), .0001f);
+        assertTrue(waveform.performAccessibilityAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD, null));
+        assertEquals(1f / 30f, target.get(), .0001f);
     }
 
     private static ReflectCatalog.Recording recording(File file, String title) {
