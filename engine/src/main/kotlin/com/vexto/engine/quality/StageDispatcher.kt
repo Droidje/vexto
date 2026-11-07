@@ -26,10 +26,7 @@ internal object StageDispatcher {
                 LocalNativeResult(it.elapsedMs, it.peakCombinedRssBytes)
             }
         }
-        fun chunks(): List<ComparisonChunk> {
-            val plan = JobFiles.load<ChunkPlan>(File(job, "chunks.json")).also { it.validate() }
-            return plan.chunks.map { ComparisonChunk(it.id, JobFiles.inside(job, it.wav), it.inputSha256, it.durationMs) }
-        }
+        fun chunkPlan(): ChunkPlan = JobFiles.load<ChunkPlan>(File(job, "chunks.json")).also { it.validate() }
         fun reference(candidate: ImmutableAsrCandidate) = CandidateRef(candidate.chunkId, candidate.source.wireName,
             candidate.artifactFile.relativeTo(job).invariantSeparatorsPath, candidate.artifactSha256)
         fun checkpoint(result: WorkerResult) = JobFiles.save(request.stage.resultFile(job), result.copy(requestId = request.requestId))
@@ -62,12 +59,19 @@ internal object StageDispatcher {
             WorkerStage.GIGAAM -> {
                 val refs = mutableListOf<CandidateRef>()
                 val warnings = mutableListOf<String>()
+                val plan = chunkPlan()
+                val waves = ChunkWaveMaterializer(job, plan, input) { warnings += it }
                 GigaAmCandidateProvider(GigaAmCandidateProvider.Models(models.file("giga_encoder"),
                     models.file("giga_decoder"), models.file("giga_joiner"), models.file("giga_tokens"))).use { provider ->
-                    val tasks = chunks()
-                for ((index, chunk) in tasks.withIndex()) {
+                    val tasks = plan.chunks
+                    for ((index, chunk) in tasks.withIndex()) {
                         currentCoroutineContext().ensureActive()
-                        try { refs += reference(provider.generate(chunk, File(job, "raw/gigaam/${chunk.id}.json"))) }
+                        try {
+                            val candidate = waves.withChunk(chunk) { current ->
+                                provider.generate(current, File(job, "raw/gigaam/${chunk.id}.json"))
+                            }
+                            refs += reference(candidate)
+                        }
                         catch (cancel: CancellationException) { throw cancel }
                         catch (failure: Exception) { warnings += "GIGAAM_FAILED:${chunk.id}:${failure.javaClass.simpleName}" }
                         checkpoint(WorkerResult(request.stage, candidates = refs.toList(), warnings = warnings.toList()))
@@ -80,10 +84,17 @@ internal object StageDispatcher {
                 val refs = mutableListOf<CandidateRef>()
                 val warnings = mutableListOf<String>()
                 val provider = WhisperComparisonProvider(executor, models.file("whisper"))
-                val tasks = chunks()
+                val plan = chunkPlan()
+                val waves = ChunkWaveMaterializer(job, plan, input) { warnings += it }
+                val tasks = plan.chunks
                 for ((index, chunk) in tasks.withIndex()) {
                     currentCoroutineContext().ensureActive()
-                    try { refs += reference(provider.generate(chunk, File(job, "raw/whisper/${chunk.id}/whisper.json"))) }
+                    try {
+                        val candidate = waves.withChunk(chunk) { current ->
+                            provider.generate(current, File(job, "raw/whisper/${chunk.id}/whisper.json"))
+                        }
+                        refs += reference(candidate)
+                    }
                     catch (cancel: CancellationException) { throw cancel }
                     catch (failure: Exception) { warnings += "WHISPER_FAILED:${chunk.id}:${failure.javaClass.simpleName}" }
                     checkpoint(WorkerResult(request.stage, candidates = refs.toList(), warnings = warnings.toList(), peakCombinedRssBytes = nativePeak))
@@ -98,7 +109,7 @@ internal object StageDispatcher {
                 val choices = mutableListOf<ChoiceRef>()
                 val warnings = mutableListOf<String>()
                 val selector = QwenAsrSelector(executor, models.file("qwen"))
-                val tasks = chunks()
+                val tasks = chunkPlan().chunks
                 for ((index, chunk) in tasks.withIndex()) {
                     currentCoroutineContext().ensureActive()
                     val originals = refs.filter { it.chunkId == chunk.id }.mapNotNull { ref ->

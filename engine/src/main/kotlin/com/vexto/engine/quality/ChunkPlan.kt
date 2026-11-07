@@ -29,6 +29,11 @@ data class ChunkPlan(val sampleCount: Long, val chunks: List<AudioChunk>) {
         /** Quiet-boundary snapping, not speech removal: every input sample belongs to exactly one chunk. */
         suspend fun create(input: File, jobDir: File): ChunkPlan {
             val count = PcmWave.inspect(input).sampleCount
+            val job = jobDir.canonicalFile
+            val source = input.canonicalFile
+            val inputWav = source.relativeTo(job).invariantSeparatorsPath
+            require(JobFiles.inside(job, inputWav) == source && !inputWav.startsWith("chunks/"))
+            val storage = ChunkStorage(inputWav = inputWav, inputSha256 = JobFiles.sha256(source))
             val result = mutableListOf<AudioChunk>()
             var from = 0L
             while (from < count) {
@@ -54,12 +59,14 @@ data class ChunkPlan(val sampleCount: Long, val chunks: List<AudioChunk>) {
                 }
                 val id = "chunk_%06d".format(result.size)
                 val relative = "chunks/$id.wav"
-                val wav = JobFiles.inside(jobDir, relative)
-                PcmWave.crop(input, wav, from, to)
-                result += AudioChunk(id, from, to, relative, JobFiles.sha256(wav))
+                result += AudioChunk(id, from, to, relative, PcmWave.cropSha256(source, from, to))
                 from = to
             }
-            return ChunkPlan(count, result).also { it.validate(); JobFiles.save(File(jobDir, "chunks.json"), it) }
+            return ChunkPlan(count, result).also {
+                it.validate()
+                JobFiles.save(File(job, "chunk-storage.json"), storage)
+                JobFiles.save(File(job, "chunks.json"), it)
+            }
         }
     }
 }

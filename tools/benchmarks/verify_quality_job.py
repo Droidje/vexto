@@ -8,6 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import struct
 import wave
 
 BUDGET, RESERVE = 2_000_000_000, 128 * 1024 * 1024
@@ -72,13 +73,38 @@ def pcm(path, joined=None):
         return source.getnframes(), digest.hexdigest()
 
 
+def canonical_chunk_sha(source_path, start, end, joined):
+    """Match Android PcmWave.cropSha256: canonical 44-byte header + exact PCM slice."""
+    size = (end - start) * 2
+    check(0 < size <= 0xffffffff - 36, "invalid_virtual_chunk_length")
+    header = struct.pack("<4sI4s4sIHHIIHH4sI", b"RIFF", size + 36, b"WAVE", b"fmt ",
+                         16, 1, 1, 16000, 32000, 2, 16, b"data", size)
+    digest = hashlib.sha256(header)
+    with wave.open(str(source_path), "rb") as source:
+        check((source.getnchannels(), source.getsampwidth(), source.getframerate(), source.getcomptype()) ==
+              (1, 2, 16000, "NONE") and 0 <= start < end <= source.getnframes(), "invalid_virtual_chunk_range")
+        source.setpos(start)
+        remaining = end - start
+        while remaining:
+            count = min(8192, remaining)
+            block = source.readframes(count)
+            check(len(block) == count * 2, "truncated_virtual_chunk_pcm")
+            digest.update(block)
+            joined.update(block)
+            remaining -= count
+    return digest.hexdigest()
+
+
 def verify_job(job_dir, allow_legacy=False):
     root = Path(job_dir).resolve()
     summary = {"schema_version": 1, "valid": False, "quality_success": False,
                "submission_export_verified": False, "metadata_verified": False,
+               "retained_audio_bytes": 0, "materialized_chunk_wavs": 0,
                "counts": {}, "timings_ms": {}, "hashes": {}, "errors": [],
                "memory_note": "Observed Android app RSS plus reserve; sampling is not a hard allocation cap"}
     try:
+        summary["retained_audio_bytes"] = sum(path.stat().st_size for path in root.rglob("*")
+            if not path.is_symlink() and path.is_file() and path.suffix.lower() in (".wav", ".pcm"))
         frames, _ = pcm(root / "original.wav")
         check(frames > 0, "empty_recording")
         summary["audio_samples"] = frames
@@ -90,6 +116,28 @@ def verify_job(job_dir, allow_legacy=False):
         summary["source_report_version"] = 2 if modern else "legacy"
         plan = document(root / "chunks.json")
         check(type(plan["sampleCount"]) is int and plan["sampleCount"] == frames, "plan_sample_count_mismatch")
+        request_path = root / "stages/GIGAAM.request.json"
+        requested_view = document(request_path)["inputWav"] if request_path.exists() else None
+        storage_path = root / "chunk-storage.json"
+        storage = document(storage_path) if storage_path.exists() else None
+        if storage is not None:
+            check(set(storage) == {"schemaVersion", "mode", "inputWav", "inputSha256"} and
+                  type(storage["schemaVersion"]) is int and storage["schemaVersion"] == 1 and
+                  storage["mode"] == "on-demand", "invalid_chunk_storage_policy")
+            view = storage["inputWav"]
+            check(requested_view is None or requested_view == view, "chunk_storage_request_view_mismatch")
+            source_path = inside(root, view)
+            check(isinstance(storage["inputSha256"], str) and
+                  re.fullmatch("[0-9a-f]{64}", storage["inputSha256"]) is not None and
+                  sha(source_path) == storage["inputSha256"], "chunk_storage_source_sha_mismatch")
+            whisper_request = root / "stages/WHISPER.request.json"
+            if whisper_request.exists():
+                check(document(whisper_request)["inputWav"] == view, "chunk_storage_request_view_mismatch")
+        else:
+            view = requested_view or ("denoised.wav" if (root / "denoised.wav").exists() else "original.wav")
+            source_path = inside(root, view)
+        view_frames, view_pcm = pcm(source_path)
+        check(view_frames == frames, "input_view_sample_count_mismatch")
         chunks, cursor, joined = {}, 0, hashlib.sha256()
         for index, chunk in enumerate(plan["chunks"]):
             ident = chunk["id"]
@@ -97,15 +145,18 @@ def verify_job(job_dir, allow_legacy=False):
             check(integer(chunk["fromSample"]) and integer(chunk["toSample"]) and
                   chunk["fromSample"] == cursor < chunk["toSample"] <= cursor + 160000, "chunk_coverage_gap_or_overlap")
             path = inside(root, chunk["wav"])
-            count, _ = pcm(path, joined)
-            check(count == chunk["toSample"] - cursor and sha(path) == chunk["inputSha256"], "chunk_audio_hash_or_length_mismatch")
+            if path.is_file():
+                count, _ = pcm(path, joined)
+                check(count == chunk["toSample"] - cursor and sha(path) == chunk["inputSha256"], "chunk_audio_hash_or_length_mismatch")
+                summary["materialized_chunk_wavs"] += 1
+            else:
+                check(storage is not None and not path.exists(), "missing_chunk_wav_without_on_demand_policy")
+                check(canonical_chunk_sha(source_path, cursor, chunk["toSample"], joined) == chunk["inputSha256"],
+                      "virtual_chunk_canonical_sha_mismatch")
             chunks[ident], cursor = chunk, chunk["toSample"]
         check(cursor == frames and chunks, "incomplete_sample_coverage")
         summary["counts"]["expected_chunks"] = len(chunks)
-        request_path = root / "stages/GIGAAM.request.json"
-        view = document(request_path)["inputWav"] if request_path.exists() else ("denoised.wav" if (root / "denoised.wav").exists() else "original.wav")
-        view_frames, view_pcm = pcm(inside(root, view))
-        check(view_frames == frames and view_pcm == joined.hexdigest(), "chunk_pcm_not_exact_input_view")
+        check(view_pcm == joined.hexdigest(), "chunk_pcm_not_exact_input_view")
         stages = {}
         for name in STAGES:
             stage = document(root / f"stages/{name}.result.json")
