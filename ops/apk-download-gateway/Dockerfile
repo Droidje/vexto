@@ -1,0 +1,7 @@
+FROM python:3.12-slim-bookworm
+WORKDIR /app
+COPY gateway.py /app/gateway.py
+USER 65532:65532
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 BIND=0.0.0.0 PORT=18768
+EXPOSE 18768
+CMD ["python", "/app/gateway.py"]
