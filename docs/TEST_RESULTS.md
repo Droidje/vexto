@@ -40,7 +40,37 @@ AVD Pixel 7, x86_64, 4 ГБ RAM, авиарежим. Обработка — вр
 
 305-секундная запись (интервью с вырезанной паузой 64 с) на AVD arm64 4 ГБ: стенка 102 с, пик RSS 1,81 ГБ; стадии: диаризация 11,5 с, Whisper Small 28,7 с, GigaAM CTC 4,4 с, выбор Qwen 8,1 с, эмоции 34,2 с. [Замер](research/diarization-compaction-avd.md).
 
-**Русские синтетические записи через приложение** ([synthetic-diarization-2026-11-08](research/synthetic-diarization-2026-11-08.md)): пять записей ivkond — WER 8,94% (DER для этого набора признан неприменимым: опубликованные интервалы включают длинные паузы и не являются эталоном границ речи); пять записей bookmix — DER 8,86% по их исходным интервалам. Все случаи сохранены, включая неудачные. Русский маршрут (одна ASR GigaAM) на 346-секундной записи ускорил полное время обработки примерно в 3,6 раза — [маршрут и замер](architecture/russian-gigaam-only.md).
+### Русские синтетические записи: WER и DER
+
+Десять полных записей через штатную foreground-службу APK `0.5.1-dev-34e5ae8`, режим FAST; Vexto_3, x86_64, Android API 36, RAM 4096 МБ. Все файлы определены как русский язык: распознавание GigaAM v3 e2e CTC INT8, границы и спикеры Nemotron 3; Whisper ASR не запускался. Выбор записей зафиксирован до инференса, без исключения неудачных случаев.
+
+| Набор | Записей | Аудио, с | WER | DER итогового JSON | Полный проход всех файлов, с | Максимальный RSS, ГБ |
+|---|---:|---:|---:|---:|---:|---:|
+| ivkond | 5 | 223,726 | 8,94% | N/A | 157,279 | 1,83 |
+| BookMix | 5 | 300,000 | N/A | 8,86% | 235,111 | 1,75 |
+
+ivkond используется **только для WER**: 21 ошибка на 235 эталонных слов. DER — **N/A**, поскольку опубликованные интервалы включают длинные паузы и не являются проверенным эталоном границ речи. У BookMix WER — **N/A**: независимого текста нет. Наборы синтетические; эти результаты не являются оценкой качества на естественных встречах в целом.
+
+| Запись | Аудио, с | WER | DER JSON |
+|---|---:|---:|---:|
+| [ivkond_train_000031](research/results/synthetic-diarization-2026-11-08/ivkond_train_000031/metrics.json) | 35,411 | 11,63% | N/A |
+| [ivkond_train_000294](research/results/synthetic-diarization-2026-11-08/ivkond_train_000294/metrics.json) | 44,821 | 6,45% | N/A |
+| [ivkond_train_000346](research/results/synthetic-diarization-2026-11-08/ivkond_train_000346/metrics.json) | 45,560 | 10,00% | N/A |
+| [ivkond_train_000391](research/results/synthetic-diarization-2026-11-08/ivkond_train_000391/metrics.json) | 43,802 | 21,74% | N/A |
+| [ivkond_train_001064](research/results/synthetic-diarization-2026-11-08/ivkond_train_001064/metrics.json) | 54,132 | 2,13% | N/A |
+| [rec_0055](research/results/synthetic-diarization-2026-11-08/rec_0055/metrics.json) | 60,000 | N/A | 5,20% |
+| [rec_0056](research/results/synthetic-diarization-2026-11-08/rec_0056/metrics.json) | 60,000 | N/A | 6,21% |
+| [rec_0057](research/results/synthetic-diarization-2026-11-08/rec_0057/metrics.json) | 60,000 | N/A | 6,90% |
+| [rec_0058](research/results/synthetic-diarization-2026-11-08/rec_0058/metrics.json) | 60,000 | N/A | 16,91% |
+| [rec_0059](research/results/synthetic-diarization-2026-11-08/rec_0059/metrics.json) | 60,000 | N/A | 9,63% |
+
+WER: нижний регистр, ё→е, пунктуация удалена; ошибки и эталонные слова суммируются по пяти файлам. DER BookMix: collar 0, overlap учитывается, оптимальное соответствие меток отдельно для каждого файла; итог считается по суммам ошибочного и эталонного speaker-time. DER итогового JSON совпал с выходом стадии Nemotron на всех пяти файлах BookMix.
+
+Время включает фоновые эмоции; основной диалог доступен раньше. RSS — показание Android-watchdog, без добавления резерва. Входы уже WAV PCM16/16kHz; декодирование исходного MP3/M4A не включено. Это одиночные прогоны на общем хосте, без изоляции нагрузки и очистки кэша между файлами.
+
+Источники, лицензии, ограничения и воспроизведение: [полный отчёт](research/synthetic-diarization-2026-11-08.md), [сводный JSON с числителями и знаменателями](research/results/synthetic-diarization-2026-11-08/summary.json), [аудиофайлы и опубликованные эталоны](../testdata/audio/ru/synthetic-20261108/README.md).
+
+Отдельный замер: русский маршрут с одной ASR GigaAM на 346-секундной записи ускорил полное время обработки примерно в 3,6 раза — [маршрут и замер](architecture/russian-gigaam-only.md).
 
 ## Узнавание спикеров между разговорами
 
