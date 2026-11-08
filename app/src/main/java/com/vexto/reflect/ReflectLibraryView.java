@@ -406,7 +406,8 @@ final class ReflectLibraryView extends ViewGroup {
         canvas.save();
         canvas.scale(scale, scale);
         if (emptySpeakers() || emptyRecords()) {
-            artwork.icon(canvas, "invite_cards", 100.81f, 121.1f);
+            if (emptyRecords()) artwork.icon(canvas, "empty_records_voice", 100.5f, 180);
+            else artwork.icon(canvas, "invite_cards", 100.81f, 121.1f);
             ReflectLibraryRow.style(paint, 22, 0xfff5f5f5, artwork.display, -.22f);
             paint.setTextAlign(Paint.Align.CENTER);
             canvas.drawText(emptySpeakers() ? "Пока нет спикеров" : "Ваши записи", 197.5f, 419, paint);
