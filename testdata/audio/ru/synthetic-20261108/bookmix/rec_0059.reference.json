@@ -1,0 +1,66 @@
+{
+  "reference_kind": "synthetic_scheduled_turns_not_word_level_vad",
+  "transcript_text_available": false,
+  "segments": [
+    {
+      "speaker_id": "spk0",
+      "start_ms": 208,
+      "end_ms": 8528
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 8909,
+      "end_ms": 15405
+    },
+    {
+      "speaker_id": "spk0",
+      "start_ms": 15961,
+      "end_ms": 20281
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 20833,
+      "end_ms": 25473
+    },
+    {
+      "speaker_id": "spk0",
+      "start_ms": 25892,
+      "end_ms": 29092
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 28023,
+      "end_ms": 32048
+    },
+    {
+      "speaker_id": "spk0",
+      "start_ms": 32154,
+      "end_ms": 35354
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 35673,
+      "end_ms": 43385
+    },
+    {
+      "speaker_id": "spk0",
+      "start_ms": 43672,
+      "end_ms": 48664
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 48924,
+      "end_ms": 52092
+    },
+    {
+      "speaker_id": "spk0",
+      "start_ms": 52514,
+      "end_ms": 56514
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 56960,
+      "end_ms": 60000
+    }
+  ]
+}

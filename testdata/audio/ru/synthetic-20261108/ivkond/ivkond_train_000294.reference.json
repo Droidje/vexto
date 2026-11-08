@@ -1,0 +1,219 @@
+{
+  "dataset": "ivkond/synthetic-speech-diarization-ru",
+  "revision": "3fa8404cfde61d2e3a3369000ce771747821e844",
+  "split": "train",
+  "row_idx": 294,
+  "audio_file": "ivkond_train_000294.wav",
+  "duration_seconds": 44.8214375,
+  "published_metadata": {
+    "duration": 44.82,
+    "num_speakers": 2,
+    "sampling_rate": 16000,
+    "conversation_type": "dialogue",
+    "difficulty": "easy",
+    "has_overlaps": false,
+    "has_simultaneous": false,
+    "has_noise": false,
+    "speakers": [
+      {
+        "speaker_id": 1,
+        "start": 0.0,
+        "end": 6.36,
+        "duration": 6.36,
+        "text": "пожалуйста забронируй билет из белгорода в курск на вторник"
+      },
+      {
+        "speaker_id": 2,
+        "start": 6.36,
+        "end": 8.93,
+        "duration": 2.34,
+        "text": "погаси свет"
+      },
+      {
+        "speaker_id": 1,
+        "start": 8.93,
+        "end": 16.41,
+        "duration": 6.36,
+        "text": "список информации об обменном курсе доллара с. ш. а. к иене за день"
+      },
+      {
+        "speaker_id": 2,
+        "start": 16.41,
+        "end": 21.74,
+        "duration": 4.2,
+        "text": "пришли мне напоминание о встрече с виталием в следующую пятницу"
+      },
+      {
+        "speaker_id": 1,
+        "start": 21.74,
+        "end": 27.8,
+        "duration": 5.28,
+        "text": "удали приём у стоматолога из сегодняшнего расписания"
+      },
+      {
+        "speaker_id": 2,
+        "start": 27.8,
+        "end": 30.74,
+        "duration": 2.46,
+        "text": "вызови такси"
+      },
+      {
+        "speaker_id": 1,
+        "start": 30.74,
+        "end": 35.41,
+        "duration": 4.26,
+        "text": "есть ли какие-нибудь предстоящие события"
+      },
+      {
+        "speaker_id": 2,
+        "start": 35.41,
+        "end": 39.87,
+        "duration": 3.54,
+        "text": "у меня кофе стал холодным сделай пожалуйста ещё"
+      },
+      {
+        "speaker_id": 1,
+        "start": 39.87,
+        "end": 44.82,
+        "duration": 4.02,
+        "text": "кто нибудь прислал письма вчера"
+      }
+    ],
+    "noise_type": null,
+    "snr": null,
+    "speaker_volumes": [
+      {
+        "speaker_id": 1,
+        "volume": 0.8
+      },
+      {
+        "speaker_id": 2,
+        "volume": 0.84
+      }
+    ],
+    "simultaneous_segments": []
+  },
+  "segments": [
+    {
+      "speaker_id": 1,
+      "start": 0.0,
+      "end": 6.36,
+      "duration": 6.36,
+      "text": "пожалуйста забронируй билет из белгорода в курск на вторник"
+    },
+    {
+      "speaker_id": 2,
+      "start": 6.36,
+      "end": 8.93,
+      "duration": 2.34,
+      "text": "погаси свет"
+    },
+    {
+      "speaker_id": 1,
+      "start": 8.93,
+      "end": 16.41,
+      "duration": 6.36,
+      "text": "список информации об обменном курсе доллара с. ш. а. к иене за день"
+    },
+    {
+      "speaker_id": 2,
+      "start": 16.41,
+      "end": 21.74,
+      "duration": 4.2,
+      "text": "пришли мне напоминание о встрече с виталием в следующую пятницу"
+    },
+    {
+      "speaker_id": 1,
+      "start": 21.74,
+      "end": 27.8,
+      "duration": 5.28,
+      "text": "удали приём у стоматолога из сегодняшнего расписания"
+    },
+    {
+      "speaker_id": 2,
+      "start": 27.8,
+      "end": 30.74,
+      "duration": 2.46,
+      "text": "вызови такси"
+    },
+    {
+      "speaker_id": 1,
+      "start": 30.74,
+      "end": 35.41,
+      "duration": 4.26,
+      "text": "есть ли какие-нибудь предстоящие события"
+    },
+    {
+      "speaker_id": 2,
+      "start": 35.41,
+      "end": 39.87,
+      "duration": 3.54,
+      "text": "у меня кофе стал холодным сделай пожалуйста ещё"
+    },
+    {
+      "speaker_id": 1,
+      "start": 39.87,
+      "end": 44.82,
+      "duration": 4.02,
+      "text": "кто нибудь прислал письма вчера"
+    }
+  ],
+  "transcript": [
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 0,
+      "end_ms": 6360,
+      "text": "пожалуйста забронируй билет из белгорода в курск на вторник"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 6360,
+      "end_ms": 8930,
+      "text": "погаси свет"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 8930,
+      "end_ms": 16410,
+      "text": "список информации об обменном курсе доллара с. ш. а. к иене за день"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 16410,
+      "end_ms": 21740,
+      "text": "пришли мне напоминание о встрече с виталием в следующую пятницу"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 21740,
+      "end_ms": 27800,
+      "text": "удали приём у стоматолога из сегодняшнего расписания"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 27800,
+      "end_ms": 30740,
+      "text": "вызови такси"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 30740,
+      "end_ms": 35410,
+      "text": "есть ли какие-нибудь предстоящие события"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 35410,
+      "end_ms": 39870,
+      "text": "у меня кофе стал холодным сделай пожалуйста ещё"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 39870,
+      "end_ms": 44820,
+      "text": "кто нибудь прислал письма вчера"
+    }
+  ],
+  "text": "пожалуйста забронируй билет из белгорода в курск на вторник погаси свет список информации об обменном курсе доллара с. ш. а. к иене за день пришли мне напоминание о встрече с виталием в следующую пятницу удали приём у стоматолога из сегодняшнего расписания вызови такси есть ли какие-нибудь предстоящие события у меня кофе стал холодным сделай пожалуйста ещё кто нибудь прислал письма вчера",
+  "reference_origin": "Published dataset annotation; not generated by ASR, LLM, VAD or the tested pipeline."
+}

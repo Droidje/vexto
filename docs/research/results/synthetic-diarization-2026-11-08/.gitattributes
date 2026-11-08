@@ -1,0 +1,2 @@
+# Native exporter bytes are validated against completion SHA256.
+*.json -text

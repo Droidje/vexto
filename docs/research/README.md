@@ -15,6 +15,8 @@
 
 ## Диаризация
 
+- [synthetic-diarization-2026-11-08.md](synthetic-diarization-2026-11-08.md) — 5 ivkond + 5 BookMix через production FAST APK на Vexto_3: WER, DER экспорта/сырого Nemotron, RAM/время и ограничения синтетической разметки.
+
 - [quick-audio-features.md](quick-audio-features.md) — 6 ноября: сравнение 7 конфигураций диаризации (Nemotron Q8/F32, Sortformer, pyannote+TitaNet/CAM++/ERes2NetV2) на фрагментах AMI; Emo и шумоподавление в сквозном прогоне.
 - [russian-diarization.md](russian-diarization.md) — 7 ноября: русские разговоры, Community-1, полный NeMo MSDD; INT8 против FP32 segmentation; прямой DER production-диаризатора из dev APK.
 - [nemotron-android.md](nemotron-android.md) — сборка Nemotron 3 на Android: закреплённые исходники, конвертация F32-весов, лимиты памяти по длительности.

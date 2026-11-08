@@ -1,0 +1,1032 @@
+{
+  "protocol": "Fixed before first inference; five unique recordings per dataset; no outcome-based exclusions",
+  "datasets": [
+    {
+      "dataset": "ivkond/synthetic-speech-diarization-ru",
+      "revision": "3fa8404cfde61d2e3a3369000ce771747821e844",
+      "dataset_url": "https://huggingface.co/datasets/ivkond/synthetic-speech-diarization-ru/tree/3fa8404cfde61d2e3a3369000ce771747821e844",
+      "license": "MIT (dataset card)",
+      "selection_rule": {
+        "dataset": "ivkond/synthetic-speech-diarization-ru",
+        "revision": "3fa8404cfde61d2e3a3369000ce771747821e844",
+        "config": "default",
+        "split": "train",
+        "order": "source parquet filenames lexicographic, then row-group index ascending, then row position ascending; global row index counts all rows including rejected rows",
+        "selection": "first 5 unique source_float32 SHA256 waveforms satisfying all original metadata conditions; shard/row order unchanged; deduplicate before inference, with no model-quality filtering",
+        "conditions": [
+          "num_speakers in {2,3}",
+          "sampling_rate == 16000",
+          "has_noise == false",
+          "has_overlaps == false",
+          "has_simultaneous == false",
+          "speakers contains nonempty text, finite nonnegative start/end and start<end for every segment",
+          "number of distinct speaker_id equals num_speakers",
+          "all segment ends <= published duration + 0.001s",
+          "no pair of different speakers overlaps by more than one audio sample (1/16000s)"
+        ],
+        "audio_policy": "full published waveform, no cropping/denoising/VAD; mono PCM16/16kHz WAV quantized from source float array",
+        "reference_policy": "published text and speaker segments copied independently of model output; canonical RTTM without VAD boundary editing",
+        "uniqueness": "SHA256 of source float32 little-endian mono samples, before PCM conversion; first eligible row for each unique waveform wins",
+        "amendment": {
+          "fixed_before_any_inference": true,
+          "reason": "Initial first five metadata-matching rows contained exact duplicate waveforms (294/297 and 346/348). Five records means five unique source recordings. Original files and selection audit retained under initial-* and original row names.",
+          "original_row_ids": [
+            31,
+            294,
+            297,
+            346,
+            348
+          ],
+          "authorization": "Parent explicitly authorized amendment before first inference; no inference results used."
+        }
+      },
+      "source_ranges": [
+        {
+          "shard": "train-00000-of-00030.parquet",
+          "parquet_size": 76790500,
+          "upstream_lfs_sha256": "9b6bba30e9d02d875bf645f6cae997f7de6ebac32b326396066a676cc887abee",
+          "retrieved_ranges": [
+            {
+              "start": 76724964,
+              "end": 76790499,
+              "bytes": 65536,
+              "sha256": "a3c1480ea6c17c497840a940729b0dbf577b422c7651c7837e33586b82318e00"
+            },
+            {
+              "start": 76764096,
+              "end": 76784306,
+              "bytes": 20211,
+              "sha256": "f90c1a7ab43dc7f68b097f8fe9822b7f78b7d5397202c8a4edfbd17254e9d2f8"
+            },
+            {
+              "start": 4,
+              "end": 76763980,
+              "bytes": 76763977,
+              "sha256": "3b8cd0bb353744a5f69ae519be508a37ade6228d29152ede545874891aae485c"
+            },
+            {
+              "start": 76763981,
+              "end": 76764095,
+              "bytes": 115,
+              "sha256": "e87d293c8b407ac074a8db94250862754cdf030f8564373abc1b9da4e3c27bd2"
+            }
+          ]
+        },
+        {
+          "shard": "train-00001-of-00030.parquet",
+          "parquet_size": 77858237,
+          "upstream_lfs_sha256": "4f8de28978533b225743649c82880ef112c69a0c75242d5a58a9e83a58f4b12a",
+          "retrieved_ranges": [
+            {
+              "start": 77792701,
+              "end": 77858236,
+              "bytes": 65536,
+              "sha256": "34e1d3cece0d0804269f19eaaa434889d4e74732a048681d3079f0161ec2e88b"
+            },
+            {
+              "start": 77832523,
+              "end": 77852094,
+              "bytes": 19572,
+              "sha256": "4653eb450a3874fa10094cf5a3f7387630eba2d076e9b2e44003316313bc2171"
+            }
+          ]
+        },
+        {
+          "shard": "train-00002-of-00030.parquet",
+          "parquet_size": 77915718,
+          "upstream_lfs_sha256": "84a2f0587d97a07d9ea907cefbd2f6831a3dd2e4cceb00430074f6189901a477",
+          "retrieved_ranges": [
+            {
+              "start": 77850182,
+              "end": 77915717,
+              "bytes": 65536,
+              "sha256": "b8459a8c87b4354d0ac978c7ca678fc507d00d47f8adc9e18f91bb768ff84385"
+            },
+            {
+              "start": 77889619,
+              "end": 77909577,
+              "bytes": 19959,
+              "sha256": "5315f04254c59ed551d71677bdb20de813e60aaf52b44d51ca5244f86efdd491"
+            }
+          ]
+        },
+        {
+          "shard": "train-00003-of-00030.parquet",
+          "parquet_size": 77324803,
+          "upstream_lfs_sha256": "1dce969cd19f581cd65eb21f2d4c339cb2de24f1bab2049071fd73d20c765c42",
+          "retrieved_ranges": [
+            {
+              "start": 77259267,
+              "end": 77324802,
+              "bytes": 65536,
+              "sha256": "f22da22ac42d536d09830222740f27f3204739b4ec3af4f4eec41465fee981ba"
+            },
+            {
+              "start": 77297154,
+              "end": 77318630,
+              "bytes": 21477,
+              "sha256": "36887dfb02defd13fd5f3589dfb94235453b58bf0b3d6f4a48c55cfb9d191203"
+            }
+          ]
+        },
+        {
+          "shard": "train-00004-of-00030.parquet",
+          "parquet_size": 81727975,
+          "upstream_lfs_sha256": "e620a50c497ed598c1aaba408b99e2461a7c3ac0a9dae8c49360c320d1eafaae",
+          "retrieved_ranges": [
+            {
+              "start": 81662439,
+              "end": 81727974,
+              "bytes": 65536,
+              "sha256": "d3d9625fb6ebb4aabbfc220ba98f4fb3e485dab49c644e828985c1d3b14b0496"
+            },
+            {
+              "start": 81697948,
+              "end": 81721791,
+              "bytes": 23844,
+              "sha256": "8db9332b5814c228ef0e205958aff1c36960d957a72771fc902163936058f59a"
+            },
+            {
+              "start": 4,
+              "end": 81697832,
+              "bytes": 81697829,
+              "sha256": "210e9094b39f2e5fa85479297496d14b1f351e39d486646155f2077385f2ee3c"
+            },
+            {
+              "start": 81697833,
+              "end": 81697947,
+              "bytes": 115,
+              "sha256": "1687d679d9faaae77bf6f184feca24d8940d146c47a1fb4c91506517644b7eb7"
+            }
+          ]
+        },
+        {
+          "shard": "train-00005-of-00030.parquet",
+          "parquet_size": 76527016,
+          "upstream_lfs_sha256": "6fa6c6152aedac1cec8bd2ffc0e225e44eb511afb9c23d74714c9cfe35e0b21f",
+          "retrieved_ranges": [
+            {
+              "start": 76461480,
+              "end": 76527015,
+              "bytes": 65536,
+              "sha256": "17b8e916b52737ecdf8e964249bf2fa0483d60de43742299a4395064c78bb321"
+            },
+            {
+              "start": 76498187,
+              "end": 76520793,
+              "bytes": 22607,
+              "sha256": "dd11be525f7d99e73005757de088ed32a744faf61b0b01b256ef6d31b65757cb"
+            },
+            {
+              "start": 4,
+              "end": 76498071,
+              "bytes": 76498068,
+              "sha256": "bdf178af22a1f9cd2a0d01bb964970f1f6a306305eb221967cb324a8d0039fc4"
+            },
+            {
+              "start": 76498072,
+              "end": 76498186,
+              "bytes": 115,
+              "sha256": "e8f724cc871d6303c14065955c901e573ae58eda19002b7b6468a586500518ad"
+            }
+          ]
+        },
+        {
+          "shard": "train-00006-of-00030.parquet",
+          "parquet_size": 80609753,
+          "upstream_lfs_sha256": "dcbc49ca0f16b8f4cb2612ab41117d9fa82b5ad339f5d64d318c7c2c09bdeaeb",
+          "retrieved_ranges": [
+            {
+              "start": 80544217,
+              "end": 80609752,
+              "bytes": 65536,
+              "sha256": "ab359c881fc61840d03da728d8ee84fcbae3a175f01b0d35d0e715fc383f9d1f"
+            },
+            {
+              "start": 80581277,
+              "end": 80603547,
+              "bytes": 22271,
+              "sha256": "c9ef2c4281e2de0b36c6347b012e86da75e1a4b0798a19e86ad8493762f3b83f"
+            }
+          ]
+        },
+        {
+          "shard": "train-00007-of-00030.parquet",
+          "parquet_size": 81696421,
+          "upstream_lfs_sha256": "0742231987db72294a03b74141d876b44e66dd330780661789fa93adb909db45",
+          "retrieved_ranges": [
+            {
+              "start": 81630885,
+              "end": 81696420,
+              "bytes": 65536,
+              "sha256": "53024fe1b91ff32c0ee7af06292bd2d7277b5291bc0874020b2fd287b292b17b"
+            },
+            {
+              "start": 81668122,
+              "end": 81690123,
+              "bytes": 22002,
+              "sha256": "290e9003b90bcafffdd480cf86b7539bc0c6b989faba23769bed86db30c38747"
+            }
+          ]
+        },
+        {
+          "shard": "train-00008-of-00030.parquet",
+          "parquet_size": 77701938,
+          "upstream_lfs_sha256": "43f2e1374e59cc08b8b774df46647cb8e3704f30a9970ad4d9ffa82a1ffb6036",
+          "retrieved_ranges": [
+            {
+              "start": 77636402,
+              "end": 77701937,
+              "bytes": 65536,
+              "sha256": "f7ef0f0fc7f80c4e4a7e7130b4e5cb0e9c1a6df91d1cec078ec14fb0cf2b138e"
+            },
+            {
+              "start": 77675089,
+              "end": 77695778,
+              "bytes": 20690,
+              "sha256": "68f5bb1f86390d15ee1ff560b7b03c7a3cd497d46abfc160b9614098cf1fabd7"
+            }
+          ]
+        },
+        {
+          "shard": "train-00009-of-00030.parquet",
+          "parquet_size": 84838146,
+          "upstream_lfs_sha256": "a8f3f08443038a0cf136ebe638c5c183ce452146c828b9db28fd568d892485fa",
+          "retrieved_ranges": [
+            {
+              "start": 84772610,
+              "end": 84838145,
+              "bytes": 65536,
+              "sha256": "89d6148b519a59395febfa993a922e0e7e3904e74b496e3aa877f149c5c0ba24"
+            },
+            {
+              "start": 84811452,
+              "end": 84831983,
+              "bytes": 20532,
+              "sha256": "fc3ba4c4db198d65fa7866777c434a4929183c2b347f7b8dfd41d21767114db2"
+            }
+          ]
+        },
+        {
+          "shard": "train-00010-of-00030.parquet",
+          "parquet_size": 73746741,
+          "upstream_lfs_sha256": "29b5ba5878eb6c0ae6b1405455062a0cd8ff1b05585802a14fcd2e8071690f6e",
+          "retrieved_ranges": [
+            {
+              "start": 73681205,
+              "end": 73746740,
+              "bytes": 65536,
+              "sha256": "54a872a5df7743dc0c78d51b314b41c657823b0a52b5563f4fd31681e464bdf0"
+            },
+            {
+              "start": 73717934,
+              "end": 73740560,
+              "bytes": 22627,
+              "sha256": "4f46be456e7f0affe0b2d75e0941cc0989a950e302fab5a87bfc0f8001467808"
+            }
+          ]
+        },
+        {
+          "shard": "train-00011-of-00030.parquet",
+          "parquet_size": 79522674,
+          "upstream_lfs_sha256": "1df22943bd98ecdc981b5f51c7feb7953dc93e1d2ff1bc596a9d68fe16ba3c34",
+          "retrieved_ranges": [
+            {
+              "start": 79457138,
+              "end": 79522673,
+              "bytes": 65536,
+              "sha256": "78581f35e5a0e74bd8ebbbe0a6120ed630ca2163f8c83b0742ffd6348db27963"
+            },
+            {
+              "start": 79495237,
+              "end": 79516435,
+              "bytes": 21199,
+              "sha256": "1b8a2d48851c0c7e865e1066199bcbca8945c9c3f8f2138d28e1e41dccc5913b"
+            }
+          ]
+        },
+        {
+          "shard": "train-00012-of-00030.parquet",
+          "parquet_size": 74269117,
+          "upstream_lfs_sha256": "f8b8cd537a5f5e67a49ecaa046feba90622a80430e451d9d6e64624198a66a55",
+          "retrieved_ranges": [
+            {
+              "start": 74203581,
+              "end": 74269116,
+              "bytes": 65536,
+              "sha256": "4ee4a708aa6a6a5cb78edc374f3221ce8a2c54c5fa07f61fb56c5127fc48f8e3"
+            },
+            {
+              "start": 74240558,
+              "end": 74262888,
+              "bytes": 22331,
+              "sha256": "997bb5ecd0cc5ed8df9941b8643516f4c74a4965e5e53ea0651d24146f64acd1"
+            }
+          ]
+        },
+        {
+          "shard": "train-00013-of-00030.parquet",
+          "parquet_size": 76982462,
+          "upstream_lfs_sha256": "ebcdcfad44dab9403262a74989d000aa86a16f610ee86f6d0750471cb3909b81",
+          "retrieved_ranges": [
+            {
+              "start": 76916926,
+              "end": 76982461,
+              "bytes": 65536,
+              "sha256": "a7625ccbdbbf6e2d3b75f4b8a4a3b94b1d11fb2b7a7d6569ac5159d685003eb9"
+            },
+            {
+              "start": 76955531,
+              "end": 76976258,
+              "bytes": 20728,
+              "sha256": "ff582fe63aeb1a967d0e06c106fa6a212ce861aceb014662a6fb132e91d6653d"
+            }
+          ]
+        },
+        {
+          "shard": "train-00014-of-00030.parquet",
+          "parquet_size": 80328430,
+          "upstream_lfs_sha256": "c1e9d2c55ef47d441750920021a8cfcd204fbefc2176092c0d4fa402865a4fa9",
+          "retrieved_ranges": [
+            {
+              "start": 80262894,
+              "end": 80328429,
+              "bytes": 65536,
+              "sha256": "7c0fe4d4a9f7ab6144baf60118b51e7ad695a82cf151b55f5e97e456e2a12db7"
+            },
+            {
+              "start": 80301096,
+              "end": 80322267,
+              "bytes": 21172,
+              "sha256": "db84e4c30252622c80416fb1c263d6b9b9b12952c656114feab06594c80ca442"
+            }
+          ]
+        },
+        {
+          "shard": "train-00015-of-00030.parquet",
+          "parquet_size": 80875119,
+          "upstream_lfs_sha256": "efc8d3f21b73c4a975117cb66b4e967bcc65b232d5a33bdd377996a092de8b6a",
+          "retrieved_ranges": [
+            {
+              "start": 80809583,
+              "end": 80875118,
+              "bytes": 65536,
+              "sha256": "e985a2c4679c93961a71dab6e405d6d220d061e427cf4d442e10a8060c4d5302"
+            },
+            {
+              "start": 80850734,
+              "end": 80868984,
+              "bytes": 18251,
+              "sha256": "bfbdfd95ced0e0d298f1173d97b00add6b5f0e528cfd76435c325392ec12825e"
+            },
+            {
+              "start": 4,
+              "end": 80850618,
+              "bytes": 80850615,
+              "sha256": "2c77577868e7b6ef935b55b57065e6940193ab3ca7c4b0244b1bee3cc4724f01"
+            },
+            {
+              "start": 80850619,
+              "end": 80850733,
+              "bytes": 115,
+              "sha256": "1687d679d9faaae77bf6f184feca24d8940d146c47a1fb4c91506517644b7eb7"
+            }
+          ]
+        }
+      ],
+      "reference_semantics": "Published utterance/clip spans, not asserted to be human VAD speech-only boundaries. Includes any leading/trailing/internal pauses in each source segment. Diagnostic silence estimates do not edit references.",
+      "conversion": "Entire source float32 waveform; mono PCM16 16kHz; round(clip(x,-1,1)*32767); no cropping, denoising, silence removal, or transcript correction.",
+      "samples": [
+        {
+          "row_idx": 31,
+          "shard": "train-00000-of-00030.parquet",
+          "row_group": 0,
+          "row_in_group": 31,
+          "row_in_shard": 31,
+          "recording_id": "ivkond_train_000031",
+          "duration_seconds": 35.411125,
+          "published_duration_seconds": 35.41,
+          "samples": 566578,
+          "sample_rate": 16000,
+          "channels": 1,
+          "num_speakers": 2,
+          "segments": 7,
+          "source_float32_sha256": "bc90211819356924c1493f4d601907ffb31032af02c253168754f866f001d2e1",
+          "source_peak": 0.0943603515625,
+          "clipped_samples": 0,
+          "files": {
+            ".wav": "ivkond/ivkond_train_000031.wav",
+            ".rttm": "ivkond/ivkond_train_000031.rttm",
+            ".reference.json": "ivkond/ivkond_train_000031.reference.json"
+          },
+          "file_sha256": {
+            ".wav": "fc88df49a61f3f2df7939a3bd6916f68c048ccf1e6b2f4bb36478586aafad143",
+            ".rttm": "196097c86172f624c6184e4d3c8ca19d05b41e3c9f30cf979a6ca7a2d9ae078c",
+            ".reference.json": "8b0f34b16dba978a13286011c363f8d9272349b5fdbf74e8fd4567f7ca6d189d"
+          }
+        },
+        {
+          "row_idx": 294,
+          "shard": "train-00004-of-00030.parquet",
+          "row_group": 0,
+          "row_in_group": 17,
+          "row_in_shard": 17,
+          "recording_id": "ivkond_train_000294",
+          "duration_seconds": 44.8214375,
+          "published_duration_seconds": 44.82,
+          "samples": 717143,
+          "sample_rate": 16000,
+          "channels": 1,
+          "num_speakers": 2,
+          "segments": 9,
+          "source_float32_sha256": "5dcd591b30453a18c11d0cf54cc9cbcf86d826af9f606f486a677674ac4df29c",
+          "source_peak": 0.13275146484375,
+          "clipped_samples": 0,
+          "files": {
+            ".wav": "ivkond/ivkond_train_000294.wav",
+            ".rttm": "ivkond/ivkond_train_000294.rttm",
+            ".reference.json": "ivkond/ivkond_train_000294.reference.json"
+          },
+          "file_sha256": {
+            ".wav": "2694d21c9f2b92406b2350a235e9ff5174658cf52b96a1c4340f60b2dc3ce82e",
+            ".rttm": "4aa0652159454d22a843d85bfc0c0730f30e24d02b0b16eb594e57b1caf4e1d9",
+            ".reference.json": "b45dee86dccaf71269f757d6539625f4647a49311d789947861cc93ae7bbac79"
+          }
+        },
+        {
+          "row_idx": 346,
+          "shard": "train-00005-of-00030.parquet",
+          "row_group": 0,
+          "row_in_group": 2,
+          "row_in_shard": 2,
+          "recording_id": "ivkond_train_000346",
+          "duration_seconds": 45.559875,
+          "published_duration_seconds": 45.56,
+          "samples": 728958,
+          "sample_rate": 16000,
+          "channels": 1,
+          "num_speakers": 2,
+          "segments": 9,
+          "source_float32_sha256": "645c87c815b0eadbd8761fa2887dc1696f0e8dcaba95487f78a3230c8b35a4ee",
+          "source_peak": 0.796112060546875,
+          "clipped_samples": 0,
+          "files": {
+            ".wav": "ivkond/ivkond_train_000346.wav",
+            ".rttm": "ivkond/ivkond_train_000346.rttm",
+            ".reference.json": "ivkond/ivkond_train_000346.reference.json"
+          },
+          "file_sha256": {
+            ".wav": "43c9d44d33606abcc791806885b2c085cbe4ff154ec99fa3c802d84239a0c62e",
+            ".rttm": "2f37b93cb6cfc8ae78356f93aa710f30bbbaad57c15dd6964a47e997e7b5d8b8",
+            ".reference.json": "cd729868a0de67e2c8749a797a7a81c2674147d0cd5b30ae88b981fc394d2a87"
+          }
+        },
+        {
+          "row_idx": 391,
+          "shard": "train-00005-of-00030.parquet",
+          "row_group": 0,
+          "row_in_group": 47,
+          "row_in_shard": 47,
+          "recording_id": "ivkond_train_000391",
+          "duration_seconds": 43.801625,
+          "published_duration_seconds": 43.8,
+          "samples": 700826,
+          "sample_rate": 16000,
+          "channels": 1,
+          "num_speakers": 2,
+          "segments": 4,
+          "source_float32_sha256": "79d37bb1e2238544a08a3c6ac48c1b0df011348c7cc6048d6a7ed5e1b0238609",
+          "source_peak": 0.756103515625,
+          "clipped_samples": 0,
+          "files": {
+            ".wav": "ivkond/ivkond_train_000391.wav",
+            ".rttm": "ivkond/ivkond_train_000391.rttm",
+            ".reference.json": "ivkond/ivkond_train_000391.reference.json"
+          },
+          "file_sha256": {
+            ".wav": "d45b16aa85a15024baff8bb5c2787012d07df597c700416a644d6a02825c4ead",
+            ".rttm": "77c19d35e01c3fbfb084e64d0f0ed9afb3aec380202bc4231ce6de729021884d",
+            ".reference.json": "d0202df66b2e078e585bb017562d50b80d4584de6e3222d7394db0ed54753d6f"
+          }
+        },
+        {
+          "row_idx": 1064,
+          "shard": "train-00015-of-00030.parquet",
+          "row_group": 0,
+          "row_in_group": 26,
+          "row_in_shard": 26,
+          "recording_id": "ivkond_train_001064",
+          "duration_seconds": 54.1319375,
+          "published_duration_seconds": 54.13,
+          "samples": 866111,
+          "sample_rate": 16000,
+          "channels": 1,
+          "num_speakers": 2,
+          "segments": 8,
+          "source_float32_sha256": "d215a5d8db4cdfc45eb8928009ee6fd958d782379ebe8be6f5c4f418253423fa",
+          "source_peak": 0.999969482421875,
+          "clipped_samples": 0,
+          "files": {
+            ".wav": "ivkond/ivkond_train_001064.wav",
+            ".rttm": "ivkond/ivkond_train_001064.rttm",
+            ".reference.json": "ivkond/ivkond_train_001064.reference.json"
+          },
+          "file_sha256": {
+            ".wav": "269c316cf476ccf8c2212ca46ce76aaf6617022db5a3fa642b0b6c9509d3b2bc",
+            ".rttm": "3f507e50776939c0489323b2ed7a8ed0186548e56509492bde9a9f76662094c4",
+            ".reference.json": "3b2fa88003327b92234b22d008b590a16fc6b63dbba2c0f326999703805c613d"
+          }
+        }
+      ]
+    },
+    {
+      "dataset": "mexus/ru-book-mix-10h",
+      "revision": "18655c48833c5acfcd868a36eb38465712d15f1c",
+      "source_shard_url": "https://huggingface.co/datasets/mexus/ru-book-mix-10h/resolve/18655c48833c5acfcd868a36eb38465712d15f1c/data/shard-0000.tar",
+      "selection_rule": "First five file_id in ascending order with n_speakers == 2; fixed before audio download or inference",
+      "source_manifest_sha256": "2f1e26fe123afe43e76b96cd49fd62e75bdb94c2f056c1fc7fa43c981de46a6c",
+      "source_readme_sha256": "72c1360b6dc09eb76a4eeb2aca1062cf5bf2cd834e96aa73dafd7f90784c0350",
+      "license": "CC-BY-4.0 as declared by publisher; upstream audiobook attributions in README",
+      "synthetic": true,
+      "ground_truth": "Published generator-scheduled turns; internal pauses may be inside RTTM turns; not manual frame-level speech activity. Overlap retained.",
+      "audio_transformation": "Lossless FLAC decode to mono PCM16/16k WAV; no cropping, denoising, speed changes or silence trimming.",
+      "samples": [
+        {
+          "id": "rec_0055",
+          "duration_seconds": 60,
+          "metadata_keys": [
+            "file_id",
+            "duration",
+            "n_speakers",
+            "speakers",
+            "overlap_stats",
+            "snr_db"
+          ],
+          "wer_reference_available": false,
+          "wer_unavailable_reason": "Published triplet metadata and manifest provide speaker/timing information only; no independent lexical transcript or per-turn source-segment/text bindings. No ASR output used as reference.",
+          "segments": [
+            {
+              "speaker_id": "spk0",
+              "start_ms": 387,
+              "end_ms": 5155
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 5545,
+              "end_ms": 10841
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 11010,
+              "end_ms": 16162
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 16697,
+              "end_ms": 20281
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 20466,
+              "end_ms": 25234
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 25478,
+              "end_ms": 30263
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 28549,
+              "end_ms": 36556
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 31253,
+              "end_ms": 37249
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 37562,
+              "end_ms": 43546
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 43896,
+              "end_ms": 47608
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 47734,
+              "end_ms": 50550
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 50983,
+              "end_ms": 56423
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 56706,
+              "end_ms": 60000
+            }
+          ],
+          "hashes": {
+            ".wav": "c223336b7b3da6387cd1052af3bf9579be6d2bc6bd5a19ef2ca8421601d1428f",
+            ".flac": "a912f97f0a2ebaf2c90e52c30c1947b6fe9e4167f717ab6cbda841cfc277487b",
+            ".rttm": "936ff4497ed71ec5c66a93ec6fbbc233f7b99a016d2aab376b4a2afe0e9f2d00",
+            ".json": "963a4e8c89e19d661d13cbf3074ca49d07ef2eeae88ecb7cb10b77faaa8cf5ce"
+          },
+          "files": {
+            ".wav": "bookmix/rec_0055.wav",
+            ".rttm": "bookmix/rec_0055.rttm",
+            ".reference.json": "bookmix/rec_0055.reference.json"
+          },
+          "file_sha256": {
+            ".wav": "c223336b7b3da6387cd1052af3bf9579be6d2bc6bd5a19ef2ca8421601d1428f",
+            ".rttm": "936ff4497ed71ec5c66a93ec6fbbc233f7b99a016d2aab376b4a2afe0e9f2d00",
+            ".reference.json": "995abb4fa374ff3b5614c4df9d7580da20dec76400f9cb0320e4a21779a8c701"
+          }
+        },
+        {
+          "id": "rec_0056",
+          "duration_seconds": 60,
+          "metadata_keys": [
+            "file_id",
+            "duration",
+            "n_speakers",
+            "speakers",
+            "overlap_stats",
+            "snr_db"
+          ],
+          "wer_reference_available": false,
+          "wer_unavailable_reason": "Published triplet metadata and manifest provide speaker/timing information only; no independent lexical transcript or per-turn source-segment/text bindings. No ASR output used as reference.",
+          "segments": [
+            {
+              "speaker_id": "spk0",
+              "start_ms": 167,
+              "end_ms": 3316
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 3763,
+              "end_ms": 11890
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 12065,
+              "end_ms": 14753
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 13177,
+              "end_ms": 16153
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 16289,
+              "end_ms": 22721
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 22827,
+              "end_ms": 26795
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 27024,
+              "end_ms": 31359
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 31757,
+              "end_ms": 34989
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 35535,
+              "end_ms": 38447
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 38696,
+              "end_ms": 43720
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 44161,
+              "end_ms": 48801
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 49144,
+              "end_ms": 53208
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 53572,
+              "end_ms": 58116
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 58315,
+              "end_ms": 60000
+            }
+          ],
+          "hashes": {
+            ".wav": "4bf732be031216cec2f581809d6dbb5700e1da767836638f26692835bffcc3d7",
+            ".flac": "12a95f6b6b384c2231491c6a86d37a2cf6ad43082485c4b830128e4dd58cafa8",
+            ".rttm": "772969f597b1d65f4d705b55d50b6d1771be15c20a5f6b00e3ad2b9a1c35e3bf",
+            ".json": "8bdcb5fc7174d8a732ec1f49124b86b9a2b019ee2ddd72634fccd2542629ce74"
+          },
+          "files": {
+            ".wav": "bookmix/rec_0056.wav",
+            ".rttm": "bookmix/rec_0056.rttm",
+            ".reference.json": "bookmix/rec_0056.reference.json"
+          },
+          "file_sha256": {
+            ".wav": "4bf732be031216cec2f581809d6dbb5700e1da767836638f26692835bffcc3d7",
+            ".rttm": "772969f597b1d65f4d705b55d50b6d1771be15c20a5f6b00e3ad2b9a1c35e3bf",
+            ".reference.json": "b599c54a46ed196aea9aa864ff3f4e3ad08098ae351b94860d4992fd8241477b"
+          }
+        },
+        {
+          "id": "rec_0057",
+          "duration_seconds": 60,
+          "metadata_keys": [
+            "file_id",
+            "duration",
+            "n_speakers",
+            "speakers",
+            "overlap_stats",
+            "snr_db"
+          ],
+          "wer_reference_available": false,
+          "wer_unavailable_reason": "Published triplet metadata and manifest provide speaker/timing information only; no independent lexical transcript or per-turn source-segment/text bindings. No ASR output used as reference.",
+          "segments": [
+            {
+              "speaker_id": "spk0",
+              "start_ms": 416,
+              "end_ms": 4608
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 5086,
+              "end_ms": 7998
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 8392,
+              "end_ms": 11304
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 11697,
+              "end_ms": 18545
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 19023,
+              "end_ms": 25583
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 25953,
+              "end_ms": 30945
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 31070,
+              "end_ms": 35614
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 36042,
+              "end_ms": 42986
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 43481,
+              "end_ms": 46521
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 46672,
+              "end_ms": 49705
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 50241,
+              "end_ms": 56033
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 53619,
+              "end_ms": 56755
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 57151,
+              "end_ms": 60000
+            }
+          ],
+          "hashes": {
+            ".wav": "6f8bccba05529e57bdc5760eb4cb4f7516a644aed2a3cb6ecc6cd75bebca85bf",
+            ".flac": "80e86d359c49f3dd680a92a2b4e0138db49fe651b118e50e98608db21b9659b2",
+            ".rttm": "22e884fe242be83fc81b64cf2c49879717b3bd8cad5be5d32fa42556544c5a6b",
+            ".json": "eee074c9d340d89146fa1eb879b03e8fa3e8c3a880717fc4d0a1e5164abb8511"
+          },
+          "files": {
+            ".wav": "bookmix/rec_0057.wav",
+            ".rttm": "bookmix/rec_0057.rttm",
+            ".reference.json": "bookmix/rec_0057.reference.json"
+          },
+          "file_sha256": {
+            ".wav": "6f8bccba05529e57bdc5760eb4cb4f7516a644aed2a3cb6ecc6cd75bebca85bf",
+            ".rttm": "22e884fe242be83fc81b64cf2c49879717b3bd8cad5be5d32fa42556544c5a6b",
+            ".reference.json": "e48289f6f3f631949101aef7537f0b6fd56e8b4db1162a4b9b368639e29113cd"
+          }
+        },
+        {
+          "id": "rec_0058",
+          "duration_seconds": 60,
+          "metadata_keys": [
+            "file_id",
+            "duration",
+            "n_speakers",
+            "speakers",
+            "overlap_stats",
+            "snr_db"
+          ],
+          "wer_reference_available": false,
+          "wer_unavailable_reason": "Published triplet metadata and manifest provide speaker/timing information only; no independent lexical transcript or per-turn source-segment/text bindings. No ASR output used as reference.",
+          "segments": [
+            {
+              "speaker_id": "spk0",
+              "start_ms": 197,
+              "end_ms": 8863
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 9149,
+              "end_ms": 14493
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 14711,
+              "end_ms": 19671
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 19962,
+              "end_ms": 26426
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 26582,
+              "end_ms": 29654
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 29779,
+              "end_ms": 35475
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 35836,
+              "end_ms": 40728
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 41078,
+              "end_ms": 46518
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 47093,
+              "end_ms": 50165
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 50735,
+              "end_ms": 53743
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 54165,
+              "end_ms": 60000
+            }
+          ],
+          "hashes": {
+            ".wav": "9c67479e2f4d03d4dd3d6093f3069e0f1e101196733e7a3f9b49dee55c8937a9",
+            ".flac": "98db8575c88fc265ed4029309a5121926a83d70bc12b533ffb678da228b7ac78",
+            ".rttm": "15cb97e7d19155a5d34fbe9304519bac21894b9051288e560eacf63e7e86c588",
+            ".json": "7e0acafe4dcbadf3222a64bd751ba2673015c68c562e20ff2780665b57f0e4e6"
+          },
+          "files": {
+            ".wav": "bookmix/rec_0058.wav",
+            ".rttm": "bookmix/rec_0058.rttm",
+            ".reference.json": "bookmix/rec_0058.reference.json"
+          },
+          "file_sha256": {
+            ".wav": "9c67479e2f4d03d4dd3d6093f3069e0f1e101196733e7a3f9b49dee55c8937a9",
+            ".rttm": "15cb97e7d19155a5d34fbe9304519bac21894b9051288e560eacf63e7e86c588",
+            ".reference.json": "53dbe24e25ac84cc39b355014b22307080c8cb2df341feff0cb13bd7de70bd74"
+          }
+        },
+        {
+          "id": "rec_0059",
+          "duration_seconds": 60,
+          "metadata_keys": [
+            "file_id",
+            "duration",
+            "n_speakers",
+            "speakers",
+            "overlap_stats",
+            "snr_db"
+          ],
+          "wer_reference_available": false,
+          "wer_unavailable_reason": "Published triplet metadata and manifest provide speaker/timing information only; no independent lexical transcript or per-turn source-segment/text bindings. No ASR output used as reference.",
+          "segments": [
+            {
+              "speaker_id": "spk0",
+              "start_ms": 208,
+              "end_ms": 8528
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 8909,
+              "end_ms": 15405
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 15961,
+              "end_ms": 20281
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 20833,
+              "end_ms": 25473
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 25892,
+              "end_ms": 29092
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 28023,
+              "end_ms": 32048
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 32154,
+              "end_ms": 35354
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 35673,
+              "end_ms": 43385
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 43672,
+              "end_ms": 48664
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 48924,
+              "end_ms": 52092
+            },
+            {
+              "speaker_id": "spk0",
+              "start_ms": 52514,
+              "end_ms": 56514
+            },
+            {
+              "speaker_id": "spk1",
+              "start_ms": 56960,
+              "end_ms": 60000
+            }
+          ],
+          "hashes": {
+            ".wav": "e056d979d474ed648a64cac021ca984feaed8e726c0161ad864808c82a700277",
+            ".flac": "076aa6463dbeb74ed08cb1a85f192d808c52c66367937a195971ad8b7ea5e243",
+            ".rttm": "61354d144f7b2d3bb1280fd9e8d9f8b525230577a81ed3a8d56827a71001ff38",
+            ".json": "30931c0737a7e45f944dc81266b47b8af5dae306bc72f8ecbe27f56ddc380c15"
+          },
+          "files": {
+            ".wav": "bookmix/rec_0059.wav",
+            ".rttm": "bookmix/rec_0059.rttm",
+            ".reference.json": "bookmix/rec_0059.reference.json"
+          },
+          "file_sha256": {
+            ".wav": "e056d979d474ed648a64cac021ca984feaed8e726c0161ad864808c82a700277",
+            ".rttm": "61354d144f7b2d3bb1280fd9e8d9f8b525230577a81ed3a8d56827a71001ff38",
+            ".reference.json": "f04ca744b7a4ead5285f0024b6e678bbaa67cae22a8db9c8dc546664dd3bab80"
+          }
+        }
+      ]
+    }
+  ]
+}
