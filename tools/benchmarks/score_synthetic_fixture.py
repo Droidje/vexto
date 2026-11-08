@@ -5,7 +5,8 @@ No inference, downloads, device access or transcript text in the output. DER use
 score_diarization's exact global mapping, zero collar, overlap scored and explicit
 [0, duration) UEM. WER uses tools/eval/score.py normalization and edit distance;
 turns are concatenated by start_ms, without speaker attribution. Enable WER only
-when reference-json contains an independent published transcript. Missing runtime
+when reference-json contains an independent published transcript. --wer-only marks
+DER as not applicable when fixture boundaries are unsuitable for speech-only DER. Missing runtime
 measurements remain null. Source basenames and SHA256s identify inputs portably.
 
 Example:
@@ -193,7 +194,15 @@ def evaluate(args):
                           errors=errors, reference_words=words,
                           protocol='start-time order; lowercase; ё->е; punctuation/underscore removed; no speaker attribution')
     processing_ms = optional_number(completion, 'processingMs')
-    exported = dict(score(reference, segments(hyp), duration), hypothesis_segments=len(hyp))
+    wer_only = getattr(args, 'wer_only', False)
+    if wer_only and not args.wer_reference_available:
+        raise ValueError('--wer-only requires --wer-reference-available')
+    not_applicable = {
+        'status': 'not_applicable_wer_only', 'der': None, 'der_percent': None,
+        'reason': 'WER-only evaluation: reference boundaries are not validated for speech-only DER.'}
+    exported = (dict(not_applicable) if wer_only else
+                dict(score(reference, segments(hyp), duration), hypothesis_segments=len(hyp)))
+    raw = dict(not_applicable) if wer_only else raw_diarization(completion, reference, duration)
     return {
         'schema_version': 1,
         'duration_seconds': duration,
@@ -201,7 +210,7 @@ def evaluate(args):
                    for key, path in paths.items()},
         'reference': rttm_info,
         'exportedDER': exported,
-        'rawNemotronDER': raw_diarization(completion, reference, duration),
+        'rawNemotronDER': raw,
         'wer': wer_result,
         'runtime': {
             'processing_ms': processing_ms,
@@ -226,6 +235,8 @@ def main(argv=None):
     parser.add_argument('--duration-seconds', required=True, type=float)
     parser.add_argument('--wer-reference-available', action='store_true',
                         help='Score WER only with an independent published transcript in reference-json')
+    parser.add_argument('--wer-only', action='store_true',
+                        help='Mark both DER values N/A for a WER-only fixture with unsuitable boundaries')
     args = parser.parse_args(argv)
     try:
         result = evaluate(args)
