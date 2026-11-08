@@ -19,13 +19,10 @@ import java.util.List;
 /** Figma processing stage, driven by the same local job that saves the transcript. */
 final class ReflectProcessingView extends ViewGroup {
     private static final int GREEN = 0xff34c759, TRACK = 0xff2f2f2d, MUTED = 0xff999999;
-    private static final int ROW_TOP = 297, ROW_SPACING = 72;
+    private static final int ROW_TOP = 270, ROW_SPACING = 75;
     private static final float ORB_SCALE = 40f / 238f;
-    private static final Step[] STEPS = {
-            new Step("Предобработка аудио", Stage.Preparing, Stage.Denoising),
-            new Step("Распознавание речи", Stage.Recognition, Stage.Recognition),
-            new Step("Определение спикеров", Stage.Diarization, Stage.Voiceprints),
-            new Step("Умная постобработка", Stage.Assembly, Stage.Emotion)
+    private static final String[] STEPS = {
+            "Подготовка аудио", "Спикеры и язык", "Распознавание речи", "Сравнение и имена", "Текст и эмоции"
     };
 
     private final ReflectArtwork artwork;
@@ -68,7 +65,7 @@ final class ReflectProcessingView extends ViewGroup {
         addText("запись локально", 0, 203, 393, 22, artwork.display, Color.WHITE, Gravity.CENTER);
         for (int i = 0; i < STEPS.length; i++) {
             int top = ROW_TOP + ROW_SPACING * i;
-            TextView label = addText(STEPS[i].title(), 118, top + (i == 3 ? 18 : 17), 257,
+            TextView label = addText(STEPS[i], 118, top + 17, 257,
                     18, artwork.semibold, Color.WHITE, Gravity.START);
             label.getPaint().setFakeBoldText(true);
             subtitles[i] = addText("", 118, top + 36, 257, 13, artwork.medium, MUTED, Gravity.START);
@@ -83,19 +80,20 @@ final class ReflectProcessingView extends ViewGroup {
         stage = value == null ? Stage.Preparing : value.stage();
         int stagePercent = value == null ? 0 : value.percent();
         int speakers = value == null ? 0 : value.speakers();
-        animateProgress(totalProgress(stage, stagePercent), stage != previousStage);
-        update(subtitles[0], "нормализация громкости");
-        update(subtitles[1], switch (state(STEPS[1])) {
-            case WAITING -> "Ожидает распознавания";
-            case ACTIVE -> "Распознаю речь · " + stagePercent + "%";
-            case COMPLETE -> "Готово · " + duration + " из " + duration;
-        });
-        update(subtitles[2], switch (state(STEPS[2])) {
-            case WAITING -> "Разделение голосов";
-            case ACTIVE -> "Определяю голоса…";
-            case COMPLETE -> speakers == 0 ? "Готово" : "Найдено " + speakers + " " + voiceWord(speakers);
-        });
-        update(subtitles[3], stage == null ? "Сохраняю расшифровку" : "Структура текста и эмоции");
+        animateProgress(value == null ? 0 : value.overallPercent(), stage != previousStage);
+        for (int index = 0; index < STEPS.length; index++) {
+            String subtitle = switch (state(index)) {
+                case WAITING -> "Ожидает обработки";
+                case ACTIVE -> (value == null ? "Готовлю обработку" : value.title())
+                        + (stage == null ? "" : " · " + stagePercent + "%");
+                case COMPLETE -> switch (index) {
+                    case 1 -> speakers == 0 ? "Готово" : "Найдено " + speakers + " " + voiceWord(speakers);
+                    case 2 -> "Готово · " + duration + " из " + duration;
+                    default -> "Готово";
+                };
+            };
+            update(subtitles[index], subtitle);
+        }
         invalidate();
     }
 
@@ -158,7 +156,7 @@ final class ReflectProcessingView extends ViewGroup {
             scale = nextScale;
             backgroundAction.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16 * scale);
             ReflectPageStyle style = new ReflectPageStyle(getContext(), artwork, width);
-            setBackground(style.rounded(0xff040402, 47));
+            setBackgroundColor(0xff040402);
             backgroundAction.setBackground(style.pressable(ReflectPageStyle.ACCENT, 24));
             for (TextSlot slot : slots) slot.view().setTextSize(TypedValue.COMPLEX_UNIT_PX, slot.size() * scale);
         }
@@ -185,7 +183,7 @@ final class ReflectProcessingView extends ViewGroup {
         canvas.scale(scale, scale);
         for (int i = 0; i < STEPS.length; i++) {
             float y = ROW_TOP + ROW_SPACING * i;
-            StepState state = state(STEPS[i]);
+            StepState state = state(i);
             if (state == StepState.ACTIVE) {
                 // The source's visible disk starts at (24, 7) within the transparent 263 × 252 PNG.
                 canvas.save();
@@ -216,32 +214,10 @@ final class ReflectProcessingView extends ViewGroup {
         canvas.restore();
     }
 
-    private StepState state(Step step) {
-        if (stage == null) return step.last() == Stage.Emotion ? StepState.ACTIVE : StepState.COMPLETE;
-        if (stage.compareTo(step.first()) < 0) return StepState.WAITING;
-        return stage.compareTo(step.last()) > 0 ? StepState.COMPLETE : StepState.ACTIVE;
-    }
-
-    // Phase weights give a single monotonic bar from the real per-phase progress, not a time estimate.
-    private static int totalProgress(Stage stage, int percent) {
-        if (stage == null) return 100;
-        return switch (stage) {
-            case Preparing -> part(0, 5, percent);
-            case Decoding -> part(5, 10, percent);
-            case Denoising -> part(10, 13, percent);
-            case Diarization, Language -> part(13, 20, percent);
-            case Voiceprints -> part(20, 25, percent);
-            case Recognition -> part(25, 40, percent);
-            case Comparison -> part(40, 70, percent);
-            case Selection -> part(70, 93, percent);
-            case Assembly -> part(93, 94, percent);
-            case Punctuation -> part(94, 95, percent);
-            case Emotion -> part(95, 99, percent);
-        };
-    }
-
-    private static int part(int start, int end, int percent) {
-        return start + Math.round((end - start) * percent / 100f);
+    private StepState state(int step) {
+        int activeStep = ReflectPipelineProgress.step(stage);
+        if (step < activeStep) return StepState.COMPLETE;
+        return step == activeStep ? StepState.ACTIVE : StepState.WAITING;
     }
 
     private static String voiceWord(int speakers) {
@@ -254,6 +230,5 @@ final class ReflectProcessingView extends ViewGroup {
     }
 
     private enum StepState { WAITING, ACTIVE, COMPLETE }
-    private record Step(String title, Stage first, Stage last) {}
     private record TextSlot(TextView view, int left, int baseline, int width, int size) {}
 }

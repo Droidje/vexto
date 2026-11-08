@@ -4,6 +4,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PipelineReportTest {
+    @Test fun exactAgreementDoesNotPretendQwenWasInvoked() {
+        val equal = PipelineCoverage(2,2,2,2,0,0,2)
+        assertTrue(equal.selectionResolved)
+        assertFalse(equal.fullProfileCompleted(true,emptyList(),true))
+        assertTrue(equal.fullProfileCompleted(true,emptyList(),true,localLlmUsed=true))
+    }
     @Test fun allStagesIncludingConfirmedLlmAreRequiredForFullProfile() {
         val all = PipelineCoverage(4,4,4,4,4,0)
         assertTrue(all.complete)

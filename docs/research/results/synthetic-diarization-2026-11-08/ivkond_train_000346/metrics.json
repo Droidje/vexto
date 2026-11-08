@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "duration_seconds": 45.559875,
+  "inputs": {
+    "reference_rttm": {
+      "name": "ivkond_train_000346.rttm",
+      "sha256": "2f37b93cb6cfc8ae78356f93aa710f30bbbaad57c15dd6964a47e997e7b5d8b8"
+    },
+    "reference_json": {
+      "name": "ivkond_train_000346.reference.json",
+      "sha256": "cd729868a0de67e2c8749a797a7a81c2674147d0cd5b30ae88b981fc394d2a87"
+    },
+    "transcript": {
+      "name": "transcript.json",
+      "sha256": "a31c85796a2bf26ca1365056f5f1896a21851bc4322696e889a38414cd8d21e7"
+    },
+    "completion": {
+      "name": "completion.json",
+      "sha256": "70fbbf73fd045c4006f63d7d678128c062f6a2806c8db34182cea3b755ba64fd"
+    }
+  },
+  "reference": {
+    "format": "rttm",
+    "recording": "ivkond_train_000346",
+    "channel": "1"
+  },
+  "exportedDER": {
+    "status": "not_applicable_wer_only",
+    "der": null,
+    "der_percent": null,
+    "reason": "WER-only evaluation: reference boundaries are not validated for speech-only DER."
+  },
+  "rawNemotronDER": {
+    "status": "not_applicable_wer_only",
+    "der": null,
+    "der_percent": null,
+    "reason": "WER-only evaluation: reference boundaries are not validated for speech-only DER."
+  },
+  "wer": {
+    "status": "scored",
+    "value": 0.1,
+    "percent": 10.0,
+    "errors": 6,
+    "reference_words": 60,
+    "hypothesis_words": 58,
+    "protocol": "start-time order; lowercase; ё->е; punctuation/underscore removed; no speaker attribution"
+  },
+  "runtime": {
+    "processing_ms": 33005,
+    "rtf": 0.7244313115433262,
+    "reported_audio_ms": 45559,
+    "peak_rss_bytes": 1376534528,
+    "peak_pss_bytes": null,
+    "memory_note": "Reported Android job RSS/PSS if present; no host memory measurement or inferred zero.",
+    "stage_ms": {
+      "Diarization": 9842,
+      "Recognition": 4504,
+      "Preparing": 3816,
+      "Selection": 1397,
+      "Decoding": 88,
+      "Assembly": 14,
+      "Language": 3542,
+      "Emotion": 8795,
+      "Voiceprints": 3877
+    }
+  },
+  "complete": true,
+  "full_profile_completed": false,
+  "selection_resolved": true,
+  "coverage": {
+    "expectedChunks": 9,
+    "gigaamChunks": 9,
+    "whisperChunks": 0,
+    "selectedChunks": 9,
+    "llmSelectedChunks": 0,
+    "unresolvedChunks": 0,
+    "equivalentChunks": 0
+  },
+  "language": null
+}

@@ -22,6 +22,15 @@ android {
         }
     }
 
+    // Install evaluation builds beside the user's application, preserving its data.
+    buildTypes {
+        debug {
+            if (providers.gradleProperty('vextoEvaluationIdSuffix').isPresent()) {
+                applicationIdSuffix providers.gradleProperty('vextoEvaluationIdSuffix').get()
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -31,6 +40,8 @@ android {
     testOptions {
         unitTests.includeAndroidResources = true
         unitTests.all {
+            // Same Maven Central artifacts; repo1 returned HTTP429 in hosted CI.
+            systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
             jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED',
                     '--add-opens=java.base/java.util=ALL-UNNAMED',
                     '--add-opens=java.base/java.io=ALL-UNNAMED',

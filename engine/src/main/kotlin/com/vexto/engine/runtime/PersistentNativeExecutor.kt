@@ -4,6 +4,7 @@ import android.os.Process as AndroidProcess
 import android.os.SystemClock
 import com.vexto.engine.review.LocalNativeExecutor
 import com.vexto.engine.review.LocalNativeResult
+import com.vexto.engine.review.NativeRequestRejectedException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -34,6 +35,7 @@ class PersistentNativeExecutor internal constructor(
     private val directory = File(workDir, "native-session-${UUID.randomUUID()}").canonicalFile
     private val closed = AtomicBoolean()
     private val requests = Mutex()
+    private val processStart = Any()
     private val owner = Executors.newSingleThreadExecutor { task ->
         Thread(task, "vexto-native-session").apply { isDaemon = true }
     }
@@ -60,8 +62,10 @@ class PersistentNativeExecutor internal constructor(
                 @Suppress("UNREACHABLE_CODE") error("unreachable")
             }
         } catch (failure: Throwable) {
-            close()
-            future.cancel(true)
+            if (failure !is NativeRequestRejectedException) {
+                close()
+                future.cancel(true)
+            }
             throw failure
         }
     }
@@ -72,20 +76,23 @@ class PersistentNativeExecutor internal constructor(
         val stable = configuration(args)
         if (child == null) {
             runner.cleanupOrphans()
-            val binary = File(runner.nativeDir, name)
+            val binary = NativeCpuDispatch.executable(runner.nativeDir, name)
             if (!binary.isFile || !binary.canExecute()) throw NativeProcessException(
                 NativeProcessException.Reason.IO, "Native executable is not installer-extracted: $name")
             check(directory.mkdirs() || directory.isDirectory)
             observe()
             executable = name
             configuration = stable
-            child = ProcessBuilder(listOf(binary.absolutePath, "--worker-dir", directory.absolutePath) + args)
-                .directory(directory).redirectOutput(File(directory, "worker.stdout"))
-                .redirectError(File(directory, "worker.stderr")).apply {
-                    environment()["LD_LIBRARY_PATH"] = runner.nativeDir.absolutePath
-                    environment()["HF_HUB_OFFLINE"] = "1"
-                    environment()["HF_HUB_DISABLE_TELEMETRY"] = "1"
-                }.start()
+            synchronized(processStart) {
+                check(!closed.get()) { "Persistent native session is closed" }
+                child = ProcessBuilder(listOf(binary.absolutePath, "--worker-dir", directory.absolutePath) + args)
+                    .directory(directory).redirectOutput(File(directory, "worker.stdout"))
+                    .redirectError(File(directory, "worker.stderr")).apply {
+                        environment()["LD_LIBRARY_PATH"] = runner.nativeDir.absolutePath
+                        environment()["HF_HUB_OFFLINE"] = "1"
+                        environment()["HF_HUB_DISABLE_TELEMETRY"] = "1"
+                    }.start()
+            }
         } else require(executable == name && configuration == stable) { "Model/session configuration changed" }
         stdout.parentFile?.mkdirs(); stderr.parentFile?.mkdirs()
         val response = File(directory, "response.json")
@@ -104,8 +111,11 @@ class PersistentNativeExecutor internal constructor(
                 require(response.length() in 1..65536) { "Native response missing or oversized" }
                 val result = Json.parseToJsonElement(response.readText()).jsonObject
                 response.delete()
-                if (result["ok"]?.jsonPrimitive?.booleanOrNull != true) throw NativeProcessException(
-                    NativeProcessException.Reason.EXIT, result["error"]?.jsonPrimitive?.content ?: "Native request failed")
+                if (result["ok"]?.jsonPrimitive?.booleanOrNull != true) {
+                    val error = result["error"]?.jsonPrimitive?.content ?: "Native request failed"
+                    if (error == NativeRequestRejectedException.ContextBudget) throw NativeRequestRejectedException(error)
+                    throw NativeProcessException(NativeProcessException.Reason.EXIT, error)
+                }
                 return LocalNativeResult(SystemClock.elapsedRealtime() - started, peak)
             }
             val code = runCatching { child!!.exitValue() }.getOrNull()
@@ -132,9 +142,9 @@ class PersistentNativeExecutor internal constructor(
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
-        child?.destroyForcibly()
+        val process = synchronized(processStart) { child?.also { it.destroyForcibly() } }
         owner.shutdownNow()
-        runCatching { child?.waitFor(2, TimeUnit.SECONDS) }
+        runCatching { process?.waitFor(2, TimeUnit.SECONDS) }
         ownedPids.forEach(runner::forgetSessionPid)
     }
 
@@ -143,7 +153,7 @@ class PersistentNativeExecutor internal constructor(
         var i = 0
         while (i < args.size) {
             val arg = args[i++]
-            if (arg in setOf("-f", "-of", "--json-schema-file", "--chat-template-file")) {
+            if (arg in setOf("-f", "-of", "--json-schema-file", "--chat-template-file", "--prompt-audit-file", "--count-tokens", "--fit-prefix", "--summary-suffix-file")) {
                 require(i < args.size); i++
             } else result += arg
         }

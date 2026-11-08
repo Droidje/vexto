@@ -8,10 +8,13 @@ import com.vexto.engine.model.export.TranscriptExport
 import com.vexto.engine.models.QualityManifest
 import com.vexto.engine.pipeline.RecordingLanguage
 import com.vexto.engine.pipeline.UtteranceEmotionTarget
+import com.vexto.engine.pipeline.UtteranceOverlapTarget
+import com.vexto.engine.models.OverlapManifest
 import com.vexto.engine.review.AsrSelectionStatus
 import com.vexto.engine.review.AsrSource
 import com.vexto.engine.review.ImmutableAsrCandidate
 import com.vexto.engine.review.SelectionAudit
+import com.vexto.engine.review.QwenAsrSelector
 import com.vexto.engine.review.sha256
 import java.io.File
 import java.io.IOException
@@ -42,7 +45,8 @@ internal class JobCheckpoint private constructor(val directory: File) {
         JobFiles.sha256(wav).also { JobFiles.write(File(directory, "decoded.sha256"), it.toByteArray(Charsets.US_ASCII)) }
 
     @Serializable
-    data class Finished(val transcript: Transcript, val stats: ProcessingStats)
+    data class Finished(val transcript: Transcript, val stats: ProcessingStats, val selectorVersion: String = "",
+        val overlapRevision: String? = null)
 
     @Serializable
     private data class LanguageCheckpoint(val inputSha256: String, val language: RecordingLanguage)
@@ -63,9 +67,17 @@ internal class JobCheckpoint private constructor(val directory: File) {
         }
     }.getOrNull()
 
-    fun finished(): Finished? = runCatching {
+    fun finished(overlapRevision: String? = null): Finished? = runCatching {
         val result = JobFiles.load<Finished>(File(directory, "finished.checkpoint.json"))
         val report = JobFiles.load<PipelineReport>(File(directory, "completion.json"))
+        require(result.overlapRevision == overlapRevision)
+        // An explicit retry must reach failed stages, including jobs made by an older selector.
+        // fullProfileCompleted is deliberately not required (e.g. Whisper-only or EQUIVALENT).
+        require(result.selectorVersion == QwenAsrSelector.Version && result.stats.complete && result.stats.selectionResolved)
+        require(report.stages.all { it.completed && it.error == null })
+        require(report.warnings.none { it.contains("_FAILED:") })
+        require(report.warnings.none { it.startsWith("OVERLAP_UNAVAILABLE:") })
+        require(report.stages.mapNotNull { it.speakerNames }.all { it.reusable })
         require(result.stats.artifactDirectory == directory.absolutePath)
         require(JobFiles.sha256(File(directory, "transcript.json")) == report.transcriptSha256 &&
             JobFiles.sha256(File(directory, "transcript.metadata.json")) == report.metadataSha256)
@@ -74,8 +86,8 @@ internal class JobCheckpoint private constructor(val directory: File) {
         result
     }.getOrNull()
 
-    fun saveFinished(transcript: Transcript, stats: ProcessingStats) =
-        JobFiles.save(File(directory, "finished.checkpoint.json"), Finished(transcript, stats))
+    fun saveFinished(transcript: Transcript, stats: ProcessingStats, overlapRevision: String? = null) =
+        JobFiles.save(File(directory, "finished.checkpoint.json"), Finished(transcript, stats, QwenAsrSelector.Version, overlapRevision))
 
     fun worker(
         stage: WorkerStage,
@@ -83,19 +95,20 @@ internal class JobCheckpoint private constructor(val directory: File) {
         inputSha256: String,
         dependencies: List<String>,
         plan: ChunkPlan?,
+        chunkIds: List<String>? = null,
     ): Pair<WorkerRequest, WorkerResult?> {
         val key = sha256((listOf(stage.name, inputWav, inputSha256) + dependencies).joinToString("\n").toByteArray())
-        val new = WorkerRequest(stage, directory.absolutePath, inputWav, resumeKey = key)
+        val new = WorkerRequest(stage, directory.absolutePath, inputWav, resumeKey = key, chunkIds = chunkIds)
         val old = runCatching { JobFiles.load<WorkerRequest>(stage.requestFile(directory)) }.getOrNull()
         if (old == null || old.resumeKey != key || old.inputWav != inputWav || old.stage != stage ||
-            old.jobDir != directory.absolutePath) return new to null
+            old.jobDir != directory.absolutePath || old.chunkIds != chunkIds) return new to null
         val result = runCatching { JobFiles.load<WorkerResult>(stage.resultFile(directory)) }.getOrNull()
         if (result == null || result.requestId != old.requestId || result.stage != stage) return new to null
-        val verified = verify(result, inputWav, plan)
+        val verified = verify(result, inputWav, plan, chunkIds)
         return if (verified == null) new to null else old to verified
     }
 
-    private fun verify(result: WorkerResult, inputWav: String, plan: ChunkPlan?): WorkerResult? = runCatching {
+    private fun verify(result: WorkerResult, inputWav: String, plan: ChunkPlan?, chunkIds: List<String>?): WorkerResult? = runCatching {
         val completed = result.completed && result.error == null
         when (result.stage) {
             WorkerStage.DENOISE -> {
@@ -112,9 +125,9 @@ internal class JobCheckpoint private constructor(val directory: File) {
                 result
             }
             WorkerStage.VOICEPRINT -> result.takeIf { completed && it.voices.keys.all { id -> id >= 0 } }
-            WorkerStage.GIGAAM, WorkerStage.WHISPER -> {
-                val chunks = requireNotNull(plan).chunks.associateBy { it.id }
-                val source = if (result.stage == WorkerStage.GIGAAM) AsrSource.GIGAAM else AsrSource.WHISPER
+            WorkerStage.GIGAAM, WorkerStage.WHISPER, WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE -> {
+                val chunks = requireNotNull(plan).chunks.filter { chunkIds == null || it.id in chunkIds }.associateBy { it.id }
+                val source = if (result.stage in setOf(WorkerStage.GIGAAM, WorkerStage.GIGAAM_REFINE)) AsrSource.GIGAAM else AsrSource.WHISPER
                 val refs = result.candidates.distinctBy { it.chunkId }.filter { ref ->
                     ref.source == source.wireName && chunks[ref.chunkId]?.let { verifyCandidate(ref, it) } == true
                 }
@@ -128,7 +141,18 @@ internal class JobCheckpoint private constructor(val directory: File) {
                     chunk != null && choice.candidate.chunkId == choice.chunkId && verifyChoice(choice, chunk)
                 }
                 result.copy(choices = choices, completed = completed && choices.size == chunks.size &&
-                    choices.size == result.choices.size)
+                    choices.size == result.choices.size && choices.none { it.status == AsrSelectionStatus.UNRESOLVED.name } &&
+                    result.speakerNames?.reusable != false)
+            }
+            WorkerStage.OVERLAP -> {
+                val manifest = JobFiles.load<OverlapManifest>(File(directory, "overlap-model.json")).also { it.validate() }
+                val targets = JobFiles.load<List<UtteranceOverlapTarget>>(File(directory, "overlap-targets.json"))
+                    .associateBy { it.index }
+                val overlaps = result.overlaps.distinctBy { it.target.index }.filter {
+                    targets[it.target.index] == it.target && it.modelRevision == manifest.revision
+                }
+                result.copy(overlaps = overlaps, completed = completed && overlaps.size == result.overlaps.size &&
+                    overlaps.size == targets.size)
             }
             WorkerStage.EMOTION -> {
                 val targets = JobFiles.load<List<UtteranceEmotionTarget>>(File(directory, "emotion-targets.json"))

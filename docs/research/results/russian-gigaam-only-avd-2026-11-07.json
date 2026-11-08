@@ -1,0 +1,39 @@
+{
+  "audioMs": 346048,
+  "processingMs": 132374,
+  "coverage": {
+    "expectedChunks": 14,
+    "gigaamChunks": 14,
+    "whisperChunks": 0,
+    "selectedChunks": 14,
+    "llmSelectedChunks": 0,
+    "unresolvedChunks": 0,
+    "equivalentChunks": 0
+  },
+  "complete": true,
+  "selectionResolved": true,
+  "fullProfileCompleted": false,
+  "localLlmUsed": false,
+  "peakRssBytes": 1341997056,
+  "stageMs": {
+    "Preparing": 3495,
+    "Recognition": 14112,
+    "Emotion": 48444,
+    "Language": 1230,
+    "Assembly": 35,
+    "Voiceprints": 2890,
+    "Decoding": 40212,
+    "Diarization": 20807,
+    "Selection": 1230
+  },
+  "avd": "Vexto_3",
+  "ramMb": 4096,
+  "storageGb": 32,
+  "sourceName": "Video Project 17.m4a",
+  "sourceSha256": "88cfc6a617feecfda81f3a99b76dd3b096d24d5f5c59225a7c897c2099bc39a6",
+  "dialogueReadySecondsApprox": 84.4,
+  "baselineDualProcessingMs": 476066,
+  "comparisonControlled": false,
+  "singleSourceCopiesVerified": 14,
+  "transcriptRows": 27
+}

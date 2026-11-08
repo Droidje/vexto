@@ -8,11 +8,13 @@ import com.vexto.engine.audio.PcmWave
 import com.vexto.engine.model.*
 import com.vexto.engine.model.export.TranscriptExport
 import com.vexto.engine.models.QualityModelStore
+import com.vexto.engine.models.OverlapModelStore
 import com.vexto.engine.quality.*
 import com.vexto.engine.review.*
 import com.vexto.engine.pipeline.RecordingLanguage
 import com.vexto.engine.pipeline.SpokenLanguageIdentifier
 import com.vexto.engine.pipeline.UtteranceEmotionAnnotations
+import com.vexto.engine.pipeline.UtteranceOverlapAnnotations
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.ProducerScope
@@ -24,6 +26,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import kotlinx.coroutines.CancellationException
@@ -40,23 +43,36 @@ class TranscriptionEngine(context: Context) {
         transcribe(audio, options, jobId)
 
     private fun transcribe(audio: Uri, options: TranscriptionOptions, jobId: String?): Flow<TranscriptionEvent> =
-        channelFlow { lock.withLock { run(audio, options, jobId) } }.flowOn(Dispatchers.Default)
+        channelFlow {
+            transcriptionRequests.incrementAndGet()
+            try {
+                LocalConversationSummary.cancelTitle()
+                lock.withLock { run(audio, options, jobId) }
+            } finally {
+                transcriptionRequests.decrementAndGet()
+            }
+        }.flowOn(Dispatchers.Default)
 
     private suspend fun ProducerScope<TranscriptionEvent>.run(uri: Uri, options: TranscriptionOptions, jobId: String?) {
         val started = SystemClock.elapsedRealtime()
-        val times = linkedMapOf<Stage, Long>()
-        val warnings = mutableListOf<String>()
+        val times = java.util.concurrent.ConcurrentHashMap<Stage, Long>()
+        val warnings = java.util.Collections.synchronizedList(mutableListOf<String>())
         var peak = 0L
-        suspend fun <T> stage(name: Stage, block: suspend ((Float) -> Unit) -> T): T {
+        suspend fun <T> stage(name: Stage, announce: Boolean = true, block: suspend ((Float) -> Unit) -> T): T {
             val t0 = SystemClock.elapsedRealtime()
             val progress: (Float) -> Unit = { trySend(TranscriptionEvent.Progress(name, it.coerceIn(0f, 1f))); Unit }
-            progress(0f)
+            if (announce) progress(0f)
             val value = block(progress)
             progress(1f)
-            times[name] = (times[name] ?: 0L) + SystemClock.elapsedRealtime() - t0
+            times.compute(name) { _, value -> (value ?: 0L) + SystemClock.elapsedRealtime() - t0 }
             return value
         }
         val manifest = QualityModelStore.manifest(context)
+        val overlapPack = runCatching { OverlapModelStore.manifest(context) }
+        val overlapManifest = overlapPack.getOrElse {
+            warnings += "OVERLAP_UNAVAILABLE:model_pack:${it.javaClass.simpleName}"
+            null
+        }
         val jobRoot = File(context.filesDir, "inference/jobs")
         val checkpoint = jobId?.let {
             require(uri.scheme == "file") { "Resumable transcription requires a saved recording" }
@@ -64,7 +80,9 @@ class TranscriptionEngine(context: Context) {
                 options.speakerCount, options.processingMode)
         }
         val job = checkpoint?.directory ?: File(jobRoot, UUID.randomUUID().toString()).apply { check(mkdirs()) }
-        checkpoint?.finished()?.let { send(TranscriptionEvent.Done(it.transcript, it.stats)); return }
+        if (overlapPack.isSuccess) checkpoint?.finished(overlapManifest?.revision)?.let {
+            send(TranscriptionEvent.Done(it.transcript, it.stats)); return
+        }
         if (options.speakerCount != null) warnings += "Nemotron automatically determines speakers; requested fixed count is not applied"
         val original = File(job, "original.wav")
         val originalHash = checkpoint?.decodedHash() ?: stage(Stage.Decoding) { progress ->
@@ -73,27 +91,40 @@ class TranscriptionEngine(context: Context) {
                 ?.forEach { Files.deleteIfExists(it.toPath()) }
             val decoded = File(job, "decoded.wav.pending")
             try {
-                AudioDecoder.decode(context, uri, job, progress).use { PcmWave.fromPcm(it.file, decoded, it.sampleCount) }
+                AudioDecoder.decodeToWave(context, uri, decoded) { progress(it * 0.98f) }
                 Files.move(decoded.toPath(), original.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
                 checkpoint?.checkpointDecoded(original).orEmpty()
             } finally { decoded.delete() }
         }
         val audioMs = PcmWave.inspect(original).sampleCount * 1000 / 16000
         // Resolve AUTO from decoded samples, never from an untrusted container duration estimate.
-        val profile = ProcessingProfile.resolve(options.processingMode, audioMs)
+        val requestedProfile = ProcessingProfile.resolve(options.processingMode, audioMs)
         val profileFile = File(job, "processing-profile.json")
-        if (checkpoint != null && profileFile.isFile) require(ProcessingProfile.read(job) == profile) {
-            "Processing profile changed since this transcription was started"
-        }
+        val freshPlan = !profileFile.exists()
+        val profile = if (checkpoint != null && profileFile.isFile) ProcessingProfile.read(job).also {
+            // Thread/worker tuning may evolve across APK updates; preserve this job's binding.
+            require(it.requestedMode == requestedProfile.requestedMode && it.mode == requestedProfile.mode) {
+                "Processing mode changed since this transcription was started"
+            }
+        } else requestedProfile
         JobFiles.save(profileFile, profile)
         val profileKey = sha256(JobFiles.json.encodeToString(profile).toByteArray(Charsets.UTF_8))
-        val models = stage(Stage.Preparing) { QualityModelStore.prepare(context, profile.fast, it) }
+        val models = stage(Stage.Preparing) { QualityModelStore.preparePipeline(context, profile.fast, it) }
         JobFiles.save(File(job, "job.json"), mapOf("source_uri" to uri.toString(), "profile" to models.manifest.version,
             "requested_mode" to profile.requestedMode.name, "effective_mode" to profile.mode.name,
             "memory_budget_bytes" to AppRss.BudgetBytes.toString(), "reserve_bytes" to AppRss.ReserveBytes.toString()))
         JobFiles.save(File(job, "models.json"), models.manifest)
         val client = StageClient(context)
-        val results = mutableListOf<WorkerResult>()
+        val earlyAsr = java.util.concurrent.ConcurrentHashMap<WorkerStage, WorkerResult>()
+        val results = java.util.Collections.synchronizedList(mutableListOf<WorkerResult>())
+        fun observeResult(result: WorkerResult) {
+            synchronized(results) { peak = maxOf(peak, result.peakCombinedRssBytes) }
+        }
+        fun recordResult(kind: WorkerStage, result: WorkerResult) {
+            results += result
+            warnings += result.warnings
+            if (!result.completed) warnings += "${kind.name}: ${result.error ?: "incomplete"}"
+        }
         suspend fun worker(
             kind: WorkerStage,
             name: Stage,
@@ -101,14 +132,36 @@ class TranscriptionEngine(context: Context) {
             inputHash: String = originalHash,
             dependencies: List<String> = emptyList(),
             plan: ChunkPlan? = null,
+            chunkIds: List<String>? = null,
+            streaming: Boolean = false,
+            record: Boolean = true,
         ): WorkerResult {
-            val (request, saved) = checkpoint?.worker(kind, input, inputHash, listOf(profileKey) + dependencies, plan)
-                ?: (WorkerRequest(kind, job.absolutePath, input) to null)
-            val result = if (saved?.completed == true) {
-                times[name] = saved.elapsedMs
+            // ASR snapshots are verified against the final chunk geometry on resume. The stable key
+            // allows a streaming prefix to finish under the same request after the complete plan arrives.
+            val bound = if (kind in setOf(WorkerStage.GIGAAM, WorkerStage.WHISPER)) dependencies.drop(1) else dependencies
+            val (baseRequest, stored) = checkpoint?.worker(kind, input, inputHash,
+                listOf(profileKey, AdaptiveRefinement.Version) + bound, plan, chunkIds)
+                ?: (WorkerRequest(kind, job.absolutePath, input, chunkIds = chunkIds) to null)
+            val live = if (streaming) null else earlyAsr.remove(kind)
+            val request = baseRequest.copy(streaming = streaming, requestId = live?.requestId ?: baseRequest.requestId,
+                resumeKey = baseRequest.resumeKey ?: AdaptiveRefinement.Version)
+            val saved = live ?: stored
+            val full = saved?.completed == true && saved.error == null && (live == null || plan == null ||
+                loadCandidates(job, plan, live.candidates, mutableListOf()).size == plan.chunks.size)
+            val result = if (full) {
+                times[name] = requireNotNull(saved).elapsedMs
                 saved
-            } else stage(name) { progress ->
-                val first = client.run(request, saved, progress)
+            } else stage(name, announce = false) { progress ->
+                var first = client.run(request, saved, progress).also(::observeResult)
+                if (!first.completed && first.error.orEmpty().contains("MEMORY")) {
+                    InferenceResources.serialOnly = true
+                    // A streaming ASR can be holding its lease while waiting for diarization.
+                    // Close those queues before a serial retry; otherwise neither can advance.
+                    if (!streaming) {
+                        val retry = request.copy(resumeKey = request.resumeKey ?: "memory-retry")
+                        first = client.run(retry, first, progress).also(::observeResult)
+                    }
+                }
                 val attemptedNpu = kind == WorkerStage.EMOTION && !first.completed && request.allowNpu &&
                     runCatching { JobFiles.load<String>(emotionNpuAttemptFile(job)) }.getOrNull() == request.requestId
                 if (!attemptedNpu) first else {
@@ -116,30 +169,22 @@ class TranscriptionEngine(context: Context) {
                     val retry = request.copy(requestId = UUID.randomUUID().toString(), allowNpu = false)
                     val partial = checkpoint?.worker(kind, input, inputHash, dependencies, plan)?.second
                         ?.copy(requestId = retry.requestId)
-                    client.run(retry, partial, progress)
+                    client.run(retry, partial, progress).also(::observeResult)
                 }
             }
-            results += result
-            peak = maxOf(peak, result.peakCombinedRssBytes)
-            warnings += result.warnings
-            if (!result.completed) warnings += "${kind.name}: ${result.error ?: "incomplete"}"
+            observeResult(result)
+            if (record) recordResult(kind, result)
             return result
         }
-        val denoise = if (profile.denoise) worker(WorkerStage.DENOISE, Stage.Denoising, "original.wav") else null
-        val view = if (denoise != null) {
-            val cleaned = File(job, "denoised.wav")
-            if (denoise.completed && cleaned.isFile &&
-                PcmWave.inspect(cleaned).sampleCount == PcmWave.inspect(original).sampleCount) "denoised.wav" else {
-                warnings += "ASR uses original audio because denoising did not produce a valid aligned-length view"
-                "original.wav"
-            }
-        } else "original.wav"
-        val viewHash = if (view == "denoised.wav") denoise?.outputSha256.orEmpty() else originalHash
-        // Language id stays in this process: the inference worker accepts one stage at a time.
         val languageFile = File(job, "language.json")
-        val (diarization, languageResult) = coroutineScope {
+        val (denoise, diarization, languageResult) = coroutineScope {
+            val cleaned = async { if (profile.denoise) worker(WorkerStage.DENOISE, Stage.Denoising, "original.wav") else null }
+            val live = freshPlan && profile.fast && audioMs > 300_000
+            val diarized = async { worker(WorkerStage.DIARIZE, Stage.Diarization, "original.wav", streaming = live, record = !live) }
             val identified = async {
                 val t0 = SystemClock.elapsedRealtime()
+                val languageSlot = InferenceResources.acquire(InferenceResources.Cost(2, 120_000_000))
+                try {
                 val savedLanguage = checkpoint?.language(originalHash)
                 val detected = savedLanguage ?: try {
                     SpokenLanguageIdentifier.identifyRecording(
@@ -151,14 +196,47 @@ class TranscriptionEngine(context: Context) {
                 }
                 if (checkpoint != null && savedLanguage == null) checkpoint.saveLanguage(originalHash, detected)
                 detected to (SystemClock.elapsedRealtime() - t0)
+                } finally { kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { InferenceResources.release(languageSlot) } }
             }
-            worker(WorkerStage.DIARIZE, Stage.Diarization, "original.wav") to identified.await()
+            val clean = cleaned.await()
+            val detected = identified.await()
+            JobFiles.save(languageFile, detected.first)
+            if (detected.first.usesWhisper) stage(Stage.Preparing) { progress ->
+                QualityModelStore.prepareWhisper(context, profile.fast, progress)
+            }
+            if (live) earlyAsr.putAll(StreamingRecognition.run(job, original, diarized,
+                detected.first.route == RecordingLanguage.SLAVIC, withWhisper = detected.first.usesWhisper) { kind, initial ->
+                worker(kind, if (kind == WorkerStage.GIGAAM) Stage.Recognition else Stage.Comparison,
+                    "original.wav", originalHash,
+                    if (kind == WorkerStage.WHISPER) listOf("", detected.first.whisperLanguage) else listOf(""),
+                    initial, streaming = true, record = false)
+            })
+            val firstDiarization = diarized.await()
+            val finalDiarization = if (live && !firstDiarization.completed && firstDiarization.error.orEmpty().contains("MEMORY")) {
+                warnings += "STREAMING_DIARIZATION_MEMORY_RETRY"
+                worker(WorkerStage.DIARIZE, Stage.Diarization, "original.wav")
+            } else firstDiarization.also { if (live) recordResult(WorkerStage.DIARIZE, it) }
+            Triple(clean, finalDiarization, detected)
         }
+        if (!diarization.completed || diarization.error != null) {
+            throw java.io.IOException("Не удалось разделить голоса. Повторите обработку записи.")
+        }
+        val view = if (denoise != null) {
+            val cleaned = File(job, "denoised.wav")
+            if (denoise.completed && cleaned.isFile &&
+                PcmWave.inspect(cleaned).sampleCount == PcmWave.inspect(original).sampleCount) "denoised.wav" else {
+                warnings += "ASR uses original audio because denoising did not produce a valid aligned-length view"
+                "original.wav"
+            }
+        } else "original.wav"
+        val viewHash = if (view == "denoised.wav") denoise?.outputSha256.orEmpty() else originalHash
         val (recordingLanguage, languageMs) = languageResult
         times[Stage.Language] = languageMs
         warnings += if (recordingLanguage.detected) "LANGUAGE:${recordingLanguage.code}" else "LANGUAGE_ID_UNAVAILABLE"
         JobFiles.save(languageFile, recordingLanguage)
         val slavic = recordingLanguage.route == RecordingLanguage.SLAVIC
+        val withWhisper = recordingLanguage.usesWhisper
+        if (!withWhisper) warnings += "ASR_ROUTE:gigaam_only:ru"
         val turns = diarization.turns
         val turnsFile = File(job, "turns.json")
         JobFiles.save(turnsFile, turns)
@@ -170,39 +248,48 @@ class TranscriptionEngine(context: Context) {
                 ?.removePrefix("speaker_")?.toIntOrNull()?.minus(1)
             speaker.copy(voice = acousticId?.let(voices::get))
         })
-        // The speech mask is a dependency of the plan, including whether diarization completed.
-        val planDependency = sha256((JobFiles.sha256(turnsFile) + ":" + diarization.completed + ":" +
-            (diarization.error == null)).toByteArray(Charsets.UTF_8))
+        // Keep the existing successful-stage binding; failed diarization cannot reach planning.
+        val planDependency = sha256((JobFiles.sha256(turnsFile) + ":true:true").toByteArray(Charsets.UTF_8))
         val planBinding = File(job, "chunk-diarization.sha256")
         val cachedPlan = checkpoint?.chunks(view, viewHash)?.takeIf {
             runCatching { planBinding.readText() == planDependency }.getOrDefault(false)
         }
-        val plan = cachedPlan ?: ChunkPlan.create(File(job, view), job,
-            turns.takeIf { diarization.completed && diarization.error == null }).also {
+        val plan = cachedPlan ?: ChunkPlan.create(File(job, view), job, turns).also {
             JobFiles.write(planBinding, planDependency.toByteArray(Charsets.US_ASCII))
         }
         val planHash = if (checkpoint != null) JobFiles.sha256(File(job, "chunks.json")) else ""
         val assembler = CandidateTranscriptAssembler()
         if (!slavic) warnings += "ASR_ROUTE:whisper_only:${recordingLanguage.code}"
-        val giga = if (slavic) worker(WorkerStage.GIGAAM, Stage.Recognition, view, viewHash, listOf(planHash), plan) else null
-        val gigaCandidates: Map<String, ImmutableAsrCandidate> = if (giga == null) emptyMap()
-            else loadCandidates(job, plan, giga.candidates, warnings)
-        if (slavic && gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
-            val core = attachVoices(AcousticTurnTranscript.place(
-                assembler.assemble(plan, gigaCandidates, turns).transcript, turns))
-            // Originals are already durable before this callback. Refinement never destroys this checkpoint.
-            JobFiles.write(File(job, "core.txt"), plan.chunks.joinToString("\n") { gigaCandidates.getValue(it.id).text }.toByteArray())
-            JobFiles.write(File(job, "core.json"), TranscriptExport.json(core).toByteArray(Charsets.UTF_8))
-            send(TranscriptionEvent.CoreReady(core, job.absolutePath))
+        var gigaCandidates: Map<String, ImmutableAsrCandidate> = emptyMap()
+        val (giga, whisper) = coroutineScope {
+            val giga = async { if (slavic) worker(WorkerStage.GIGAAM, Stage.Recognition, view, viewHash, listOf(planHash), plan) else null }
+            val whisper = async { if (withWhisper) worker(WorkerStage.WHISPER, Stage.Comparison, view, viewHash,
+            listOf(planHash, recordingLanguage.whisperLanguage), plan) else null }
+            val first = giga.await()
+            gigaCandidates = first?.let { loadCandidates(job, plan, it.candidates, warnings) }.orEmpty()
+            if (slavic && gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
+                val core = attachVoices(AcousticTurnTranscript.place(
+                    assembler.assemble(plan, gigaCandidates, turns).transcript, turns))
+                // Originals are already durable before this callback. Refinement never destroys this checkpoint.
+                JobFiles.write(File(job, "core.txt"), plan.chunks.joinToString("\n") { gigaCandidates.getValue(it.id).text }.toByteArray())
+                JobFiles.write(File(job, "core.json"), TranscriptExport.json(core).toByteArray(Charsets.UTF_8))
+                send(TranscriptionEvent.CoreReady(core, job.absolutePath))
+            }
+            first to whisper.await()
         }
-        val whisper = worker(WorkerStage.WHISPER, Stage.Comparison, view, viewHash,
-            listOf(planHash, recordingLanguage.whisperLanguage), plan)
-        val reviewedChoices = if (slavic) worker(WorkerStage.SELECT, Stage.Selection, view, viewHash,
+        // FAST is a single light pass. Disagreement is resolved by Qwen over both immutable
+        // candidates, never by silently restarting RNNT/Large under the same progress label.
+        val refinement = RefinementPlan(emptyMap())
+        JobFiles.save(File(job, "refinement-plan.json"), refinement)
+        val effectiveRefs = CandidateSources.read(job, slavic)
+        val review = worker(WorkerStage.SELECT, Stage.Selection, view, viewHash,
             listOf(planHash, JobFiles.json.encodeToString(giga?.candidates.orEmpty()),
-                JobFiles.json.encodeToString(whisper.candidates)), plan).choices else emptyList()
+                JobFiles.json.encodeToString(effectiveRefs), JobFiles.sha256(turnsFile), SpeakerNamePlan.Version,
+                QwenAsrSelector.Version), plan)
+        val reviewedChoices = review.choices
         val choices = reviewedChoices.associateBy { it.chunkId }.toMutableMap()
         // Failure is explicitly unresolved, never interpreted as a quality win for either recognizer.
-        val all = loadCandidates(job, plan, giga?.candidates.orEmpty() + whisper.candidates, warnings, allowMultiple = true)
+        val all = loadCandidates(job, plan, effectiveRefs, warnings, allowMultiple = true)
         if (!slavic) {
             val whisperCandidates = all.values.filter { it.source == AsrSource.WHISPER }.associateBy { it.chunkId }
             if (whisperCandidates.size == plan.chunks.size && whisperCandidates.isNotEmpty()) {
@@ -229,11 +316,8 @@ class TranscriptionEngine(context: Context) {
                 selection.status.name, selection.audit.reason)
         }
         val selected = loadCandidates(job, plan, choices.values.map { it.candidate }, warnings)
-        // Qwen may pick a Whisper chunk that drops words. The scored text stays the raw GigaAM candidate.
-        val display = if (gigaCandidates.size == plan.chunks.size && gigaCandidates.isNotEmpty()) {
-            warnings += "EXPORT_TEXT:gigaam_raw"
-            gigaCandidates
-        } else selected
+        // The SDK keeps the complete selected original; neither ASR source has export priority.
+        val display = selected
         val assembled = stage(Stage.Assembly) {
             val base = assembler.assemble(plan, display, turns)
             base.copy(transcript = AcousticTurnTranscript.place(base.transcript, turns))
@@ -244,34 +328,73 @@ class TranscriptionEngine(context: Context) {
         JobFiles.save(File(job, "selection.json"), choices.values.sortedBy { it.chunkId })
         JobFiles.write(File(job, "selected.txt"), plan.chunks.mapNotNull { selected[it.id]?.text }.joinToString("\n").toByteArray())
         var transcript = attachVoices(assembled.transcript)
-        val emotionTargets = UtteranceEmotionAnnotations.targets(transcript)
-        val emotionTargetsFile = File(job, "emotion-targets.json")
-        JobFiles.save(emotionTargetsFile, emotionTargets)
-        // The worker receives exact line identity and returns a score only for that line's original audio.
-        val emotions = worker(WorkerStage.EMOTION, Stage.Emotion, "original.wav",
-            dependencies = if (checkpoint != null) listOf(JobFiles.sha256(emotionTargetsFile)) else emptyList())
-        transcript = runCatching { UtteranceEmotionAnnotations.attach(transcript, emotions.emotions) }
-            .getOrElse { warnings += "EMOTION_MAPPING_FAILED:${it.javaClass.simpleName}"; transcript }
-        val unscored = transcript.utterances.count { it.endMs > it.startMs && it.emotionProbabilities == null }
-        if (unscored > 0) warnings += "EMOTION_FAILED:unscored_utterances=$unscored"
+        review.speakerNames?.let { names ->
+            transcript = names.attach(transcript)
+            if (names.status !in setOf("resolved", "no_identity_cues")) warnings += "SPEAKER_NAMES:${names.status}"
+        }
+        if (profile.backgroundEmotions && transcript.utterances.any { it.text.isNotBlank() }) {
+            JobFiles.write(File(job, "transcript.json"), TranscriptExport.submissionJson(transcript).toByteArray(Charsets.UTF_8))
+            JobFiles.write(File(job, "transcript.metadata.json"), TranscriptExport.jsonWithMetadata(transcript).toByteArray(Charsets.UTF_8))
+            JobFiles.save(File(job, "dialogue-ready.json"), transcript)
+            val dialogueWarning = when {
+                selected.size != plan.chunks.size -> "Часть аудио не распознана. Доступный текст и оригинальные результаты сохранены."
+                unresolved > 0 -> "Текст сохранён. Для части фрагментов выбор модели не подтверждён."
+                else -> null
+            }
+            send(TranscriptionEvent.CoreReady(transcript, job.absolutePath, finalText = true, warning = dialogueWarning))
+        }
+        run {
+            val emotionTargets = UtteranceEmotionAnnotations.targets(transcript)
+            val emotionTargetsFile = File(job, "emotion-targets.json")
+            JobFiles.save(emotionTargetsFile, emotionTargets)
+            // The worker receives exact line identity and returns a score only for that line's original audio.
+            val emotions = worker(WorkerStage.EMOTION, Stage.Emotion, "original.wav",
+                dependencies = if (checkpoint != null) listOf(JobFiles.sha256(emotionTargetsFile)) else emptyList())
+            transcript = runCatching { UtteranceEmotionAnnotations.attach(transcript, emotions.emotions) }
+                .getOrElse { warnings += "EMOTION_MAPPING_FAILED:${it.javaClass.simpleName}"; transcript }
+            val unscored = transcript.utterances.count { it.endMs > it.startMs && it.emotionProbabilities == null }
+            if (unscored > 0) warnings += "EMOTION_FAILED:unscored_utterances=$unscored"
+        }
+        if (overlapManifest != null) {
+            try {
+                val targetsFile = File(job, "overlap-targets.json")
+                JobFiles.save(targetsFile, UtteranceOverlapAnnotations.targets(transcript))
+                JobFiles.save(File(job, "overlap-model.json"), overlapManifest)
+                val overlap = worker(WorkerStage.OVERLAP, Stage.Overlap, "original.wav",
+                    dependencies = listOf(overlapManifest.revision, JobFiles.sha256(targetsFile)), record = false)
+                results += overlap
+                if (overlap.completed && overlap.error == null) {
+                    transcript = UtteranceOverlapAnnotations.attach(transcript, overlap.overlaps, overlapManifest.revision)
+                } else warnings += "OVERLAP_UNAVAILABLE:${overlap.error ?: "incomplete"}"
+            } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (error: Exception) {
+                // Optional acoustic metadata must never replace or discard the recognized text.
+                warnings += "OVERLAP_UNAVAILABLE:${error.javaClass.simpleName}"
+            }
+        }
         val coverage = PipelineCoverage(plan.chunks.size,
             all.values.count { it.source == AsrSource.GIGAAM }, all.values.count { it.source == AsrSource.WHISPER },
-            selected.size, choices.values.count { it.status == AsrSelectionStatus.SELECTED_BY_LLM.name }, unresolved)
+            selected.size, choices.values.count { it.status == AsrSelectionStatus.SELECTED_BY_LLM.name }, unresolved,
+            choices.values.count { it.status == AsrSelectionStatus.EQUIVALENT.name })
         val withinBudget = peak + AppRss.ReserveBytes <= AppRss.BudgetBytes
-        val expectedStages = WorkerStage.entries.toSet() -
-            (if (profile.denoise) emptySet() else setOf(WorkerStage.DENOISE)) -
-            (if (slavic) emptySet() else setOf(WorkerStage.GIGAAM, WorkerStage.SELECT))
-        val allStagesSucceeded = results.map { it.stage }.toSet() == expectedStages &&
-            results.all { it.completed && it.error == null }
-        val fullProfile = coverage.fullProfileCompleted(allStagesSucceeded, warnings, withinBudget)
+        val expectedStages = profile.expectedStages(slavic, withWhisper) + if (refinement.ids.isEmpty()) emptySet()
+            else setOfNotNull(WorkerStage.GIGAAM_REFINE.takeIf { slavic }, WorkerStage.WHISPER_REFINE)
+        val requiredResults = results.filter { it.stage != WorkerStage.OVERLAP }
+        val allStagesSucceeded = requiredResults.map { it.stage }.toSet() == expectedStages &&
+            requiredResults.all { it.completed && it.error == null }
+        val localLlmUsed = coverage.llmSelectedChunks > 0 || review.speakerNames?.status == "resolved"
+        val requiredWarnings = warnings.filterNot { it.startsWith("OVERLAP_UNAVAILABLE:") }
+        val fullProfile = coverage.fullProfileCompleted(allStagesSucceeded, requiredWarnings, withinBudget, localLlmUsed)
         val export = File(job, "transcript.json")
         val metadata = File(job, "transcript.metadata.json")
         JobFiles.write(export, TranscriptExport.submissionJson(transcript).toByteArray(Charsets.UTF_8))
         JobFiles.write(metadata, TranscriptExport.jsonWithMetadata(transcript).toByteArray(Charsets.UTF_8))
         val whisperName = if (profile.fast) "Whisper-small-q5_1" else "Whisper-large-v3-q5_0"
         val gigaName = if (profile.fast) "GigaAM-v3-e2e-ctc-int8" else "GigaAM-v3-e2e-rnnt-int8"
-        val asrModel = if (slavic) "$gigaName+$whisperName; selection-only Qwen3-1.7B-Q4_K_M"
-            else "$whisperName; language=${recordingLanguage.code}; gigaam_skipped"
+        val asrModel = if (!withWhisper) "$gigaName; language=ru; whisper_skipped; context names Qwen3-1.7B-Q4_K_M"
+            else if (slavic) "$gigaName+$whisperName; adaptive=false; selection + context names Qwen3-1.7B-Q4_K_M"
+            else "$whisperName; language=${recordingLanguage.code}; gigaam_skipped; context names Qwen3-1.7B-Q4_K_M"
         val stats = ProcessingStats(audioMs, SystemClock.elapsedRealtime() - started, times,
             peak / (1024 * 1024), asrModel, 4,
             artifactDirectory = job.absolutePath, warnings = warnings.distinct(), complete = coverage.complete,
@@ -283,8 +406,8 @@ class TranscriptionEngine(context: Context) {
             stageMs = times.mapKeys { it.key.name }, stages = results.toList(),
             transcriptSha256 = JobFiles.sha256(export), metadataSha256 = JobFiles.sha256(metadata), warnings = stats.warnings,
             modelVerificationReused = models.verificationReused, processingProfile = profile,
-            skippedSilenceMs = plan.skippedSamples / 16))
-        checkpoint?.saveFinished(transcript, stats)
+            skippedSilenceMs = plan.skippedSamples / 16, localLlmUsed = localLlmUsed))
+        checkpoint?.saveFinished(transcript, stats, overlapManifest?.revision)
         send(TranscriptionEvent.Done(transcript, stats))
     }
 
@@ -302,5 +425,9 @@ class TranscriptionEngine(context: Context) {
         }.toMap()
     }
 
-    private companion object { val lock = Mutex() }
+    internal companion object {
+        val lock = Mutex()
+        private val transcriptionRequests = AtomicInteger()
+        val isTranscriptionPending: Boolean get() = transcriptionRequests.get() > 0
+    }
 }

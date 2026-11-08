@@ -13,6 +13,7 @@ class QwenAsrSelector(
     private val promptBuilder: SelectorPrompt = SelectorPrompt(),
     private val timeoutMs: Long = 120_000,
 ) {
+    companion object { const val Version = "selector-native-token-budget-v2" }
     suspend fun selectAll(pairs: List<AsrCandidatePair>, workDir: File): List<AsrSelection> {
         require(pairs.map { it.chunkId }.distinct().size == pairs.size) { "duplicate_chunk_id" }
         pairs.forEach { require(it.chunkId.matches(Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,95}"))) }
@@ -31,27 +32,18 @@ class QwenAsrSelector(
         if (pair.gigaam == null || pair.whisper == null) {
             return fallback("one_available_candidate")
         }
+        if (pair.gigaam.text == pair.whisper.text) return tool.equivalent(pair, selected)
         val request = try { promptBuilder.renderScopedSource(pair) } catch (_: SelectorPromptTooLarge) {
             return fallback("prompt_exceeds_context_budget")
         } catch (_: Exception) {
             return fallback("candidate_identity_or_hash_mismatch")
         }
         if (!modelFile.isFile) return fallback("selector_model_unavailable")
-        val prompt = File(dir, "prompt.txt").apply { writeText(request.prompt) }
-        val schema = File(dir, "tool-schema.json").apply { writeText(request.schema) }
-        val template = File(dir, "nonthinking.jinja").apply { writeText(SelectorPrompt.NonThinkingTemplate) }
+        val args = BoundedQwenRequest.arguments(modelFile, request, dir)
         val stdout = File(dir, "selector.stdout")
         val stderr = File(dir, "selector.stderr")
         val response = try {
-            executor.run("libvexto_llama_exec.so", listOf(
-                "-m", modelFile.absolutePath, "--jinja", "--chat-template-file", template.absolutePath,
-                "--reasoning", "off", "-cnv", "--single-turn", "--simple-io", "--no-display-prompt",
-                "--no-context-shift", "-c", "1024", "-t", "2", "--threads-batch", "2",
-                "-b", "128", "-ub", "64", "-ngl", "0", "--no-repack", "--no-warmup",
-                "--cache-type-k", "f16", "--cache-type-v", "f16", "--seed", "42",
-                "--temp", "0", "--repeat-penalty", "1.0", "-n", "16",
-                "--json-schema-file", schema.absolutePath, "-f", prompt.absolutePath,
-            ), dir, stdout, stderr, timeoutMs)
+            executor.run("libvexto_llama_exec.so", args, dir, stdout, stderr, timeoutMs)
             if (!stdout.isFile || stdout.length() > 8192) {
                 return fallback("selector_response_missing_or_oversized")
             }
@@ -59,6 +51,8 @@ class QwenAsrSelector(
             Charsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(stdout.readBytes())).toString()
         } catch (_: TimeoutCancellationException) {
             return fallback("selector_timeout")
+        } catch (_: NativeRequestRejectedException) {
+            return fallback("prompt_exceeds_context_budget")
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {

@@ -14,6 +14,8 @@ import java.nio.file.StandardCopyOption;
 /** Private sidecar files keyed by the saved recording filename. */
 final class ReflectTranscriptStore {
     private static final int MAX_TITLE_LENGTH = 200;
+    private static final String SUMMARY_VERSION = "v2:";
+    private static final int MAX_SUMMARY_BYTES = 64 * 1024;
     private static final Object TRANSCRIPT_WRITE_LOCK = new Object();
     private final File filesDirectory;
 
@@ -24,6 +26,54 @@ final class ReflectTranscriptStore {
     ReflectTranscript load(File recording) throws IOException {
         File path = sidecar(recording, ".json");
         return readTranscript(path);
+    }
+
+    String loadSummary(File recording, String fingerprint) throws IOException {
+        File file = sidecar(recording, ".summary");
+        if (!file.isFile() || file.length() > MAX_SUMMARY_BYTES) return null;
+        String value = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+        String prefix = SUMMARY_VERSION + fingerprint + "\n";
+        return value.startsWith(prefix) && !value.substring(prefix.length()).trim().isEmpty()
+                ? value.substring(prefix.length()) : null;
+    }
+
+    boolean saveSummary(File recording, String fingerprint, String summary) throws IOException {
+        if (summary == null || summary.trim().isEmpty()) return false;
+        byte[] data = (SUMMARY_VERSION + fingerprint + "\n" + summary.trim()).getBytes(StandardCharsets.UTF_8);
+        if (data.length > MAX_SUMMARY_BYTES) return false;
+        return withCurrentText(recording, fingerprint, () -> {
+            writeAtomically(sidecar(recording, ".summary"), data);
+            return true;
+        });
+    }
+
+    boolean withCurrentText(File recording, String fingerprint, TranscriptUpdate update) throws IOException {
+        synchronized (TRANSCRIPT_WRITE_LOCK) {
+            ReflectTranscript current = load(recording);
+            if (current == null || !ReflectSummaryController.sourceOf(current).fingerprint().equals(fingerprint)) return false;
+            return update.save();
+        }
+    }
+
+    interface TranscriptUpdate {
+        boolean save() throws IOException;
+    }
+
+    File summaryCheckpoints(File recording) throws IOException { return sidecar(recording, ".summary-work"); }
+
+    void deleteSummary(File recording) throws IOException {
+        synchronized (TRANSCRIPT_WRITE_LOCK) {
+            Files.deleteIfExists(sidecar(recording, ".summary").toPath());
+            deleteCheckpointTree(summaryCheckpoints(recording));
+        }
+    }
+
+    static void deleteCheckpointTree(File directory) throws IOException {
+        if (!directory.exists()) return;
+        try (var paths = Files.walk(directory.toPath())) {
+            java.util.Iterator<Path> iterator = paths.sorted(java.util.Comparator.reverseOrder()).iterator();
+            while (iterator.hasNext()) Files.deleteIfExists(iterator.next());
+        }
     }
 
     void save(File recording, ReflectTranscript transcript) throws IOException {
@@ -57,7 +107,9 @@ final class ReflectTranscriptStore {
             ReflectTranscript existing = readTranscript(target);
             ReflectTranscript core = readTranscript(engineMarker(jobId, "published-core.json"));
             ReflectTranscript finalWritten = readTranscript(marker);
-            if (finalWritten != null && finalWritten.sameLines(existing)) {
+            ReflectTranscript enriched = readTranscript(engineMarker(jobId, "published-emotions.json"));
+            if (finalWritten != null && (finalWritten.sameLines(existing)
+                    || enriched != null && enriched.sameLines(existing))) {
                 return new EngineSave(existing, core, true);
             }
             if (existing != null && (core == null || !core.sameLines(existing))) {
@@ -67,6 +119,38 @@ final class ReflectTranscriptStore {
             writeAtomically(marker, data);
             writeAtomically(target, data);
             return new EngineSave(transcript, core, true);
+        }
+    }
+
+    /** Enrich only the job's unchanged dialogue. Never overwrite an imported or edited transcript. */
+    EngineSave saveEngineEmotions(File recording, String jobId, ReflectTranscript incoming) throws IOException {
+        File target = sidecar(recording, ".json");
+        File marker = engineMarker(jobId, "published-emotions.json");
+        synchronized (TRANSCRIPT_WRITE_LOCK) {
+            ReflectTranscript existing = readTranscript(target);
+            ReflectTranscript dialogue = readTranscript(engineMarker(jobId, "published-final.json"));
+            ReflectTranscript previous = readTranscript(marker);
+            if (existing == null || dialogue == null
+                    || !dialogue.sameLines(existing) && (previous == null || !previous.sameLines(existing))) {
+                return new EngineSave(existing, null, false);
+            }
+            if (!java.util.Arrays.equals(dialogue.encodeSpeakerRevision(), incoming.encodeSpeakerRevision())) {
+                throw new IOException("Emotion result does not match the original dialogue");
+            }
+            java.util.List<ReflectTranscript.Line> lines = new java.util.ArrayList<>(existing.lines.size());
+            for (int index = 0; index < existing.lines.size(); index++) {
+                var original = existing.lines.get(index);
+                var scored = incoming.lines.get(index);
+                lines.add(new ReflectTranscript.Line(original.speakerId, original.startMs, original.endMs,
+                        original.text, scored.emotionProbabilities, original.speakerName,
+                        scored.overlapDetected == null ? original.overlapDetected : scored.overlapDetected));
+            }
+            ReflectTranscript enriched = new ReflectTranscript(lines);
+            byte[] data = enriched.encode();
+            // Keep published-final immutable: either the base or this proof survives a process death.
+            writeAtomically(marker, data);
+            writeAtomically(target, data);
+            return new EngineSave(enriched, dialogue, true);
         }
     }
 
@@ -92,6 +176,20 @@ final class ReflectTranscriptStore {
         File root = new File(filesDirectory, "inference/jobs").getCanonicalFile();
         if (!root.equals(path.getParentFile())) throw new IOException("Engine artifacts outside private job storage");
         writeAtomically(sidecar(recording, ".engine"), path.getName().getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Decoded 16 kHz WAV from the job that produced this transcript, or null. */
+    File decodedWav(File recording) throws IOException {
+        File marker = sidecar(recording, ".engine");
+        if (!marker.isFile() || marker.length() > 80) return null;
+        String name = new String(Files.readAllBytes(marker.toPath()), StandardCharsets.UTF_8).trim();
+        if (!name.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) {
+            return null;
+        }
+        File root = new File(filesDirectory, "inference/jobs").getCanonicalFile();
+        File wav = new File(new File(root, name), "original.wav").getCanonicalFile();
+        if (!root.equals(wav.getParentFile().getParentFile()) || !wav.isFile()) return null;
+        return wav;
     }
 
     String title(File recording, String fallback) {

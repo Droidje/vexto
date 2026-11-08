@@ -35,6 +35,8 @@ final class ReflectView extends ViewGroup {
         void toggleMenu();
         void attach();
         void openRecorder();
+        void openCallRecorder();
+        void quickRecord();
         void startRecording();
         void pauseRecording();
         void finishRecording();
@@ -46,12 +48,13 @@ final class ReflectView extends ViewGroup {
         void refreshSpeakers();
         void closeSpeakerProfile();
         void openSpeakerMenu();
+        void renameSpeakerProfile();
         void openSpeakerUtterance(SpeakerDirectory.Utterance utterance);
     }
 
     private static final float WIDTH = 393, HEIGHT = 852;
     static final int NAV_BOTTOM_CLEARANCE = 99;
-    private static final float LIBRARY_TOP = 83;
+    private static final float LIBRARY_TOP = 24;
     private static final float FINISH_LEFT = 172, FINISH_CENTER_X = 201.5f;
     private static final int BACKGROUND = 0xff040402, WHITE = Color.WHITE;
     private static final Screen[] TABS = {Screen.HOME, Screen.RECORDS, Screen.SPEAKERS, Screen.SETTINGS};
@@ -93,7 +96,6 @@ final class ReflectView extends ViewGroup {
     private final Paint snapshotPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
     private final RectF snapshotBounds = new RectF(0, 0, WIDTH, HEIGHT);
     private final List<RectF> childAreas = new ArrayList<>();
-    private final Path stage = new Path();
     private final Path glass = new Path();
     private final RecordingVisuals recordingVisuals = new RecordingVisuals();
     private RecordingOrb recordingOrb;
@@ -105,6 +107,13 @@ final class ReflectView extends ViewGroup {
     private int pageDirection = 1, pageSteps = 1;
     private Screen departingScreen;
     private Bitmap departingPage;
+    private boolean callMode;
+
+    void callMode(boolean value) {
+        callMode = value;
+        invalidate();
+    }
+
     private Bitmap[] passingTabs;
     private View pageContent;
     private ReflectConversationPlayer reviewPlayer;
@@ -125,7 +134,7 @@ final class ReflectView extends ViewGroup {
         settings = new ReflectSettingsView(context, artwork, preferences, actions::openMicrophoneSettings);
         transcript = new ReflectTranscriptView(context, artwork, preferences, actions);
         speakerProfile = new SpeakerProfileView(context, artwork, preferences, actions::closeSpeakerProfile,
-                actions::openSpeakerMenu, actions::openSpeakerUtterance);
+                actions::openSpeakerMenu, actions::renameSpeakerProfile, actions::openSpeakerUtterance);
         speakerProfile.setBackgroundColor(BACKGROUND);
         processing = new ReflectProcessingView(context, artwork, preferences, actions::closeTranscript);
         export = new ReflectExportView(context, artwork, preferences, actions);
@@ -142,8 +151,7 @@ final class ReflectView extends ViewGroup {
         };
         navigationGlass.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         setWillNotDraw(false);
-        stage.addRoundRect(0, 0, WIDTH, HEIGHT, 47, 47, Path.Direction.CW);
-        glass.addRoundRect(175, 661, 377, 749, 26, 26, Path.Direction.CW);
+        glass.addRoundRect(175, 617, 377, 749, 26, 26, Path.Direction.CW);
         rebuildControls();
     }
 
@@ -399,7 +407,7 @@ final class ReflectView extends ViewGroup {
             case SPEAKERS -> "Спикеры";
             case SETTINGS -> "Настройки";
             case MENU -> "Добавить аудио";
-            case READY -> "Запись аудио";
+            case READY -> callMode ? "Запись звонка" : "Запись аудио";
             case RECORDING -> "Идёт запись";
             case PAUSED -> "Запись на паузе";
             case REVIEW -> "Готово";
@@ -426,7 +434,12 @@ final class ReflectView extends ViewGroup {
                 outside.setOnClickListener(view -> actions.toggleMenu());
                 place(outside, 0, 0, WIDTH, HEIGHT);
             }
-            control(screen == Screen.MENU ? "Закрыть меню" : "Добавить", 318, 765, 59, 59, actions::toggleMenu);
+            View add = control(screen == Screen.MENU ? "Закрыть меню" : "Добавить", 318, 765, 59, 59,
+                    actions::toggleMenu);
+            if (screen == Screen.HOME) add.setOnLongClickListener(view -> {
+                actions.quickRecord();
+                return true;
+            });
             tabControl(Screen.HOME, () -> show(Screen.HOME));
             tabControl(Screen.RECORDS, () -> show(Screen.RECORDS));
             tabControl(Screen.SPEAKERS, () -> {
@@ -435,8 +448,9 @@ final class ReflectView extends ViewGroup {
             });
             tabControl(Screen.SETTINGS, () -> show(Screen.SETTINGS));
             if (screen == Screen.MENU) {
-                control("Прикрепить файл", 175, 661, 202, 44, actions::attach);
-                control("Записать сейчас", 175, 705, 202, 44, actions::openRecorder);
+                control("Прикрепить файл", 175, 617, 202, 44, actions::attach);
+                control("Записать сейчас", 175, 661, 202, 44, actions::openRecorder);
+                control("Звонок", 175, 705, 202, 44, actions::openCallRecorder);
             }
         } else {
             if (screen == Screen.RECORDING || screen == Screen.PAUSED) {
@@ -518,12 +532,11 @@ final class ReflectView extends ViewGroup {
     }
 
     @Override protected void onDraw(Canvas canvas) {
-        canvas.drawColor(0xff1e1e1e);
+        canvas.drawColor(BACKGROUND);
         int save = canvas.save();
         canvas.translate(offsetX, offsetY);
         canvas.scale(scale, scale);
-        rounded(canvas, 0, 0, WIDTH, HEIGHT, 47, BACKGROUND);
-        canvas.clipPath(stage);
+        canvas.clipRect(0, 0, WIDTH, HEIGHT);
         drawPageCanvas(canvas);
         canvas.restoreToCount(save);
         if (recordingScreen(screen) && recordingVisuals.needsFrame(SystemClock.uptimeMillis())) {
@@ -539,7 +552,7 @@ final class ReflectView extends ViewGroup {
         int save = canvas.save();
         canvas.translate(offsetX, offsetY);
         canvas.scale(scale, scale);
-        canvas.clipPath(stage);
+        canvas.clipRect(0, 0, WIDTH, HEIGHT);
         int local = canvas.save();
         canvas.scale(1 / scale, 1 / scale);
         canvas.translate(-offsetX, -offsetY);
@@ -676,21 +689,21 @@ final class ReflectView extends ViewGroup {
     private void drawHome(Canvas c) {
         artwork.image(c, "butterfly", 71, 280, 250, 194);
         text(c, welcomeTitle, 196, 501, 22, 0xfff5f5f5, artwork.display, true);
-        text(c, "Прикрепите файлы или запишите", 186.5f, 533.3f, 16, 0xff999999, artwork.medium, true);
-        text(c, "аудио прямо сейчас", 186.5f, 554, 16, 0xff999999, artwork.medium, true);
+        text(c, "Нажмите чтобы прикрепить файл", 186.5f, 533.3f, 16, 0xff999999, artwork.medium, true);
+        text(c, "или удерживайте для записи", 186.5f, 554, 16, 0xff999999, artwork.medium, true);
         artwork.icon(c, "guide_arrow", 177.24f, 579.25f);
     }
 
     private void drawNavigation(Canvas c, float menu) {
         drawNavigationBar(c, menu, true);
         if (menu > 0) {
-            int save = c.saveLayerAlpha(166, 649, 389, 769, Math.round(menu * 255));
+            int save = c.saveLayerAlpha(166, 605, 389, 769, Math.round(menu * 255));
             float shift = 14 * (1 - menu);
             float stretchX = .9f + .1f * menu;
             float stretchY = .86f + .14f * menu;
             c.translate(0, shift);
             c.scale(stretchX, stretchY, 359, 744);
-            menuBackdrop.draw(c, 175, 661, 377, 749, 26, 13, sample -> {
+            menuBackdrop.draw(c, 175, 617, 377, 749, 26, 13, sample -> {
                 // Undo the menu transform to sample the scene in stage coordinates.
                 sample.scale(1 / stretchX, 1 / stretchY, 359, 744);
                 sample.translate(0, -shift);
@@ -739,14 +752,24 @@ final class ReflectView extends ViewGroup {
         }
         paint.setShader(null);
         c.restore();
-        outline(c, 175, 661, 377, 749, 26, MENU_EDGE);
-        artwork.icon(c, "attach", 191, 675);
-        artwork.icon(c, "mic_menu", 191, 715);
-        text(c, "Прикрепить файл", 219.5f, 690, 16, WHITE, artwork.medium, false);
-        text(c, "Записать сейчас", 219, 730, 16, WHITE, artwork.medium, false);
+        outline(c, 175, 617, 377, 749, 26, MENU_EDGE);
+        artwork.icon(c, "attach", 191, 631);
+        artwork.icon(c, "mic_menu", 191, 675);
+        c.save();
+        c.translate(189, 716);
+        c.scale(22f / 24, 22f / 24);
+        artwork.icon(c, "headset", 0, 0);
+        c.restore();
+        text(c, "Прикрепить файл", 219.5f, 646, 16, WHITE, artwork.medium, false);
+        text(c, "Записать сейчас", 219, 690, 16, WHITE, artwork.medium, false);
+        text(c, "Звонок", 219, 734, 16, WHITE, artwork.medium, false);
     }
 
     private void drawRecorder(Canvas c, Screen page) {
+        if (callMode && page != Screen.REVIEW) {
+            artwork.icon(c, "headset", 184.5f, 66);
+            text(c, "Звонок", 196.5f, 123, 18, WHITE, artwork.medium, true);
+        }
         if (orbEdgeShade == null) orbEdgeShade = orbEdgeShade();
         long now = SystemClock.uptimeMillis();
         c.save();

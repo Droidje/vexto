@@ -116,7 +116,7 @@ object PcmWave {
         }
     }
 
-    private fun header(rate: Int, bytes: Long): ByteArray {
+    internal fun header(rate: Int, bytes: Long): ByteArray {
         require(rate == 16000 && bytes in 0..0xffffffffL - 36) { "Recording exceeds RIFF size limit" }
         return ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
             put("RIFF".toByteArray()); putInt((bytes + 36).toInt()); put("WAVEfmt ".toByteArray())

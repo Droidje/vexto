@@ -92,6 +92,7 @@ final class SpeakerProfilesUi {
     void closeProfile() {
         view.show(ReflectView.Screen.SPEAKERS);
         selectProfile(null);
+        refreshSpeakers();
     }
 
     private boolean isOpen(String id) {
@@ -120,15 +121,7 @@ final class SpeakerProfilesUi {
         if (detail == null || !isOpen(detail.profile().id())) return;
         var profile = detail.profile();
         ReflectActionSheet menu = view.actionSheet(activity, ReflectCatalog.speakerName(profile.name(), profile.self()));
-        menu.option("Переименовать", () -> {
-            if (!isOpen(profile.id())) return;
-            editName("Имя спикера", profile.name(), name -> {
-                if (isOpen(profile.id())) run(() -> {
-                    profiles.rename(profile.id(), name);
-                    return null;
-                }, ignored -> updated());
-            });
-        });
+        menu.option("Переименовать", () -> renameProfile(profile));
         menu.option("Объединить с другим спикером", () -> {
             if (isOpen(profile.id())) chooseMergeTarget(profile);
         });
@@ -141,6 +134,20 @@ final class SpeakerProfilesUi {
             });
         }
         menu.show();
+    }
+
+    void renameProfile() {
+        if (detail != null) renameProfile(detail.profile());
+    }
+
+    private void renameProfile(SpeakerProfiles.Profile profile) {
+        if (!isOpen(profile.id())) return;
+        editName("Имя спикера", profile.name(), name -> {
+            if (isOpen(profile.id())) run(() -> {
+                profiles.rename(profile.id(), name);
+                return null;
+            }, ignored -> updated());
+        });
     }
 
     private void chooseMergeTarget(SpeakerProfiles.Profile source) {

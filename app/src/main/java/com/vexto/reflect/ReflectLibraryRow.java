@@ -55,12 +55,37 @@ final class ReflectLibraryRow extends View {
                 (canvas, paint) -> text(canvas, paint, message, 16, 25, 16, MUTED, artwork.regular, 0));
     }
 
+    ReflectLibraryRow action(ReflectArtwork art, String title, Runnable action) {
+        return bind(64, title, false, action, (canvas, paint) -> {
+            paint.setColor(0xff303030);
+            canvas.drawRoundRect(16, 4, 377, 52, 24, 24, paint);
+            style(paint, 16, Color.WHITE, art.medium, 0);
+            paint.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText(title, 196.5f, 34, paint);
+        });
+    }
+
+    ReflectLibraryRow quote(ReflectArtwork art, ReflectCatalog.Quote quote, Runnable open) {
+        String text = "«" + quote.excerpt() + "»";
+        String time = String.format(java.util.Locale.ROOT, "%d:%02d", quote.startMs() / 60_000,
+                quote.startMs() / 1000 % 60);
+        return bind(100, quote.conversation().title + ", " + time + ", " + text, false, open, (canvas, paint) -> {
+            recordingCover(canvas, art);
+            textRight(canvas, paint, time, 361, 29, 16, MUTED, art.duration, 0);
+            rowTitle(canvas, paint, art, quote.conversation().title, 279 - paint.measureText(time));
+            preview(canvas, paint, art, text, 303);
+            chevron(canvas, paint, 373, 23);
+            separator(canvas, paint, 97);
+        });
+    }
+
     ReflectLibraryRow recording(ReflectArtwork art, ReflectCatalog.Recording item,
                                 ReflectLocalTranscription.Progress progress, Runnable open) {
         String participants = String.join(", ", item.participants);
         boolean hasSpeakers = !participants.isEmpty();
         boolean hasTranscript = item.hasTranscript();
-        String status = progress != null ? progress.percent() + "%" : hasTranscript ? "Есть текст" : "Сохранено";
+        boolean processing = progress != null && !progress.backgroundEmotions();
+        String status = processing ? progress.overallPercent() + "%" : hasTranscript ? "Есть текст" : "Сохранено";
         String timeAndLength = item.timeLabel + " · " + item.length;
         String label = item.title + ", " + item.timeLabel + ", " + item.length + ", " + status;
         if (hasSpeakers) label += ", участники: " + participants;
@@ -70,7 +95,7 @@ final class ReflectLibraryRow extends View {
             recordingCover(canvas, art);
             float statusRight = hasTranscript || progress != null ? 377 : 361;
             textRight(canvas, paint, status, statusRight, 29, 17,
-                    progress != null ? 0xff63b7ff : hasTranscript ? 0xff34c759 : MUTED, art.regular, -.43f);
+                    processing ? 0xff63b7ff : hasTranscript ? 0xff34c759 : MUTED, art.regular, -.43f);
             float available = statusRight - 74 - 10 - paint.measureText(status);
             rowTitle(canvas, paint, art, item.title, available);
             text(canvas, paint, timeAndLength, 74, 51, 16, MUTED, art.regular, -.23f);
@@ -127,7 +152,8 @@ final class ReflectLibraryRow extends View {
 
     ReflectLibraryRow conversation(ReflectArtwork art, ReflectCatalog.Conversation item,
                                     ReflectLocalTranscription.Progress progress, Runnable open) {
-        String description = progress == null ? item.preview : progress.title() + " · " + progress.percent() + "%";
+        String description = progress == null || progress.backgroundEmotions() ? item.preview
+                : progress.title() + " · " + progress.overallPercent() + "%";
         return bind(91,
                 item.title + ", " + item.recording.timeLabel + ", " + description, false, open, (canvas, paint) -> {
             recordingCover(canvas, art);

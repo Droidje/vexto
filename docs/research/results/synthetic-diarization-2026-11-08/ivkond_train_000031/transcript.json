@@ -1,0 +1,46 @@
+{
+  "transcript": [
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 851,
+      "end_ms": 4009,
+      "text": "Напомни мне завтра в 10:00 утра про встречу."
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 8181,
+      "end_ms": 11359,
+      "text": "Сколько € я могу получить из о1ногол"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 13121,
+      "end_ms": 16389,
+      "text": "Будут какие-то события в центре на этих выходных"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 21231,
+      "end_ms": 23109,
+      "text": "Найди еду и закажи."
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 24821,
+      "end_ms": 26979,
+      "text": "Пожалуйста, можешь сделать кофе?"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 28481,
+      "end_ms": 31159,
+      "text": "Какие группы указаны в моих контактах?"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 32941,
+      "end_ms": 35059,
+      "text": "Как приготовить тыкву-спагетти?"
+    }
+  ]
+}

@@ -1,0 +1,1730 @@
+{
+  "reports": [
+    {
+      "input_sha256": "75503e8f4ff246e34be6d0ef0b1b79266b99f9ba9ac7970fe66c5922fcec6b4f",
+      "model": "eres2net",
+      "evaluator_sha256": "4fa2407debe3608e1acb623191d922574d97f1fb39d04a9088858bb88af789cb",
+      "extractor_sha256": "c7fd307595b544ce510206491b9818cfd5f0d587dd9a9875b1b36e1badaa7e48",
+      "model_revision": "sha256:e2d2048292e055f7b61cdec3db010503f35369b245bf0b3bbad021c9a91e4053",
+      "style": "short-agc",
+      "manifest_sha256": "394c9e87a10c5d0857c152db2f10bb6c10c1bd851d0e843eab44233fcb5347b9",
+      "extraction_seconds": 15.947033250005916,
+      "profiles": 60,
+      "people": 15,
+      "sessions": 16,
+      "comparisons": [
+        {
+          "enrollment_sessions": 2,
+          "method": "first",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 12,
+            "missed": 4,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "first",
+          "policy": "calibration_only",
+          "threshold": 0.7037994049729943,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "mean",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 14,
+            "missed": 2,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "mean",
+          "policy": "calibration_only",
+          "threshold": 0.7550780315922095,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "max",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 12,
+            "missed": 4,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "max",
+          "policy": "calibration_only",
+          "threshold": 0.7586181098659623,
+          "margin": 0.12,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "first",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 4,
+            "missed": 4,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "first",
+          "policy": "calibration_only",
+          "threshold": 0.7037994049729943,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "mean",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "mean",
+          "policy": "calibration_only",
+          "threshold": 0.8025878040470743,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "max",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 7,
+            "missed": 1,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "max",
+          "policy": "calibration_only",
+          "threshold": 0.7907322482602522,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        }
+      ]
+    },
+    {
+      "input_sha256": "2a021e2c544af5ad3c398fa32d0009a4a2a978a0066a5a42133ed54dcf40199b",
+      "model": "eres2net",
+      "evaluator_sha256": "4fa2407debe3608e1acb623191d922574d97f1fb39d04a9088858bb88af789cb",
+      "extractor_sha256": "c7fd307595b544ce510206491b9818cfd5f0d587dd9a9875b1b36e1badaa7e48",
+      "model_revision": "sha256:e2d2048292e055f7b61cdec3db010503f35369b245bf0b3bbad021c9a91e4053",
+      "style": "long10",
+      "manifest_sha256": "394c9e87a10c5d0857c152db2f10bb6c10c1bd851d0e843eab44233fcb5347b9",
+      "extraction_seconds": 4.434334750054404,
+      "profiles": 60,
+      "people": 15,
+      "sessions": 16,
+      "comparisons": [
+        {
+          "enrollment_sessions": 2,
+          "method": "first",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 7,
+            "missed": 9,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 8,
+            "missed": 6,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "first",
+          "policy": "calibration_only",
+          "threshold": 0.6754133922284016,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "mean",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 9,
+            "missed": 7,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 12,
+            "missed": 2,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "mean",
+          "policy": "calibration_only",
+          "threshold": 0.6736577065974066,
+          "margin": 0.12,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 1,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "max",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 9,
+            "missed": 7,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 9,
+            "missed": 5,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "max",
+          "policy": "calibration_only",
+          "threshold": 0.6998370439611555,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "first",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 3,
+            "missed": 5,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 3,
+            "missed": 4,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "first",
+          "policy": "calibration_only",
+          "threshold": 0.6763611793582459,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "mean",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 5,
+            "missed": 3,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "mean",
+          "policy": "calibration_only",
+          "threshold": 0.7252262130298759,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "max",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 6,
+            "missed": 2,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 5,
+            "missed": 2,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "max",
+          "policy": "calibration_only",
+          "threshold": 0.7224955025301245,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 5,
+            "missed": 2,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        }
+      ]
+    },
+    {
+      "input_sha256": "b9bc5e8aa118d3200ba095f1fce1409eb794b232e2ccfa60ed302cfb9905a745",
+      "model": "eres2net",
+      "evaluator_sha256": "4fa2407debe3608e1acb623191d922574d97f1fb39d04a9088858bb88af789cb",
+      "extractor_sha256": "c7fd307595b544ce510206491b9818cfd5f0d587dd9a9875b1b36e1badaa7e48",
+      "model_revision": "sha256:e2d2048292e055f7b61cdec3db010503f35369b245bf0b3bbad021c9a91e4053",
+      "style": "long30",
+      "manifest_sha256": "394c9e87a10c5d0857c152db2f10bb6c10c1bd851d0e843eab44233fcb5347b9",
+      "extraction_seconds": 12.486137040890753,
+      "profiles": 60,
+      "people": 15,
+      "sessions": 16,
+      "comparisons": [
+        {
+          "enrollment_sessions": 2,
+          "method": "first",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 13,
+            "missed": 3,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 13,
+            "missed": 1,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "first",
+          "policy": "calibration_only",
+          "threshold": 0.7138531919448289,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "mean",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 15,
+            "missed": 1,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "mean",
+          "policy": "calibration_only",
+          "threshold": 0.7657587448946956,
+          "margin": 0.12,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "max",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 14,
+            "missed": 2,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "max",
+          "policy": "calibration_only",
+          "threshold": 0.7625504848309778,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "first",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 5,
+            "missed": 3,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 6,
+            "missed": 1,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "first",
+          "policy": "calibration_only",
+          "threshold": 0.7138531919448289,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "mean",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "mean",
+          "policy": "calibration_only",
+          "threshold": 0.8264239435959311,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "max",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "max",
+          "policy": "calibration_only",
+          "threshold": 0.8181912030899541,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        }
+      ]
+    },
+    {
+      "input_sha256": "76b412805acedd3923c9deaaf1d99dc62765a2432dc87e96eba72e583047caac",
+      "model": "ecapa",
+      "evaluator_sha256": "4fa2407debe3608e1acb623191d922574d97f1fb39d04a9088858bb88af789cb",
+      "extractor_sha256": "c7fd307595b544ce510206491b9818cfd5f0d587dd9a9875b1b36e1badaa7e48",
+      "model_revision": "0f99f2d0ebe89ac095bcc5903c4dd8f72b367286",
+      "style": "long10",
+      "manifest_sha256": "394c9e87a10c5d0857c152db2f10bb6c10c1bd851d0e843eab44233fcb5347b9",
+      "extraction_seconds": 2.8638844159431756,
+      "profiles": 60,
+      "people": 15,
+      "sessions": 16,
+      "comparisons": [
+        {
+          "enrollment_sessions": 2,
+          "method": "first",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 1,
+            "missed": 15,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 1,
+            "missed": 13,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "first",
+          "policy": "calibration_only",
+          "threshold": 0.5717624604412919,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 13,
+            "missed": 1,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "mean",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 4,
+            "missed": 12,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 6,
+            "missed": 8,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "mean",
+          "policy": "calibration_only",
+          "threshold": 0.6655152478258578,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 13,
+            "missed": 1,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "max",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 2,
+            "missed": 14,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 4,
+            "missed": 10,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "max",
+          "policy": "calibration_only",
+          "threshold": 0.6610636098385969,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 13,
+            "missed": 1,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "first",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 0,
+            "missed": 8,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 0,
+            "missed": 7,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "first",
+          "policy": "calibration_only",
+          "threshold": 0.5717624604412919,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "mean",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 2,
+            "missed": 6,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 2,
+            "missed": 5,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "mean",
+          "policy": "calibration_only",
+          "threshold": 0.6628090584017655,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "max",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 1,
+            "missed": 7,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 2,
+            "missed": 5,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "max",
+          "policy": "calibration_only",
+          "threshold": 0.6610636098385969,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 6,
+            "missed": 1,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        }
+      ]
+    },
+    {
+      "input_sha256": "065ceef26fbf26abb4a9283c528454b608c1e91617eeacbcba5050fe1c8cfbc6",
+      "model": "wespeaker",
+      "evaluator_sha256": "4fa2407debe3608e1acb623191d922574d97f1fb39d04a9088858bb88af789cb",
+      "extractor_sha256": "c7fd307595b544ce510206491b9818cfd5f0d587dd9a9875b1b36e1badaa7e48",
+      "model_revision": "f0c48c298fd835726c27956a5d617bad7115627e",
+      "style": "long10",
+      "manifest_sha256": "394c9e87a10c5d0857c152db2f10bb6c10c1bd851d0e843eab44233fcb5347b9",
+      "extraction_seconds": 7.284407500177622,
+      "profiles": 60,
+      "people": 15,
+      "sessions": 16,
+      "comparisons": [
+        {
+          "enrollment_sessions": 2,
+          "method": "first",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 1,
+            "missed": 15,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 4,
+            "missed": 10,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "first",
+          "policy": "calibration_only",
+          "threshold": 0.5354829224111953,
+          "margin": 0.12,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "mean",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 7,
+            "missed": 9,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 7,
+            "missed": 7,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "mean",
+          "policy": "calibration_only",
+          "threshold": 0.6567411683183069,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "max",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 3,
+            "missed": 13,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 5,
+            "missed": 9,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 2,
+          "method": "max",
+          "policy": "calibration_only",
+          "threshold": 0.6907015765440943,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 16,
+            "correct": 16,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 16,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 112
+          },
+          "test": {
+            "known_queries": 14,
+            "correct": 14,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 14,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 84
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "first",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 0,
+            "missed": 8,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 1,
+            "missed": 6,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "first",
+          "policy": "calibration_only",
+          "threshold": 0.5656404995546906,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "mean",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 6,
+            "missed": 2,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 3,
+            "missed": 4,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "mean",
+          "policy": "calibration_only",
+          "threshold": 0.6962980124056192,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "max",
+          "policy": "fixed_0.80_0.08",
+          "threshold": 0.8,
+          "margin": 0.08,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 3,
+            "missed": 5,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 1,
+            "missed": 6,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        },
+        {
+          "enrollment_sessions": 3,
+          "method": "max",
+          "policy": "calibration_only",
+          "threshold": 0.6907015765440943,
+          "margin": 0.16,
+          "calibration": {
+            "known_queries": 8,
+            "correct": 8,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 8,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 56
+          },
+          "test": {
+            "known_queries": 7,
+            "correct": 7,
+            "missed": 0,
+            "wrong_identity": 0,
+            "unknown_queries": 7,
+            "false_accept_unknown": 0,
+            "pair_false_accept": 0,
+            "negative_pairs": 42
+          }
+        }
+      ]
+    }
+  ],
+  "base_commit": "aa7ec76f326a7b3c37b565680216653797f8f46c",
+  "protocol": "Exploratory AMI headset audio, oracle diarization and confirmed enrollment; same-day meetings; not Android end-to-end.",
+  "availability_exclusion": "One incomplete person excluded before inference; 8 calibration and 7 test people, 4 meetings each.",
+  "sqlite_late_voice_replay": {
+    "baseline": {
+      "profiles": 28,
+      "positive_pairs": 42,
+      "missed_pairs": 42,
+      "negative_pairs": 300,
+      "false_merges": 0,
+      "global_profiles": 28,
+      "style": "short-agc"
+    },
+    "candidate": {
+      "profiles": 28,
+      "positive_pairs": 42,
+      "missed_pairs": 2,
+      "negative_pairs": 300,
+      "false_merges": 0,
+      "global_profiles": 7,
+      "style": "short-agc"
+    }
+  },
+  "verification": {
+    "jvm_tests": 206,
+    "jvm_failures": 0,
+    "python_tests": 119,
+    "python_failures": 0,
+    "python_platform_skips": 1,
+    "native_inference_on_android": false
+  }
+}

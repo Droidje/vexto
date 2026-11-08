@@ -16,6 +16,7 @@ enum class Stage(val title: String) {
     Assembly("Собираю расшифровку"),
     Punctuation("Расставляю знаки"),
     Emotion("Определяю эмоции реплик"),
+    Overlap("Проверка перебиваний"),
 }
 
 sealed interface TranscriptionEvent {
@@ -25,7 +26,7 @@ sealed interface TranscriptionEvent {
     /** Реплики, готовые до завершения всей обработки. */
     data class Partial(val transcript: Transcript) : TranscriptionEvent
 
-    data class CoreReady(val transcript: Transcript, val artifactDirectory: String) : TranscriptionEvent
+    data class CoreReady(val transcript: Transcript, val artifactDirectory: String, val finalText: Boolean = false, val warning: String? = null) : TranscriptionEvent
 
     data class Done(val transcript: Transcript, val stats: ProcessingStats) : TranscriptionEvent
 }

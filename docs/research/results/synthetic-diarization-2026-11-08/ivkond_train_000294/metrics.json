@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "duration_seconds": 44.8214375,
+  "inputs": {
+    "reference_rttm": {
+      "name": "ivkond_train_000294.rttm",
+      "sha256": "4aa0652159454d22a843d85bfc0c0730f30e24d02b0b16eb594e57b1caf4e1d9"
+    },
+    "reference_json": {
+      "name": "ivkond_train_000294.reference.json",
+      "sha256": "b45dee86dccaf71269f757d6539625f4647a49311d789947861cc93ae7bbac79"
+    },
+    "transcript": {
+      "name": "transcript.json",
+      "sha256": "2f23f74cd82bb59848482866a8930edfeef08aed3808eebf9a2736b0690cf065"
+    },
+    "completion": {
+      "name": "completion.json",
+      "sha256": "30b34bca204e8f2faac9b4e6f0c06c08b31b8df722a45afda001084726e8c3ad"
+    }
+  },
+  "reference": {
+    "format": "rttm",
+    "recording": "ivkond_train_000294",
+    "channel": "1"
+  },
+  "exportedDER": {
+    "status": "not_applicable_wer_only",
+    "der": null,
+    "der_percent": null,
+    "reason": "WER-only evaluation: reference boundaries are not validated for speech-only DER."
+  },
+  "rawNemotronDER": {
+    "status": "not_applicable_wer_only",
+    "der": null,
+    "der_percent": null,
+    "reason": "WER-only evaluation: reference boundaries are not validated for speech-only DER."
+  },
+  "wer": {
+    "status": "scored",
+    "value": 0.06451612903225806,
+    "percent": 6.451612903225806,
+    "errors": 4,
+    "reference_words": 62,
+    "hypothesis_words": 60,
+    "protocol": "start-time order; lowercase; ё->е; punctuation/underscore removed; no speaker attribution"
+  },
+  "runtime": {
+    "processing_ms": 41244,
+    "rtf": 0.9201846772540484,
+    "reported_audio_ms": 44821,
+    "peak_rss_bytes": 1827672064,
+    "peak_pss_bytes": null,
+    "memory_note": "Reported Android job RSS/PSS if present; no host memory measurement or inferred zero.",
+    "stage_ms": {
+      "Recognition": 5182,
+      "Preparing": 5514,
+      "Voiceprints": 3797,
+      "Emotion": 9538,
+      "Diarization": 8508,
+      "Language": 3199,
+      "Selection": 7843,
+      "Assembly": 16,
+      "Decoding": 100
+    }
+  },
+  "complete": true,
+  "full_profile_completed": false,
+  "selection_resolved": true,
+  "coverage": {
+    "expectedChunks": 9,
+    "gigaamChunks": 9,
+    "whisperChunks": 0,
+    "selectedChunks": 9,
+    "llmSelectedChunks": 0,
+    "unresolvedChunks": 0,
+    "equivalentChunks": 0
+  },
+  "language": null
+}

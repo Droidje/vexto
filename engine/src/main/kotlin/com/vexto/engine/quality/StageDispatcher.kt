@@ -2,9 +2,10 @@ package com.vexto.engine.quality
 
 import android.content.Context
 import com.vexto.engine.models.QualityModelStore
+import com.vexto.engine.models.OverlapManifest
+import com.vexto.engine.models.OverlapModelStore
 import com.vexto.engine.pipeline.*
 import com.vexto.engine.review.*
-import com.vexto.engine.runtime.NativeDiarizationProvider
 import com.vexto.engine.runtime.NativeProcessRunner
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -41,8 +42,15 @@ internal object StageDispatcher {
             }
             WorkerStage.DIARIZE -> {
                 val work = prepareOutput(File(job, "diarization"))
-                val result = NativeDiarizationProvider.run(models.file("nemotron"), input,
-                    File(work, "turns.rttm"), work, runner)
+                val stable: ((Long, List<com.vexto.engine.runtime.NativeSpeakerTurn>) -> Unit)? = if (!request.streaming) null else { frontier, rows ->
+                    val ids = rows.sortedBy { it.startMs }.map { it.speakerId }.distinct().withIndex().associate { it.value to it.index }
+                    val partial = rows.map { row -> PipelineTurn(
+                        ids.getValue(row.speakerId), row.startMs, row.endMs) }
+                    JobFiles.save(File(job, "diarization-progress.json"), DiarizationProgress(frontier, partial))
+                }
+                val diarized = LongRecordingDiarization.run(models.file("nemotron"), input, work, runner,
+                    threads = if (request.streaming) 2 else 4, onStable = stable)
+                val result = diarized.result
                 val ids = result.turns.sortedBy { it.startMs }.map { it.speakerId }.distinct().withIndex().associate { it.value to it.index }
                 val durationMs = com.vexto.engine.audio.PcmWave.inspect(input).sampleCount / 16
                 val turns = result.turns.map { turn ->
@@ -50,7 +58,8 @@ internal object StageDispatcher {
                     PipelineTurn(ids.getValue(turn.speakerId), turn.startMs, minOf(turn.endMs, durationMs))
                 }
                 JobFiles.save(File(job, "diarization/speaker-map.json"), ids)
-                WorkerResult(request.stage, turns = turns, peakCombinedRssBytes = result.process.peakCombinedRssBytes)
+                WorkerResult(request.stage, turns = turns, warnings = diarized.warnings,
+                    peakCombinedRssBytes = result.process.peakCombinedRssBytes)
             }
             WorkerStage.VOICEPRINT -> {
                 val turns = JobFiles.load<List<PipelineTurn>>(File(job, "turns.json"))
@@ -58,29 +67,35 @@ internal object StageDispatcher {
                 JobFiles.save(File(job, "voiceprints.json"), voices)
                 WorkerResult(request.stage, voices = voices)
             }
-            WorkerStage.GIGAAM, WorkerStage.WHISPER ->
+            WorkerStage.GIGAAM, WorkerStage.WHISPER, WorkerStage.GIGAAM_REFINE, WorkerStage.WHISPER_REFINE ->
                 QueuedAsrStages.run(request, job, input, models, runner, onProgress)
             WorkerStage.SELECT -> {
-                val refs = listOf(WorkerStage.GIGAAM, WorkerStage.WHISPER).flatMap { stage ->
-                    runCatching { JobFiles.load<WorkerResult>(stage.resultFile(job)).candidates }.getOrDefault(emptyList())
-                }
-                val choices = saved?.choices.orEmpty().toMutableList()
+                val slavic = JobFiles.load<RecordingLanguage>(File(job, "language.json")).route == RecordingLanguage.SLAVIC
+                val refs = CandidateSources.read(job, slavic)
+                val choices = saved?.choices.orEmpty().filter { it.status != AsrSelectionStatus.UNRESOLVED.name }.toMutableList()
                 val known = choices.mapTo(mutableSetOf()) { it.chunkId }
                 val warnings = mutableListOf<String>()
                 val tasks = chunkPlan().chunks
+                // An older cached executable still works with its conservative byte cap.
+                // Probe before opening a model session; do not send it the new larger envelope.
+                val contract = prepareOutput(File(job, "qwen-contract")).also { it.mkdirs() }
+                val help = File(contract, "help.stdout")
+                val info = runner.run("libvexto_llama_exec.so", listOf("--help"), contract,
+                    help, File(contract, "help.stderr"), 15_000)
+                nativePeak = maxOf(nativePeak, info.peakCombinedRssBytes)
+                val promptBytes = if (help.readText().contains(BoundedQwenRequest.Protocol)) BoundedQwenRequest.MaxPromptBytes
+                    else BoundedQwenRequest.MaxIdentityPromptBytes.also { warnings += "QWEN_LEGACY_PROMPT_LIMIT" }
+                var names = saved?.speakerNames
+                val cadence = CheckpointCadence()
                 var processed = known.size
-                if (processed > 0) onProgress(processed.toFloat() / tasks.size.coerceAtLeast(1))
-                if (processed == tasks.size) {
-                    onProgress(1f)
-                    return WorkerResult(request.stage, choices = choices, peakCombinedRssBytes = nativePeak)
-                }
+                if (processed > 0) onProgress(0.95f * processed / tasks.size.coerceAtLeast(1))
                 runner.persistentExecutor(File(job, "workers/qwen")).use { session ->
                     val metered = LocalNativeExecutor { executable, args, dir, stdout, stderr, timeout ->
                         session.run(executable, args, dir, stdout, stderr, timeout).also {
                             nativePeak = maxOf(nativePeak, it.peakCombinedRssBytes)
                         }
                     }
-                    val selector = QwenAsrSelector(metered, models.file("qwen"))
+                    val selector = QwenAsrSelector(metered, models.file("qwen"), promptBuilder = SelectorPrompt(promptBytes))
                     for (chunk in tasks) {
                         currentCoroutineContext().ensureActive()
                         if (chunk.id in known) continue
@@ -91,34 +106,82 @@ internal object StageDispatcher {
                                 }
                             }.getOrElse { warnings += "INVALID_ORIGINAL:${chunk.id}:${ref.source}"; null }
                         }
-                        if (originals.isEmpty()) { warnings += "ASR_MISSING:${chunk.id}"; onProgress((++processed).toFloat() / tasks.size); continue }
+                        if (originals.isEmpty()) { warnings += "ASR_MISSING:${chunk.id}"; onProgress(0.95f * (++processed) / tasks.size); continue }
                         val pair = AsrCandidatePair(chunk.id, chunk.inputSha256, originals.firstOrNull { it.source == AsrSource.GIGAAM },
                             originals.firstOrNull { it.source == AsrSource.WHISPER })
                         prepareOutput(File(job, "selection/${chunk.id}"))
-                        val selected = selector.selectAll(listOf(pair), File(job, "selection")).single()
+                        val selected = if (!JobFiles.load<RecordingLanguage>(File(job, "language.json")).usesWhisper) {
+                            AsrSelectionTool().fallback(pair, File(job, "selection/${chunk.id}/display-candidate.json").also { it.parentFile?.mkdirs() },
+                                "language_route_gigaam_only")
+                        } else selector.selectAll(listOf(pair), File(job, "selection")).single()
                         val ref = CandidateRef(chunk.id, selected.displayCandidate.source.wireName,
                             selected.selectedArtifact.relativeTo(job).invariantSeparatorsPath, selected.audit.selectedSha256)
                         choices += ChoiceRef(chunk.id, ref, selected.status.name, selected.audit.reason)
                         JobFiles.save(File(job, "selection/${chunk.id}/audit.json"), selected.audit)
-                        checkpoint(WorkerResult(request.stage, choices = choices.toList(), warnings = warnings.toList(), peakCombinedRssBytes = nativePeak))
-                        onProgress((++processed).toFloat() / tasks.size)
+                        if (cadence.due(choices.size, tasks.size)) checkpoint(WorkerResult(request.stage,
+                            choices = choices.toList(), warnings = warnings.toList(), peakCombinedRssBytes = nativePeak))
+                        onProgress(0.95f * (++processed) / tasks.size)
                     }
+                    // Keep the same Qwen model/context alive for one bounded naming request.
+                    names = try {
+                        val namingInput = SpeakerNamingInput.create(job, chunkPlan(), refs, choices)
+                        names?.takeIf { it.reusable && it.sourceSha256 == SpeakerNamePlan.sourceHash(namingInput) }
+                            ?: QwenSpeakerNames(metered, models.file("qwen")).infer(namingInput,
+                                prepareOutput(File(job, "speaker-names")))
+                    } catch (cancel: CancellationException) {
+                        throw cancel
+                    } catch (_: Exception) {
+                        SpeakerNamesArtifact("", "input_unavailable")
+                    }
+                    JobFiles.save(File(job, "speaker-names.json"), requireNotNull(names))
                 }
-                WorkerResult(request.stage, choices = choices, warnings = warnings, peakCombinedRssBytes = nativePeak)
+                onProgress(1f)
+                WorkerResult(request.stage, choices = choices, warnings = warnings,
+                    peakCombinedRssBytes = nativePeak, speakerNames = names)
+            }
+            WorkerStage.OVERLAP -> {
+                val manifest = JobFiles.load<OverlapManifest>(File(job, "overlap-model.json")).also { it.validate() }
+                require(OverlapModelStore.manifest(context) == manifest) { "Overlap model changed during job" }
+                val targets = JobFiles.load<List<UtteranceOverlapTarget>>(File(job, "overlap-targets.json"))
+                require(targets.map { it.index }.distinct().size == targets.size)
+                val targetMap = targets.associateBy { it.index }
+                val evidence = saved?.overlaps.orEmpty().distinctBy { it.target.index }.filter {
+                    targetMap[it.target.index] == it.target && it.modelRevision == manifest.revision
+                }
+                val known = evidence.mapTo(mutableSetOf()) { it.target.index }
+                val pending = targets.filter { it.index !in known }
+                val model = OverlapModelStore.prepare(context, manifest)
+                val cadence = CheckpointCadence()
+                fun save(values: List<UtteranceOverlapEvidence>, force: Boolean = false): WorkerResult {
+                    val result = WorkerResult(request.stage, overlaps = values, backends = listOf("cpu"))
+                    if (force || cadence.due(values.size, targets.size)) checkpoint(result)
+                    if (targets.isNotEmpty()) onProgress(values.size.toFloat() / targets.size)
+                    return result
+                }
+                OverlapProvider(model).use { provider ->
+                    val added = provider.annotate(input, pending, manifest.revision) { save(evidence + it) }
+                    save((evidence + added).sortedBy { it.target.index }, force = true)
+                }
             }
             WorkerStage.EMOTION -> {
                 val targets = JobFiles.load<List<UtteranceEmotionTarget>>(File(job, "emotion-targets.json"))
                 val evidence = saved?.emotions.orEmpty()
                 val known = evidence.mapTo(mutableSetOf()) { it.target.index }
                 val pending = targets.filter { it.index !in known }
+                if (pending.isNotEmpty() && ProcessingProfile.read(job).backgroundEmotions) {
+                    QualityModelStore.prepareEmotion(context)
+                }
                 val backends = saved?.backends.orEmpty().toMutableSet()
                 val accelerator = if (request.allowNpu && pending.isNotEmpty()) EmotionNative.npuDriver() else null
                 if (accelerator != null) JobFiles.save(emotionNpuAttemptFile(job), request.requestId)
 
-                fun save(emotions: List<UtteranceEmotionEvidence>): WorkerResult {
-                    JobFiles.save(File(job, "emotion.json"), UtteranceEmotionArtifact(emotions))
+                val cadence = CheckpointCadence()
+                fun save(emotions: List<UtteranceEmotionEvidence>, force: Boolean = false): WorkerResult {
                     val result = WorkerResult(request.stage, emotions = emotions, backends = backends.toList())
-                    checkpoint(result)
+                    if (force || cadence.due(emotions.size, targets.size)) {
+                        JobFiles.save(File(job, "emotion.json"), UtteranceEmotionArtifact(emotions))
+                        checkpoint(result)
+                    }
                     if (targets.isNotEmpty()) onProgress(emotions.size.toFloat() / targets.size)
                     return result
                 }
@@ -138,7 +201,7 @@ internal object StageDispatcher {
                         save(evidence + it)
                     }
                     recordBackend()
-                    save((evidence + added).sortedBy { it.target.index })
+                    save((evidence + added).sortedBy { it.target.index }, force = true)
                 }
             }
         }

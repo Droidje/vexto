@@ -1,0 +1,92 @@
+# Результаты тестов
+
+Сводка актуализирована 8 ноября 2026. Каждая цифра относится к указанной конфигурации и выборке. Инференс APK в Android, расчёт WER/DER на компьютере и исследовательские запуски моделей на компьютере различаются ниже. WER оценён на 10 записях (5 ivkond + 5 FLEURS), DER — на 10 записях (5 BookMix + 5 чистых BookMix). [Архитектура](ARCHITECTURE.md), [ограничения](LIMITATIONS.md), [агрегаты](research/results/).
+
+## Наши записи: Test2 и Video Project 17
+
+Новые полные прогоны исходных `Test2.mp3` и `Video Project 17.m4a` (ранее называли Video Player): APK `0.5.1-dev-1d21558`, FAST, Vexto_3 x86_64, RAM 4096 МБ. В отличие от публичных WAV, здесь время включает декодирование исходных сжатых файлов.
+
+| Запись | Аудио, с | Полный проход, с | Пик RSS, ГБ | RTF | WER | DER |
+|---|---:|---:|---:|---:|---:|---:|
+| Test2.mp3 | 21,012 | 29,227 | 1,43 | 1,391 | N/A | N/A |
+| Video Project 17.m4a | 346,048 | 211,445 | 1,43 | 0,611 | N/A | N/A |
+
+Опубликованной разметки этих личных записей нет. Время включает фоновые эмоции, основной диалог доступен раньше. Личные аудио, транскрипты и полные артефакты остаются локально; опубликованы только [безопасные агрегаты, coverage и SHA256](research/results/clean-audio-probes-2026-11-08/summary.json). `fullProfileCompleted=false` на русском одноречевом пути не означает потерю чанков; все ожидаемые чанки распознаны и выбраны, `complete=true`, `selectionResolved=true`.
+
+## Русские синтетические записи: пять + пять
+
+[CSV актуальных серий: все 22 записи, WER/DER, время, RSS и RTF](../artifacts/test-results/results.csv).
+
+Десять полных записей через штатную foreground-службу APK `0.5.1-dev-34e5ae8`, режим FAST; Vexto_3, x86_64, Android API 36, RAM 4096 МБ. Все файлы определены как русский язык: распознавание GigaAM v3 e2e CTC INT8, границы и спикеры Nemotron 3; Whisper ASR не запускался. Выбор записей зафиксирован до инференса, без исключения неудачных случаев.
+
+| Набор | Записей | Аудио, с | WER | DER итогового JSON | Полный проход всех файлов, с | Максимальный RSS, ГБ |
+|---|---:|---:|---:|---:|---:|---:|
+| ivkond | 5 | 223,726 | 8,94% | N/A | 157,279 | 1,83 |
+| BookMix | 5 | 300,000 | N/A | 8,86% | 235,111 | 1,75 |
+
+ivkond используется **только для WER** (21 ошибка на 235 эталонных слов), BookMix — **только для DER**.
+
+| Запись | Аудио, с | WER | DER JSON |
+|---|---:|---:|---:|
+| [ivkond_train_000031](research/results/synthetic-diarization-2026-11-08/ivkond_train_000031/metrics.json) | 35,411 | 11,63% | N/A |
+| [ivkond_train_000294](research/results/synthetic-diarization-2026-11-08/ivkond_train_000294/metrics.json) | 44,821 | 6,45% | N/A |
+| [ivkond_train_000346](research/results/synthetic-diarization-2026-11-08/ivkond_train_000346/metrics.json) | 45,560 | 10,00% | N/A |
+| [ivkond_train_000391](research/results/synthetic-diarization-2026-11-08/ivkond_train_000391/metrics.json) | 43,802 | 18,74% | N/A |
+| [ivkond_train_001064](research/results/synthetic-diarization-2026-11-08/ivkond_train_001064/metrics.json) | 54,132 | 2,13% | N/A |
+| [rec_0055](research/results/synthetic-diarization-2026-11-08/rec_0055/metrics.json) | 60,000 | N/A | 5,20% |
+| [rec_0056](research/results/synthetic-diarization-2026-11-08/rec_0056/metrics.json) | 60,000 | N/A | 6,21% |
+| [rec_0057](research/results/synthetic-diarization-2026-11-08/rec_0057/metrics.json) | 60,000 | N/A | 6,90% |
+| [rec_0058](research/results/synthetic-diarization-2026-11-08/rec_0058/metrics.json) | 60,000 | N/A | 16,91% |
+| [rec_0059](research/results/synthetic-diarization-2026-11-08/rec_0059/metrics.json) | 60,000 | N/A | 9,63% |
+
+WER: нижний регистр, ё→е, пунктуация удалена; ошибки и эталонные слова суммируются по пяти файлам. DER BookMix: collar 0, overlap учитывается, оптимальное соответствие меток отдельно для каждого файла; итог считается по суммам ошибочного и эталонного speaker-time. DER итогового JSON совпал с выходом стадии Nemotron на всех пяти файлах BookMix.
+
+Время включает фоновые эмоции; основной диалог доступен раньше. RSS — показание Android-watchdog, без добавления резерва. Входы уже WAV PCM16/16kHz; декодирование исходного MP3/M4A не включено.
+
+Источники, лицензии, ограничения и воспроизведение: [полный отчёт](research/synthetic-diarization-2026-11-08.md), [сводный JSON с числителями и знаменателями](research/results/synthetic-diarization-2026-11-08/summary.json), [аудиофайлы и опубликованные эталоны](../testdata/audio/ru/synthetic-20261108/README.md).
+
+## Дополнительные тесты: чистые условия
+
+Пять FLEURS с опубликованным текстом и пять новых двухголосых BookMix без наложений (SNR 25 dB). Выбор зафиксирован по источникам/метаданным до инференса. Это демонстрационные условия; все выбранные результаты сохранены. APK `0.5.1-dev-1d21558`, FAST, тот же AVD 4 ГБ.
+
+| Набор | Файлов | WER | DER JSON |
+|---|---:|---:|---:|
+| FLEURS | 5 | 4,48 | N/A |
+| BookMix clean | 5 | N/A | 6,08 |
+
+Значения WER/DER в процентах. FLEURS — только WER: независимых границ речи нет. BookMix — только DER: независимого текста нет. WER считается по сумме ошибок/эталонных слов; DER — по суммам speaker-time, collar 0, overlap учитывается.
+
+| Запись | WER, % | DER, % | Обработка, с | Пик RSS, ГБ |
+|---|---:|---:|---:|---:|
+| [fleurs-ru-01](research/results/clean-audio-probes-2026-11-08/fleurs-ru-01/metrics.json) | 0,00 | N/A | 87,151 | 1,39 |
+| [fleurs-ru-02](research/results/clean-audio-probes-2026-11-08/fleurs-ru-02/metrics.json) | 3,85 | N/A | 30,223 | 1,36 |
+| [fleurs-ru-03](research/results/clean-audio-probes-2026-11-08/fleurs-ru-03/metrics.json) | 2,63 | N/A | 44,189 | 1,34 |
+| [fleurs-ru-04](research/results/clean-audio-probes-2026-11-08/fleurs-ru-04/metrics.json) | 5,88 | N/A | 39,551 | 1,45 |
+| [fleurs-ru-05](research/results/clean-audio-probes-2026-11-08/fleurs-ru-05/metrics.json) | 9,38 | N/A | 54,801 | 1,45 |
+| [rec_0061](research/results/clean-audio-probes-2026-11-08/rec_0061/metrics.json) | N/A | 6,26 | 53,959 | 1,40 |
+| [rec_0063](research/results/clean-audio-probes-2026-11-08/rec_0063/metrics.json) | N/A | 6,42 | 44,338 | 1,44 |
+| [rec_0066](research/results/clean-audio-probes-2026-11-08/rec_0066/metrics.json) | N/A | 5,09 | 61,245 | 1,38 |
+| [rec_0070](research/results/clean-audio-probes-2026-11-08/rec_0070/metrics.json) | N/A | 8,22 | 52,513 | 1,38 |
+| [rec_0071](research/results/clean-audio-probes-2026-11-08/rec_0071/metrics.json) | N/A | 4,37 | 65,886 | 1,37 |
+
+Время включает фоновые эмоции. [Полный отчёт, протокол и исходники](research/clean-audio-probes-2026-11-08.md), [новые аудио и эталоны](../testdata/audio/ru/clean-demo-20261108/README.md).
+
+## Другие измерения
+
+- **Междиалоговое узнавание:** контролируемый replay реального SQLite-matcher приложения на AMI (7 людей, 28 появлений): после исправления 2/42 пропусков связей и 0/300 ложных объединений. Отдельное аудиосравнение ERes2Net — 14/14 возвращающихся людей. Это разные эксперименты, не статистика всех пользователей. [Протокол](research/speaker-matching-quality.md).
+- **Детектор наложений:** AMI, отложенные участники: precision 18/19 = 94,7%, 1 ложная тревога среди 56 отрицательных окон, 1 ошибка среди 27 коротких подтверждений; F1 0,800, ROC AUC 0,948. Русский отрицательный контроль RINCO — 0/4. [Обучение и выборка](research/natural-overlap-precision.md). Сверка ONNX/PyTorch на 82 окнах: 0 различных решений, max расхождение вероятности 0,0000089. [Перенос](research/android-overlap.md).
+- **LID:** обрезанный Whisper tiny (23,3 против 102,8 МБ) совпал с полным tiny на 30/30 коротких файлов sherpa-onnx. [Метод](research/spoken-language-id.md).
+
+## Оптимизация отдельного LLM-резюме
+
+На ARM64 AVD 4 ГБ диагностический native harness сравнил прежнее попарное резюмирование и точное планирование токенов/широкий merge: на одной расшифровке 5:46 среднее двух порядков 141,31 → 71,09 с, число вызовов 15 → 3. [Метод](research/summary-token-budget.md), [контракт](architecture/summary-token-budget.md).
+
+## Физические устройства
+
+Полный конвейер — запись, офлайн-обработка, экспорт — проверен вручную на Nothing Phone 3a (8 ГБ) и realme C21 (4 ГБ).
+
+## CI и воспроизведение
+
+По [конфигурации CI](../.github/workflows/ci.yml) PR/push в dev/main запускают Python/JVM-проверки, lint и сборку без native; PR в main и обновление main дополнительно собирают native APK ARM64/x86_64. Ручные audio/optimization probes включаются отдельно.
+
+Команды исходных экспериментов, SHA весов и условия находятся в связанных отчётах. Публичные аудиофикстуры с лицензиями — [здесь](../testdata/audio/ru/README.md); приватные записи не публикуются. Неначатые и незавершённые исследования не дописываются в таблицы как успешные результаты.

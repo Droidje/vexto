@@ -9,66 +9,124 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Stable conversation numbers linked to the private recording filenames. */
+/** Stable conversation identity and title lifecycle, independent of the recording title. */
 final class ReflectConversationStore extends SQLiteOpenHelper {
+    private static final int PENDING = 0, AUTOMATIC = 1, MANUAL = 2, DELETED = 3;
+
+    record Entry(long number, String customTitle, int state) {
+        String title() { return customTitle == null ? numberedTitle(number) : customTitle; }
+        boolean needsTitle() { return state == PENDING; }
+        boolean deleted() { return state == DELETED; }
+    }
+
     ReflectConversationStore(Context context) {
-        super(context, "conversations.db", null, 1);
+        super(context, "conversations.db", null, 3);
     }
 
     @Override public void onCreate(SQLiteDatabase database) {
-        database.execSQL("CREATE TABLE conversations ("
-                + "number INTEGER PRIMARY KEY AUTOINCREMENT, recording TEXT NOT NULL UNIQUE)");
+        database.execSQL("CREATE TABLE conversations (number INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + "recording TEXT NOT NULL UNIQUE, title TEXT, title_state INTEGER NOT NULL DEFAULT 0)");
     }
 
     @Override public void onUpgrade(SQLiteDatabase database, int oldVersion, int newVersion) {
-        throw new IllegalStateException("Unknown conversation database migration");
+        if (oldVersion < 1 || oldVersion > 2 || newVersion != 3) throw new IllegalStateException("Unknown conversation migration");
+        if (oldVersion == 1) {
+            database.execSQL("ALTER TABLE conversations ADD COLUMN title TEXT");
+            database.execSQL("ALTER TABLE conversations ADD COLUMN title_state INTEGER NOT NULL DEFAULT 0");
+        }
+        // v2 consumed even failed inference as AUTOMATIC with no title. No manual,
+        // deleted or successfully named conversation is eligible for this repair.
+        database.execSQL("UPDATE conversations SET title_state = 0 WHERE title_state = 1 AND title IS NULL");
     }
 
-    Map<String, Long> assign(List<ReflectCatalog.Recording> recordings) {
+    Map<String, Entry> assign(List<ReflectCatalog.Recording> recordings) {
         SQLiteDatabase database = getWritableDatabase();
-        Map<String, Long> numbers = new HashMap<>();
+        Map<String, Entry> entries = new HashMap<>();
         database.beginTransaction();
         try {
-            try (var rows = database.query("conversations", new String[]{"recording", "number"},
-                    null, null, null, null, null)) {
-                while (rows.moveToNext()) numbers.put(rows.getString(0), rows.getLong(1));
+            try (var rows = database.query("conversations",
+                    new String[]{"recording", "number", "title", "title_state"}, null, null, null, null, null)) {
+                while (rows.moveToNext()) {
+                    entries.put(rows.getString(0), new Entry(rows.getLong(1), rows.getString(2), rows.getInt(3)));
+                }
             }
-            // The catalog is newest-first. Number existing recordings oldest-first on migration.
+            // Number pre-existing recordings in their original order.
             for (int index = recordings.size() - 1; index >= 0; index--) {
                 String recording = recordings.get(index).file.getName();
-                if (!numbers.containsKey(recording)) numbers.put(recording, insert(database, recording));
+                if (!entries.containsKey(recording)) entries.put(recording, insert(database, recording));
             }
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
         }
-        return numbers;
+        return entries;
     }
 
     String title(File recording) {
         SQLiteDatabase database = getWritableDatabase();
         database.beginTransaction();
         try {
-            String name = recording.getName();
-            long number;
-            try (var rows = database.query("conversations", new String[]{"number"}, "recording = ?",
-                    new String[]{name}, null, null, null)) {
-                number = rows.moveToFirst() ? rows.getLong(0) : insert(database, name);
-            }
+            Entry entry = find(database, recording);
+            if (entry == null) entry = insert(database, recording.getName());
             database.setTransactionSuccessful();
-            return title(number);
+            return entry.title();
         } finally {
             database.endTransaction();
         }
     }
 
-    static String title(Long number) {
-        return number == null ? "Разговор" : "Разговор №" + number;
+    boolean needsTitle(File recording) {
+        Entry entry = find(getReadableDatabase(), recording);
+        return entry != null && entry.needsTitle();
     }
 
-    private static long insert(SQLiteDatabase database, String recording) {
+    boolean isDeleted(File recording) {
+        Entry entry = find(getReadableDatabase(), recording);
+        return entry != null && entry.deleted();
+    }
+
+    boolean rename(File recording, String title) {
+        return update(recording, title, MANUAL, "title_state != ?", DELETED);
+    }
+
+    /** Only a usable generated title completes the one-time automatic assignment. */
+    boolean completeTitle(File recording, String title) {
+        if (title == null || title.isBlank()) return false;
+        return update(recording, title, AUTOMATIC, "title_state = ?", PENDING);
+    }
+
+    /** Explicit navigation from a retained recording can restore its archived conversation. */
+    boolean restore(File recording) {
+        ContentValues values = new ContentValues(1);
+        values.put("title_state", AUTOMATIC);
+        return getWritableDatabase().update("conversations", values, "recording = ? AND title_state = ?",
+                new String[]{recording.getName(), Integer.toString(DELETED)}) == 1;
+    }
+
+    boolean delete(File recording) {
+        return update(recording, null, DELETED, "title_state != ?", DELETED);
+    }
+
+    static String numberedTitle(long number) { return "Разговор №" + number; }
+
+    private boolean update(File recording, String title, int state, String filter, int previousState) {
+        ContentValues values = new ContentValues(2);
+        values.put("title", title);
+        values.put("title_state", state);
+        return getWritableDatabase().update("conversations", values, "recording = ? AND " + filter,
+                new String[]{recording.getName(), Integer.toString(previousState)}) == 1;
+    }
+
+    private static Entry find(SQLiteDatabase database, File recording) {
+        try (var rows = database.query("conversations", new String[]{"number", "title", "title_state"},
+                "recording = ?", new String[]{recording.getName()}, null, null, null)) {
+            return rows.moveToFirst() ? new Entry(rows.getLong(0), rows.getString(1), rows.getInt(2)) : null;
+        }
+    }
+
+    private static Entry insert(SQLiteDatabase database, String recording) {
         ContentValues row = new ContentValues(1);
         row.put("recording", recording);
-        return database.insertOrThrow("conversations", null, row);
+        return new Entry(database.insertOrThrow("conversations", null, row), null, PENDING);
     }
 }

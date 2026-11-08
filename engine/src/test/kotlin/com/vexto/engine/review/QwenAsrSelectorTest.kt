@@ -16,9 +16,21 @@ class QwenAsrSelectorTest {
     @get:Rule val temp = TemporaryFolder()
     private fun pair(id: String, text: String = "Тестовая реплика."): AsrCandidatePair {
         val dir = temp.root.resolve(id).apply { mkdirs() }
-        fun candidate(source: AsrSource) = ImmutableAsrCandidate.create(id, source, "a".repeat(64), text,
+        fun candidate(source: AsrSource) = ImmutableAsrCandidate.create(id, source, "a".repeat(64), if (source == AsrSource.GIGAAM) text else "$text Другой вариант.",
             emptyList(), emptyList(), dir.resolve(source.wireName + ".json"))
         return AsrCandidatePair(id, "a".repeat(64), candidate(AsrSource.GIGAAM), candidate(AsrSource.WHISPER))
+    }
+
+    @Test fun identicalTextsBypassTheModelWithoutClaimingAnLlmDecision() = runBlocking {
+        val base = pair("same")
+        val whisper = ImmutableAsrCandidate.create(base.chunkId, AsrSource.WHISPER, base.inputSha256,
+            base.gigaam!!.text, emptyList(), emptyList(), temp.root.resolve("equal-whisper.json"))
+        val noModel = LocalNativeExecutor { _, _, _, _, _, _ -> error("LLM must not run") }
+        val result = QwenAsrSelector(noModel, temp.newFile("equal-model.gguf"))
+            .selectAll(listOf(base.copy(whisper = whisper)), temp.root.resolve("equal-selection")).single()
+        assertEquals(AsrSelectionStatus.EQUIVALENT, result.status)
+        assertFalse(result.audit.selectedByLlm)
+        assertEquals(base.gigaam!!.text, result.displayCandidate.text)
     }
 
     @Test fun `every chunk receives its own local tool call and failures do not cut the review list`() = runBlocking {
@@ -56,7 +68,7 @@ class QwenAsrSelectorTest {
     }
 
     @Test fun `oversize never truncates candidates and sole source bypasses generation`() = runBlocking {
-        val oversized = pair("large", "Ж".repeat(1000))
+        val oversized = pair("large", "Ж".repeat(5000))
         val original = oversized.whisper!!.verifiedBytes()
         val only = pair("only").copy(whisper = null)
         val executor = LocalNativeExecutor { _, _, _, _, _, _ -> error("native must not run") }
@@ -67,6 +79,32 @@ class QwenAsrSelectorTest {
         assertArrayEquals(original, oversized.whisper!!.verifiedBytes())
         assertEquals(AsrSelectionStatus.ONE_AVAILABLE, results[1].status)
         assertFalse(results[1].audit.selectedByLlm)
+    }
+
+    @Test fun nativeTokenRejectionDoesNotPreventReviewingTheNextWholeRussianCandidate() = runBlocking {
+        val tooManyTokens = pair("token_reject", "Ж".repeat(1000))
+        val text = "Сегодня мы подробно обсуждаем обработку русской речи и сохранение всех оригиналов. ".repeat(6)
+        val full = pair("whole", text)
+        val calls = mutableListOf<String>()
+        val executor = LocalNativeExecutor { _, args, dir, stdout, _, _ ->
+            calls += dir.name
+            if (dir.name == "token_reject") throw NativeRequestRejectedException(NativeRequestRejectedException.ContextBudget)
+            val prompt = java.io.File(args[args.indexOf("-f") + 1]).readText()
+            assertTrue(prompt.toByteArray().size > 864)
+            val data = Json.parseToJsonElement(prompt.substringAfter('\n')).jsonObject
+            assertEquals(full.gigaam!!.text, data.getValue("gigaam").jsonPrimitive.content)
+            assertEquals(full.whisper!!.text, data.getValue("whisper").jsonPrimitive.content)
+            assertEquals("1024", args[args.indexOf("-c") + 1])
+            stdout.writeText("\"whisper\"")
+            LocalNativeResult(10, 100)
+        }
+        val selected = QwenAsrSelector(executor, temp.newFile("native-token-model.gguf")).selectAll(
+            listOf(tooManyTokens, full), temp.root.resolve("native-token-selection"))
+        assertEquals(listOf("token_reject", "whole"), calls)
+        assertEquals("prompt_exceeds_context_budget", selected[0].audit.reason)
+        assertEquals(AsrSelectionStatus.SELECTED_BY_LLM, selected[1].status)
+        assertEquals(full.whisper!!.text, selected[1].displayCandidate.text)
+        listOf(tooManyTokens, full).forEach { it.gigaam!!.verifiedBytes(); it.whisper!!.verifiedBytes() }
     }
 
     @Test fun `tool schema has one chunk enum and no reasoning in generation prefix`() {

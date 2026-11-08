@@ -1,5 +1,7 @@
 # Исторический движок до quality profile
 
+> Исторический эксперимент: цифры и решения ниже относятся к указанным версиям, данным и устройствам. Текущее поведение — [архитектура](../ARCHITECTURE.md), применимые измерения и ограничения — [TEST_RESULTS](../TEST_RESULTS.md) и [LIMITATIONS](../LIMITATIONS.md). Описанный промежуточный экспорт/каскад не задаёт текущий русский GigaAM-only маршрут.
+
 Этот документ описывает прежнюю реализацию GigaAM + Silero + ERes2Net. Его замеры не относятся к новой связке.
 
 # engine: офлайн-движок расшифровки
@@ -111,7 +113,7 @@ python tools/benchmarks/score_dev_diarization.py --manifest MANIFEST.json --hypo
 Scorer требует те же хеши русских фикстур, что у сохранённого Nemotron baseline,
 `status=completed`, `forced_speaker_count=null`, `asr_executed=false` и связанный
 хеш RTTM. При неполном/невалидном прогоне успешный pooled DER не публикуется.
-[Результат прямого сравнения dev](../docs/research/russian-diarization.md#прямое-сравнение-с-диаризатором-из-dev-apk).
+[Результат прямого сравнения dev](russian-diarization.md#прямое-сравнение-с-диаризатором-из-dev-apk).
 
 ## Замеры на эмуляторе
 

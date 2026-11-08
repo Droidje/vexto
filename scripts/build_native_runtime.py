@@ -44,7 +44,10 @@ def main() -> int:
     parser.add_argument("--component", choices=("nemotron", "whisper", "llama"), action="append")
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--avx2", action="store_true", help="x86_64 emulator only; generic default")
+    parser.add_argument("--variant-suffix", choices=("avx2",), help="Stage accelerated companions alongside baseline libraries")
     args = parser.parse_args()
+    if args.variant_suffix and (not args.avx2 or args.abi != ["x86_64"]):
+        parser.error("variant-suffix requires --avx2 --abi x86_64")
     if not 1 <= args.jobs <= 8:
         parser.error("jobs must be 1..8")
     cmake, ninja = shutil.which("cmake"), shutil.which("ninja")
@@ -59,6 +62,7 @@ def main() -> int:
     for name, source in sources.items():
         if digest(source / "CMakeLists.txt", text=True) != pins[name]["cmake_sha256_lf"]:
             raise ValueError(f"unexpected {name} source anchor; use pinned revision")
+    subprocess.run([sys.executable, str(NATIVE / "patch_diar_threads.py"), str(sources["nemotron"])], check=True)
     # The NDK liblog link is the existing audited minimal upstream build patch.
     sentence_cmake = sources["nemotron"] / "cmake/sentencepiece.cmake"
     if digest(sentence_cmake, text=True) != "faf9803756a56e076004998aa9dfb2042f22a542e017ac54bb30b2cf63c8b26f":
@@ -121,9 +125,12 @@ def main() -> int:
                     "-DLLAMA_BUILD_TESTS=OFF", "-DLLAMA_BUILD_EXAMPLES=ON", "-DLLAMA_BUILD_SERVER=OFF",
                     "-DLLAMA_CURL=OFF", "-DLLAMA_OPENSSL=OFF", "-DLLAMA_BUILD_COMMON=ON"]
                 target, binary = "vexto_llama_exec", target_dir / "bin/vexto_llama_exec"
+            if args.variant_suffix and component == "nemotron":
+                configure += ["-DVEXTO_VARIANT_SUFFIX=" + args.variant_suffix]
             run(configure, log)
             run([cmake, "--build", target_dir, "--target", target, "--parallel", args.jobs], log)
-            destination = output / f"libvexto_{component}_exec.so"
+            variant = "_" + args.variant_suffix if args.variant_suffix else ""
+            destination = output / f"libvexto_{component}{variant}_exec.so"
             shutil.copy2(binary, destination)
             run([strip, "--strip-unneeded", destination], log)
             if component == "nemotron":
@@ -137,7 +144,7 @@ def main() -> int:
             for name in needed:
                 if name not in {"libc.so", "libm.so", "libdl.so", "liblog.so", "libandroid.so"} and not (output / name).exists():
                     raise ValueError(f"unstaged dependency {name} of {file.name}")
-            if file.name.startswith("libvexto_") and "/system/bin/linker64" not in elf:
+            if file.name.endswith("_exec.so") and "/system/bin/linker64" not in elf:
                 raise ValueError("packaged executable must be Android PIE with linker64")
             artifacts.append({"file": file.name, "size_bytes": file.stat().st_size, "sha256": digest(file), "needed": needed})
         manifest = {"status": "cross_compiled_not_executed", "abi": abi, "api": 28, "ndk": "r28c",

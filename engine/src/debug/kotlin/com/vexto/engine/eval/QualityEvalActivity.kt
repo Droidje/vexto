@@ -38,13 +38,21 @@ class QualityEvalActivity : Activity() {
                     try {
                         media.setDataSource(audio.absolutePath)
                         val duration = media.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
-                        require(duration != null && duration <= 40_000) { "Use a short audio fixture of at most 40 seconds" }
+                        require(duration != null && duration <= 400_000) { "Use an audio fixture of at most 6 minutes 40 seconds" }
                     } finally { media.release() }
-                    TranscriptionEngine(this@QualityEvalActivity).transcribe(Uri.fromFile(audio)).collect { event ->
+                    val processingMode = ProcessingMode.valueOf(intent.getStringExtra("processing_mode") ?: "QUALITY")
+                    val started = android.os.SystemClock.elapsedRealtime()
+                    TranscriptionEngine(this@QualityEvalActivity).transcribe(Uri.fromFile(audio),
+                        TranscriptionOptions(processingMode = processingMode)).collect { event ->
                         when (event) {
                             is TranscriptionEvent.Progress -> JobFiles.save(File(out, "progress.json"),
                                 mapOf("stage" to event.stage.name, "fraction" to event.fraction.toString()))
-                            is TranscriptionEvent.CoreReady -> JobFiles.write(File(out, "core-ready"), event.artifactDirectory.toByteArray())
+                            is TranscriptionEvent.CoreReady -> {
+                                JobFiles.write(File(out, "core-ready"), event.artifactDirectory.toByteArray())
+                                if (event.finalText) JobFiles.save(File(out, "dialogue-ready.json"), mapOf(
+                                    "elapsed_ms" to (android.os.SystemClock.elapsedRealtime() - started).toString(),
+                                    "job" to event.artifactDirectory))
+                            }
                             is TranscriptionEvent.Partial -> Unit
                             is TranscriptionEvent.Done -> {
                                 val job = File(event.stats.artifactDirectory)

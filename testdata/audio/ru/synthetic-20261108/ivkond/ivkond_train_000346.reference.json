@@ -1,0 +1,219 @@
+{
+  "dataset": "ivkond/synthetic-speech-diarization-ru",
+  "revision": "3fa8404cfde61d2e3a3369000ce771747821e844",
+  "split": "train",
+  "row_idx": 346,
+  "audio_file": "ivkond_train_000346.wav",
+  "duration_seconds": 45.559875,
+  "published_metadata": {
+    "duration": 45.56,
+    "num_speakers": 2,
+    "sampling_rate": 16000,
+    "conversation_type": "interview",
+    "difficulty": "easy",
+    "has_overlaps": false,
+    "has_simultaneous": false,
+    "has_noise": false,
+    "speakers": [
+      {
+        "speaker_id": 1,
+        "start": 0.0,
+        "end": 5.22,
+        "duration": 5.22,
+        "text": "есть ли в этом районе фестиваль еды"
+      },
+      {
+        "speaker_id": 2,
+        "start": 5.22,
+        "end": 9.72,
+        "duration": 3.72,
+        "text": "пожалуйста добавь апельсины в мой список продуктов"
+      },
+      {
+        "speaker_id": 2,
+        "start": 9.72,
+        "end": 13.81,
+        "duration": 3.84,
+        "text": "можешь сделать мне чашку кофе"
+      },
+      {
+        "speaker_id": 1,
+        "start": 13.81,
+        "end": 19.96,
+        "duration": 4.98,
+        "text": "сколько времени нужно чтобы добраться до театра"
+      },
+      {
+        "speaker_id": 2,
+        "start": 19.96,
+        "end": 26.61,
+        "duration": 5.76,
+        "text": "можешь ответить жене что я буду занят над проектом следующие три недели"
+      },
+      {
+        "speaker_id": 1,
+        "start": 26.61,
+        "end": 33.56,
+        "duration": 3.54,
+        "text": "включи случайную музыку"
+      },
+      {
+        "speaker_id": 2,
+        "start": 33.56,
+        "end": 36.17,
+        "duration": 2.28,
+        "text": "я пошел в магазин"
+      },
+      {
+        "speaker_id": 1,
+        "start": 36.17,
+        "end": 40.65,
+        "duration": 3.48,
+        "text": "купи мне билет в москву"
+      },
+      {
+        "speaker_id": 2,
+        "start": 40.65,
+        "end": 45.56,
+        "duration": 4.32,
+        "text": "насколько евро дороже по сравнению с долларом с. ш. а."
+      }
+    ],
+    "noise_type": null,
+    "snr": null,
+    "speaker_volumes": [
+      {
+        "speaker_id": 1,
+        "volume": 1.09
+      },
+      {
+        "speaker_id": 2,
+        "volume": 0.95
+      }
+    ],
+    "simultaneous_segments": []
+  },
+  "segments": [
+    {
+      "speaker_id": 1,
+      "start": 0.0,
+      "end": 5.22,
+      "duration": 5.22,
+      "text": "есть ли в этом районе фестиваль еды"
+    },
+    {
+      "speaker_id": 2,
+      "start": 5.22,
+      "end": 9.72,
+      "duration": 3.72,
+      "text": "пожалуйста добавь апельсины в мой список продуктов"
+    },
+    {
+      "speaker_id": 2,
+      "start": 9.72,
+      "end": 13.81,
+      "duration": 3.84,
+      "text": "можешь сделать мне чашку кофе"
+    },
+    {
+      "speaker_id": 1,
+      "start": 13.81,
+      "end": 19.96,
+      "duration": 4.98,
+      "text": "сколько времени нужно чтобы добраться до театра"
+    },
+    {
+      "speaker_id": 2,
+      "start": 19.96,
+      "end": 26.61,
+      "duration": 5.76,
+      "text": "можешь ответить жене что я буду занят над проектом следующие три недели"
+    },
+    {
+      "speaker_id": 1,
+      "start": 26.61,
+      "end": 33.56,
+      "duration": 3.54,
+      "text": "включи случайную музыку"
+    },
+    {
+      "speaker_id": 2,
+      "start": 33.56,
+      "end": 36.17,
+      "duration": 2.28,
+      "text": "я пошел в магазин"
+    },
+    {
+      "speaker_id": 1,
+      "start": 36.17,
+      "end": 40.65,
+      "duration": 3.48,
+      "text": "купи мне билет в москву"
+    },
+    {
+      "speaker_id": 2,
+      "start": 40.65,
+      "end": 45.56,
+      "duration": 4.32,
+      "text": "насколько евро дороже по сравнению с долларом с. ш. а."
+    }
+  ],
+  "transcript": [
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 0,
+      "end_ms": 5220,
+      "text": "есть ли в этом районе фестиваль еды"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 5220,
+      "end_ms": 9720,
+      "text": "пожалуйста добавь апельсины в мой список продуктов"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 9720,
+      "end_ms": 13810,
+      "text": "можешь сделать мне чашку кофе"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 13810,
+      "end_ms": 19960,
+      "text": "сколько времени нужно чтобы добраться до театра"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 19960,
+      "end_ms": 26610,
+      "text": "можешь ответить жене что я буду занят над проектом следующие три недели"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 26610,
+      "end_ms": 33560,
+      "text": "включи случайную музыку"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 33560,
+      "end_ms": 36170,
+      "text": "я пошел в магазин"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 36170,
+      "end_ms": 40650,
+      "text": "купи мне билет в москву"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 40650,
+      "end_ms": 45560,
+      "text": "насколько евро дороже по сравнению с долларом с. ш. а."
+    }
+  ],
+  "text": "есть ли в этом районе фестиваль еды пожалуйста добавь апельсины в мой список продуктов можешь сделать мне чашку кофе сколько времени нужно чтобы добраться до театра можешь ответить жене что я буду занят над проектом следующие три недели включи случайную музыку я пошел в магазин купи мне билет в москву насколько евро дороже по сравнению с долларом с. ш. а.",
+  "reference_origin": "Published dataset annotation; not generated by ASR, LLM, VAD or the tested pipeline."
+}

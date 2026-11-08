@@ -1,11 +1,15 @@
 package com.vexto.reflect;
 
 import android.content.Context;
+import com.vexto.engine.model.EmotionProbabilities;
+import com.vexto.engine.model.Transcript;
+import com.vexto.engine.model.Utterance;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collections;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -69,6 +73,70 @@ public class PendingTranscriptionTest {
         assertEquals("Готовый текст", retried.transcript().lines.get(0).text);
     }
 
+    @Test public void dialogueIsDurableBeforeEmotionsAndEnrichmentSurvivesResume() throws Exception {
+        var request = PendingTranscription.create(context, recording);
+        var store = new ReflectTranscriptStore(context.getFilesDir());
+        var dialogue = new ReflectTranscript(List.of(
+                new ReflectTranscript.Line("speaker_1", 10, 900, "Основной диалог.", null, "Анна")));
+        assertTrue(store.saveEngineFinal(recording, request.jobId(), dialogue).owned());
+        assertNull(store.load(recording).lines.get(0).emotionProbabilities);
+        File marker = new File(context.getFilesDir(), "inference/jobs/" + request.jobId() + "/dialogue-ready.json");
+        Files.write(marker.toPath(), "{}".getBytes(StandardCharsets.UTF_8));
+        request.write(context);
+        assertTrue(PendingTranscription.read(context).dialogueReady(context));
+        var scored = new ReflectTranscript(List.of(
+                new ReflectTranscript.Line("speaker_1", 10, 900, "Основной диалог.", new EmotionProbabilities(0, 1, 0, 0), "Другое имя")));
+        assertTrue(store.saveEngineEmotions(recording, request.jobId(), scored).owned());
+        var reopened = new ReflectTranscriptStore(context.getFilesDir());
+        var result = reopened.load(recording);
+        assertEquals("Анна", result.lines.get(0).speakerName);
+        assertEquals("Основной диалог.", result.lines.get(0).text);
+        assertEquals(scored.lines.get(0).emotionProbabilities, result.lines.get(0).emotionProbabilities);
+        assertTrue(java.util.Arrays.equals(dialogue.encodeSpeakerRevision(), result.encodeSpeakerRevision()));
+        assertEquals(result.lines.get(0).emotionProbabilities,
+                reopened.saveEngineFinal(recording, request.jobId(), dialogue).transcript().lines.get(0).emotionProbabilities);
+        // A restart between enrichment proof and target write can still retry against the immutable dialogue.
+        reopened.save(recording, dialogue);
+        assertTrue(reopened.saveEngineEmotions(recording, request.jobId(), scored).owned());
+    }
+
+    @Test public void emotionOnlyUpdateRejectsChangedTextAndLeavesImportedDialogueUntouched() throws Exception {
+        String id = PendingTranscription.create(context, recording).jobId();
+        var store = new ReflectTranscriptStore(context.getFilesDir());
+        var original = transcript("Исходные слова");
+        assertTrue(store.saveEngineFinal(recording, id, original).owned());
+        assertThrows(IOException.class, () -> store.saveEngineEmotions(recording, id, transcript("Потеря слов")));
+        var imported = transcript("Ручной импорт");
+        store.save(recording, imported);
+        assertFalse(store.saveEngineEmotions(recording, id, original).owned());
+        assertTrue(imported.sameLines(store.load(recording)));
+    }
+
+    @Test public void emptyDiarizationIntervalsDoNotBlockCoreOrFinalPublication() throws Exception {
+        var emotions = new EmotionProbabilities(1, 0, 0, 0);
+        var output = new Transcript(List.of(
+                new Utterance("speaker_1", 0, 100, "", List.of(), null),
+                new Utterance("speaker_1", 100, 200, "  Полный исходный текст.  ", List.of(), emotions),
+                new Utterance("speaker_2", 200, 300, " \t\n", List.of(), null),
+                new Utterance("speaker_2", 300, 400, "Вторая реплика.", List.of(), null),
+                new Utterance("speaker_1", 400, 500, "", List.of(), null)), List.of());
+        var converted = ReflectTranscriptionService.convert(output);
+        String id = PendingTranscription.create(context, recording).jobId();
+        var store = new ReflectTranscriptStore(context.getFilesDir());
+        assertTrue(store.saveEngineCore(recording, id, converted));
+        assertTrue(store.saveEngineFinal(recording, id, converted).owned());
+
+        var restored = new ReflectTranscriptStore(context.getFilesDir()).load(recording);
+        assertEquals(2, restored.lines.size());
+        assertEquals("  Полный исходный текст.  ", restored.lines.get(0).text);
+        assertEquals(100, restored.lines.get(0).startMs);
+        assertEquals(200, restored.lines.get(0).endMs);
+        assertEquals(emotions, restored.lines.get(0).emotionProbabilities);
+        assertEquals("speaker_2", restored.lines.get(1).speakerId);
+        assertEquals("Вторая реплика.", restored.lines.get(1).text);
+        assertEquals(5, output.getUtterances().size()); // Engine evidence is not changed.
+    }
+
     @Test public void recoveredJobDoesNotOverwriteUserTranscriptOrAnotherJobsCore() throws Exception {
         String id = PendingTranscription.create(context, recording).jobId();
         var store = new ReflectTranscriptStore(context.getFilesDir());
@@ -80,6 +148,25 @@ public class PendingTranscriptionTest {
         store.save(recording, transcript("Импорт пользователя"));
         assertFalse(store.saveEngineFinal(recording, id, transcript("Готовый текст")).owned());
         assertEquals("Импорт пользователя", store.load(recording).lines.get(0).text);
+    }
+
+    @Test public void summaryIsReusedOnlyForTheSameTranscript() throws Exception {
+        var store = new ReflectTranscriptStore(context.getFilesDir());
+        var original = transcript("Встреча состоится в пятницу");
+        String fingerprint = ReflectSummaryController.sourceOf(original).fingerprint();
+        store.save(recording, original);
+        var summary = new File(new File(context.getFilesDir(), "transcripts"), recording.getName() + ".summary");
+        Files.write(summary.toPath(), ("v1:" + fingerprint + "\nСтарый пересказ.").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        assertNull(store.loadSummary(recording, fingerprint));
+        assertTrue(store.saveSummary(recording, fingerprint, "Договорились встретиться в пятницу."));
+
+        var reopened = new ReflectTranscriptStore(context.getFilesDir());
+        assertEquals("Договорились встретиться в пятницу.", reopened.loadSummary(recording, fingerprint));
+        var replacement = transcript("Встречу перенесли на понедельник");
+        reopened.save(recording, replacement);
+        assertNull(reopened.loadSummary(recording, ReflectSummaryController.sourceOf(replacement).fingerprint()));
+        assertFalse(reopened.saveSummary(recording, fingerprint, "Устаревший результат"));
+        assertEquals("Встречу перенесли на понедельник", reopened.load(recording).lines.get(0).text);
     }
 
     private static ReflectTranscript transcript(String text) {

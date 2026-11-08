@@ -1,0 +1,76 @@
+{
+  "reference_kind": "synthetic_scheduled_turns_not_word_level_vad",
+  "transcript_text_available": false,
+  "segments": [
+    {
+      "speaker_id": "spk0",
+      "start_ms": 167,
+      "end_ms": 3316
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 3763,
+      "end_ms": 11890
+    },
+    {
+      "speaker_id": "spk0",
+      "start_ms": 12065,
+      "end_ms": 14753
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 13177,
+      "end_ms": 16153
+    },
+    {
+      "speaker_id": "spk0",
+      "start_ms": 16289,
+      "end_ms": 22721
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 22827,
+      "end_ms": 26795
+    },
+    {
+      "speaker_id": "spk0",
+      "start_ms": 27024,
+      "end_ms": 31359
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 31757,
+      "end_ms": 34989
+    },
+    {
+      "speaker_id": "spk0",
+      "start_ms": 35535,
+      "end_ms": 38447
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 38696,
+      "end_ms": 43720
+    },
+    {
+      "speaker_id": "spk0",
+      "start_ms": 44161,
+      "end_ms": 48801
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 49144,
+      "end_ms": 53208
+    },
+    {
+      "speaker_id": "spk0",
+      "start_ms": 53572,
+      "end_ms": 58116
+    },
+    {
+      "speaker_id": "spk1",
+      "start_ms": 58315,
+      "end_ms": 60000
+    }
+  ]
+}

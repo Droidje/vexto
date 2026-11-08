@@ -1,0 +1,28 @@
+{
+  "transcript": [
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 541,
+      "end_ms": 1889,
+      "text": "Включи леесника."
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 2941,
+      "end_ms": 6749,
+      "text": "Отправь emaile Дарье, планы на сегодня"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 8651,
+      "end_ms": 12219,
+      "text": "Отправь электронное письмо тиму на hotmaile.com"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 14881,
+      "end_ms": 19299,
+      "text": "Сегодня в час дня будет дождь"
+    }
+  ]
+}

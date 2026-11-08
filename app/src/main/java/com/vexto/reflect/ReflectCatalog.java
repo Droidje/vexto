@@ -63,12 +63,15 @@ final class ReflectCatalog {
     static final class Conversation {
         final String title, preview, search;
         final Recording recording;
+        final boolean needsTitle;
 
-        Conversation(String title, String preview, Recording recording) {
-            this.title = title;
+        Conversation(ReflectConversationStore.Entry entry, String preview, Recording recording) {
+            this.title = entry == null ? "Разговор" : entry.title();
             this.preview = preview;
             this.recording = recording;
-            this.search = title + " " + recording.search;
+            needsTitle = entry != null && entry.needsTitle() && recording.hasTranscript();
+            this.search = title + " " + recording.search
+                    + (entry == null ? "" : " " + ReflectConversationStore.numberedTitle(entry.number()));
         }
     }
 
@@ -167,40 +170,61 @@ final class ReflectCatalog {
     }
 
     static List<Conversation> localConversations(List<Recording> recordings, ReflectConversationStore store) {
-        Map<String, Long> numbers;
-        try { numbers = store.assign(recordings); }
-        catch (RuntimeException unavailable) { numbers = Map.of(); }
+        Map<String, ReflectConversationStore.Entry> entries;
+        try { entries = store.assign(recordings); }
+        catch (RuntimeException unavailable) { entries = Map.of(); }
         List<Conversation> conversations = new ArrayList<>(recordings.size());
         for (Recording recording : recordings) {
-            conversations.add(new Conversation(ReflectConversationStore.title(numbers.get(recording.file.getName())),
+            var entry = entries.get(recording.file.getName());
+            if (entry != null && entry.deleted()) continue;
+            conversations.add(new Conversation(entry,
                     recording.hasTranscript() ? recording.preview : "Локальная аудиозапись · " + recording.length,
                     recording));
         }
         return Collections.unmodifiableList(conversations);
     }
 
-    static List<Conversation> searchConversations(List<Conversation> conversations, String query,
-                                                   ReflectTranscriptStore transcripts) {
+    record Quote(Conversation conversation, int startMs, String excerpt) {}
+
+    static List<Conversation> searchConversations(List<Conversation> conversations, String query) {
         List<Conversation> results = new ArrayList<>();
-        String[] terms = normalized(query).trim().split("\\s+");
         for (Conversation conversation : conversations) {
-            if (Thread.currentThread().isInterrupted()) break;
-            List<String> remaining = new ArrayList<>(Arrays.asList(terms));
-            remaining.removeIf(normalized(conversation.search)::contains);
-            if (!remaining.isEmpty() && conversation.recording.hasTranscript()) {
-                ReflectTranscript transcript = loadTranscript(transcripts, conversation.recording.file);
-                if (transcript != null) {
-                    for (ReflectTranscript.Line line : transcript.lines) {
-                        if (Thread.currentThread().isInterrupted()) return results;
-                        remaining.removeIf(normalized(
-                                com.vexto.engine.model.PhoneticSurface.present(line.text))::contains);
-                        if (remaining.isEmpty()) break;
-                    }
-                }
-            }
-            if (remaining.isEmpty()) results.add(conversation);
+            if (matches(normalized(conversation.search), normalized(query))) results.add(conversation);
         }
         return results;
+    }
+
+    static List<Quote> searchConversationQuotes(List<Conversation> conversations, String query,
+                                                ReflectTranscriptStore transcripts) {
+        List<Quote> results = new ArrayList<>();
+        String[] terms = normalized(query).trim().split("\\s+");
+        for (Conversation conversation : conversations) {
+            if (Thread.currentThread().isInterrupted() || results.size() >= 100) break;
+            List<String> remaining = new ArrayList<>(Arrays.asList(terms));
+            remaining.removeIf(normalized(conversation.search)::contains);
+            ReflectTranscript transcript = loadTranscript(transcripts, conversation.recording.file);
+            if (transcript == null) continue;
+            for (ReflectTranscript.Line line : transcript.lines) {
+                if (Thread.currentThread().isInterrupted()) return results;
+                String text = com.vexto.engine.model.PhoneticSurface.present(line.text);
+                String searchable = normalized(text);
+                if (!remaining.stream().allMatch(searchable::contains)) continue;
+                int match = remaining.stream().mapToInt(searchable::indexOf).filter(index -> index >= 0)
+                        .min().orElse(0);
+                results.add(new Quote(conversation, line.startMs, excerpt(text, match)));
+                if (results.size() >= 100) break;
+            }
+        }
+        return results;
+    }
+
+    private static String excerpt(String text, int match) {
+        int start = Math.max(0, match - 40);
+        if (start > 0 && Character.isLowSurrogate(text.charAt(start))) start--;
+        int end = Math.min(text.length(), start + 220);
+        if (end < text.length() && Character.isHighSurrogate(text.charAt(end - 1))) end--;
+        return (start == 0 ? "" : "…") + text.substring(start, end).trim()
+                + (end == text.length() ? "" : "…");
     }
 
     private static String normalized(String text) {

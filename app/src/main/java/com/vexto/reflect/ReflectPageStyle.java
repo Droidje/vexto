@@ -19,6 +19,7 @@ final class ReflectPageStyle {
     static final int SELF_ACCENT = 0xff7ae8c4;
     static final int SELF_SURFACE = 0xff124d40;
     static final int ACCENT = 0xff0088ff;
+    static final int DANGER = 0xffff6568;
     final ReflectArtwork art;
     private final Context context;
     private final float scale;

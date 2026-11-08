@@ -18,6 +18,9 @@ data class RecordingLanguage(
         if (detected && route == SLAVIC) require(code == "ru" || code == "be")
     }
 
+    /** Only a successful Russian detection opts out of the second recognizer. */
+    val usesWhisper: Boolean get() = !(detected && code == "ru")
+
     /** Whisper.cpp flag. Belarusian stays on the existing Russian flag. */
     val whisperLanguage: String get() = if (route == SLAVIC) "ru" else code
 

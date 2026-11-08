@@ -1,6 +1,7 @@
 package com.vexto.reflect;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
@@ -62,6 +63,54 @@ public class ReflectConversationsTest {
         }
     }
 
+    @Test public void automaticTitleIsOneTimeAndManualTitleWins() {
+        var first = recording(new File("first.wav"), "Имя записи");
+        var second = recording(new File("second.wav"), "Другая запись");
+        try (var store = new ReflectConversationStore(context)) {
+            var initial = ReflectCatalog.localConversations(List.of(second, first), store);
+            assertTrue(initial.get(0).needsTitle);
+            assertTrue(store.completeTitle(first.file, "Бюджет выставки"));
+            assertFalse(store.completeTitle(first.file, "Другое название модели"));
+            assertEquals("Бюджет выставки", store.title(first.file));
+            assertTrue(store.rename(first.file, "Моё имя для выставки"));
+            assertTrue(store.rename(second.file, "Разговор №2"));
+            assertFalse(store.completeTitle(second.file, "Поздний ответ модели"));
+        }
+        try (var store = new ReflectConversationStore(context)) {
+            var reopened = ReflectCatalog.localConversations(List.of(second, first), store);
+            assertEquals("Разговор №2", reopened.get(0).title);
+            assertEquals("Моё имя для выставки", reopened.get(1).title);
+            assertEquals("Имя записи", reopened.get(1).recording.title);
+            assertFalse(reopened.get(0).needsTitle);
+            assertFalse(reopened.get(1).needsTitle);
+        }
+    }
+
+    @Test public void migrationPreservesNumbersAndDeletionKeepsTheRecording() throws Exception {
+        File directory = new File(context.getFilesDir(), "recordings");
+        Files.createDirectories(directory.toPath());
+        File audio = Files.write(new File(directory, "old.wav").toPath(), new byte[]{1}).toFile();
+        try (var old = context.openOrCreateDatabase("conversations.db", Context.MODE_PRIVATE, null)) {
+            old.execSQL("CREATE TABLE conversations (number INTEGER PRIMARY KEY AUTOINCREMENT, recording TEXT NOT NULL UNIQUE)");
+            old.execSQL("INSERT INTO conversations VALUES (17, 'old.wav')");
+            old.setVersion(1);
+        }
+        var entry = recording(audio, "Старое имя записи");
+        try (var store = new ReflectConversationStore(context)) {
+            var migrated = ReflectCatalog.localConversations(List.of(entry), store);
+            assertEquals("Разговор №17", migrated.get(0).title);
+            assertTrue(migrated.get(0).needsTitle);
+            assertTrue(store.delete(audio));
+        }
+        try (var store = new ReflectConversationStore(context)) {
+            assertTrue(ReflectCatalog.localConversations(List.of(entry), store).isEmpty());
+            assertTrue(store.isDeleted(audio));
+            assertTrue(audio.isFile());
+            assertFalse(store.completeTitle(audio, "Поздний ответ модели"));
+            assertFalse(store.rename(audio, "Позднее переименование"));
+        }
+    }
+
     @Test public void searchFindsWordsBeyondThePreviewAndCombinesThemWithMetadata() throws Exception {
         File directory = new File(context.getFilesDir(), "recordings");
         Files.createDirectories(directory.toPath());
@@ -72,8 +121,13 @@ public class ReflectConversationsTest {
                 new ReflectTranscript.Line("speaker", 500, 900, "Подтверждённый итог"))));
         try (var store = new ReflectConversationStore(context)) {
             var rows = ReflectCatalog.localConversations(List.of(recording(first, "Совещание")), store);
-            assertEquals(rows, ReflectCatalog.searchConversations(rows, "АННА подтвержденный №1", transcripts));
-            assertTrue(ReflectCatalog.searchConversations(rows, "Анна неизвестное", transcripts).isEmpty());
+            assertTrue(ReflectCatalog.searchConversations(rows, "АННА подтвержденный №1").isEmpty());
+            assertEquals(rows, ReflectCatalog.searchConversations(rows, "Анна №1"));
+            var quotes = ReflectCatalog.searchConversationQuotes(rows, "АННА подтвержденный №1", transcripts);
+            assertEquals(1, quotes.size());
+            assertEquals(500, quotes.get(0).startMs());
+            assertEquals("Подтверждённый итог", quotes.get(0).excerpt());
+            assertTrue(ReflectCatalog.searchConversationQuotes(rows, "Анна неизвестное", transcripts).isEmpty());
         }
     }
 
@@ -124,6 +178,34 @@ public class ReflectConversationsTest {
         assertEquals(.4f, target.get(), .0001f);
         assertTrue(waveform.performAccessibilityAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD, null));
         assertEquals(1f / 30f, target.get(), .0001f);
+    }
+
+    @Test public void backgroundEmotionsKeepTranscriptAndFooterUsableUntilCompletion() {
+        var actions = (ReflectTranscriptView.Actions) java.lang.reflect.Proxy.newProxyInstance(
+                getClass().getClassLoader(), new Class<?>[]{ReflectTranscriptView.Actions.class}, (proxy, method, args) -> null);
+        var page = new ReflectTranscriptView(context, new ReflectArtwork(context.getAssets()), new ReflectPreferences(context), actions);
+        var progress = ReflectLocalTranscription.WAITING.asBackgroundEmotions().advance(com.vexto.engine.model.Stage.Emotion, 30);
+        assertEquals(100, progress.overallPercent());
+        assertTrue(progress.backgroundEmotions());
+        var transcript = new ReflectTranscript(List.of(new ReflectTranscript.Line("speaker_1", 0, 1000, "Текст уже готов")));
+        page.content("Диалог", "0:01", 1000, transcript, false, false, null, false, null, progress);
+        page.measure(android.view.View.MeasureSpec.makeMeasureSpec(393, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(852, android.view.View.MeasureSpec.EXACTLY));
+        page.layout(0, 0, 393, 852);
+        android.widget.TextView footer = findEmotionFooter(page);
+        assertTrue(footer != null && footer.getVisibility() == android.view.View.VISIBLE);
+        assertTrue(footer.getTop() > 750);
+        page.transcription(null);
+        assertEquals(android.view.View.GONE, footer.getVisibility());
+    }
+
+    private static android.widget.TextView findEmotionFooter(android.view.View view) {
+        if (view instanceof android.widget.TextView text && "эмоции обрабатываются".contentEquals(text.getText())) return text;
+        if (view instanceof android.view.ViewGroup group) for (int i = 0; i < group.getChildCount(); i++) {
+            var found = findEmotionFooter(group.getChildAt(i));
+            if (found != null) return found;
+        }
+        return null;
     }
 
     private static ReflectCatalog.Recording recording(File file, String title) {

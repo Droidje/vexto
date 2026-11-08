@@ -3,7 +3,6 @@ package com.vexto.reflect;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Outline;
 import android.graphics.Path;
 import android.text.SpannableString;
 import android.text.Spanned;
@@ -11,7 +10,6 @@ import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewOutlineProvider;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
@@ -48,12 +46,6 @@ final class ReflectExportView extends FrameLayout {
         this.preferences = preferences;
         this.actions = actions;
         setBackgroundColor(INK);
-        setOutlineProvider(new ViewOutlineProvider() {
-            @Override public void getOutline(View view, Outline outline) {
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), view.getWidth() * 47f / 393f);
-            }
-        });
-        setClipToOutline(true);
     }
 
     void content(String title, String length, ReflectTranscript transcript, RecordingExport selected,

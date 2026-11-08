@@ -1,0 +1,32 @@
+audio: struct<array: list<element: float>, sampling_rate: int64>
+  child 0, array: list<element: float>
+      child 0, element: float
+  child 1, sampling_rate: int64
+duration: double
+num_speakers: int64
+sampling_rate: int64
+conversation_type: string
+difficulty: string
+has_overlaps: bool
+has_simultaneous: bool
+has_noise: bool
+speakers: list<element: struct<speaker_id: int64, start: double, end: double, duration: double, text: string>>
+  child 0, element: struct<speaker_id: int64, start: double, end: double, duration: double, text: string>
+      child 0, speaker_id: int64
+      child 1, start: double
+      child 2, end: double
+      child 3, duration: double
+      child 4, text: string
+noise_type: string
+snr: double
+speaker_volumes: list<element: struct<speaker_id: int64, volume: double>>
+  child 0, element: struct<speaker_id: int64, volume: double>
+      child 0, speaker_id: int64
+      child 1, volume: double
+simultaneous_segments: list<element: struct<start: double, end: double, speaker1_id: int64, speaker2_id: int64, duration: d (... 7 chars omitted)
+  child 0, element: struct<start: double, end: double, speaker1_id: int64, speaker2_id: int64, duration: double>
+      child 0, start: double
+      child 1, end: double
+      child 2, speaker1_id: int64
+      child 3, speaker2_id: int64
+      child 4, duration: double

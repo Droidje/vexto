@@ -126,16 +126,18 @@ public final class ReflectTranscriptionService extends Service {
     private void start(PendingTranscription request) {
         Job started = new Job(request);
         job = started;
+        started.backgroundEmotions = request.dialogueReady(this);
+        if (started.backgroundEmotions) started.progress = started.progress.asBackgroundEmotions();
         File recording = request.recording();
         changed(started);
         started.task = ReflectEngine.transcribeResumable(getApplicationContext(), Uri.fromFile(recording),
-                new TranscriptionOptions(null, true, request.processingMode()), request.jobId(), new ReflectEngine.DetailedListener() {
+                new TranscriptionOptions(null, true, request.processingMode()), request.jobId(), new ReflectEngine.EnrichmentListener() {
             @Override public void onProgress(Stage stage, float fraction) {
                 if (job != started) return;
                 int percent = Math.round(fraction * 100);
                 var previous = started.progress;
                 if (stage == previous.stage() && percent == previous.percent()) return;
-                started.progress = new ReflectLocalTranscription.Progress(stage, percent, previous.speakers());
+                started.progress = previous.advance(stage, percent);
                 changed(started);
             }
 
@@ -144,7 +146,7 @@ public final class ReflectTranscriptionService extends Service {
                 int speakers = transcript.getSpeakers().size();
                 var previous = started.progress;
                 if (speakers == 0 || speakers == previous.speakers()) return;
-                started.progress = new ReflectLocalTranscription.Progress(previous.stage(), previous.percent(), speakers);
+                started.progress = previous.withSpeakers(speakers);
                 changed(started);
             }
 
@@ -154,18 +156,39 @@ public final class ReflectTranscriptionService extends Service {
                 io.execute(() -> publishCore(started, transcript, artifacts));
             }
 
+            @Override public void onDialogueReady(Transcript transcript, String artifacts, String warning) {
+                if (job != started) return;
+                started.backgroundEmotions = true;
+                started.progress = started.progress.withSpeakers(transcript.getSpeakers().size()).asBackgroundEmotions();
+                changed(started);
+                io.execute(() -> publishDialogueReady(started, transcript, artifacts, warning));
+            }
+
             @Override public void onDone(Transcript transcript, ProcessingStats stats) {
                 if (job != started) return;
                 if (transcript.getUtterances().isEmpty()) {
                     complete(started, null, "В записи не удалось распознать речь.");
                     return;
                 }
-                started.progress = new ReflectLocalTranscription.Progress(null, 100, transcript.getSpeakers().size());
+                started.progress = started.backgroundEmotions
+                        ? started.progress.advance(started.progress.stage(), 100)
+                        : new ReflectLocalTranscription.Progress(null, 100, transcript.getSpeakers().size());
                 changed(started);
                 io.execute(() -> publishFinal(started, transcript, stats));
             }
 
             @Override public void onError(Throwable error) {
+                // Never log model input, exception messages or private artifact paths.
+                String diagnostic = "Processing failed at " + started.progress.stage()
+                        + " (" + error.getClass().getSimpleName() + ")";
+                Throwable cause = error;
+                for (int depth = 0; cause != null && depth < 5; depth++, cause = cause.getCause()) {
+                    if (cause instanceof com.vexto.engine.runtime.NativeProcessException nativeError) {
+                        diagnostic += ": " + nativeError.getReason() + "/" + nativeError.getExitCode();
+                        break;
+                    }
+                }
+                Log.w(TAG, diagnostic);
                 String message = "Не удалось расшифровать запись. Можно повторить попытку.";
                 if (error instanceof AudioInputTooLongException) {
                     message = "Запись длиннее 4 часов. Разделите её на несколько частей.";
@@ -174,6 +197,9 @@ public final class ReflectTranscriptionService extends Service {
                 } else if (error instanceof OfflineModelPackException) {
                     message = "Установите проверенный офлайн-пакет моделей и повторите расшифровку.";
                 }
+                if (started.backgroundEmotions) message = started.progress.stage() == Stage.Overlap
+                        ? "Не удалось проверить перебивания. Расшифровка сохранена."
+                        : "Не удалось определить эмоции. Расшифровка сохранена.";
                 complete(started, null, message);
             }
         });
@@ -195,15 +221,66 @@ public final class ReflectTranscriptionService extends Service {
             });
         } catch (IOException | RuntimeException unavailable) {
             // The inference checkpoint is durable even if the UI cannot publish the preview.
-            Log.w(TAG, "Could not publish provisional transcript" + ": " + unavailable.getClass().getSimpleName());
+            Log.w(TAG, "Could not publish provisional transcript", unavailable);
+        }
+    }
+
+    private void publishDialogueReady(Job started, Transcript output, String artifacts, String warning) {
+        if (started.interrupted) return;
+        File recording = started.request.recording();
+        try {
+            ReflectTranscriptStore.EngineSave saved;
+            synchronized (started) {
+                if (started.interrupted) return;
+                saved = store.saveEngineFinal(recording, started.request.jobId(), convert(output));
+                if (!saved.owned()) return;
+                store.saveEngineArtifacts(recording, artifacts);
+            }
+            if (saved.provisional() != null) {
+                try { profiles.retainAcrossRefinement(recording, saved.provisional(), saved.transcript()); }
+                catch (IOException | RuntimeException unavailable) { Log.w(TAG, "Could not retain speaker links", unavailable); }
+            }
+            registerSpeakers(recording, saved.transcript(), output);
+            new ReflectTranscriptionOutcomes(this).finish(recording, true, null);
+            main.post(() -> {
+                if (job != started || started.interrupted) return;
+                changed(started);
+                ReflectLocalTranscription.notifyFinished(new ReflectLocalTranscription.Result(recording, saved.transcript(), warning));
+            });
+        } catch (IOException | RuntimeException unavailable) {
+            Log.w(TAG, "Could not publish main dialogue", unavailable);
+        }
+    }
+
+    private void publishEmotions(Job started, Transcript output) {
+        if (started.interrupted) return;
+        try {
+            ReflectTranscriptStore.EngineSave saved;
+            synchronized (started) {
+                if (started.interrupted) return;
+                saved = store.saveEngineEmotions(started.request.recording(), started.request.jobId(), convert(output));
+            }
+            boolean missing = output.getUtterances().stream().anyMatch(line ->
+                    !line.getText().trim().isEmpty() && line.getEmotionProbabilities() == null);
+            String message = missing ? "Для части реплик эмоции не определены. Расшифровка сохранена." : null;
+            main.post(() -> complete(started, saved.transcript(), message));
+        } catch (IOException | RuntimeException failure) {
+            Log.w(TAG, "Could not enrich dialogue emotions", failure);
+            main.post(() -> complete(started, null, "Не удалось сохранить эмоции. Расшифровка сохранена."));
         }
     }
 
     private void publishFinal(Job started, Transcript output, ProcessingStats stats) {
         if (started.interrupted) return;
+        if (started.backgroundEmotions) { publishEmotions(started, output); return; }
         File recording = started.request.recording();
         try {
-            var saved = store.saveEngineFinal(recording, started.request.jobId(), convert(output));
+            ReflectTranscript converted = convert(output);
+            if (converted.lines.isEmpty()) {
+                main.post(() -> complete(started, null, "В записи не удалось распознать речь."));
+                return;
+            }
+            var saved = store.saveEngineFinal(recording, started.request.jobId(), converted);
             ReflectTranscript transcript = saved.transcript();
             if (!saved.owned()) {
                 main.post(() -> complete(started, transcript, "У записи уже есть расшифровка."));
@@ -227,7 +304,7 @@ public final class ReflectTranscriptionService extends Service {
                     : statsWarning == null ? profileWarning : profileWarning + " " + statsWarning;
             main.post(() -> complete(started, transcript, message));
         } catch (IOException | RuntimeException failure) {
-            Log.w(TAG, "Could not publish transcript" + ": " + failure.getClass().getSimpleName());
+            Log.w(TAG, "Could not publish transcript", failure);
             main.post(() -> complete(started, null, "Не удалось сохранить расшифровку."));
         }
     }
@@ -245,12 +322,16 @@ public final class ReflectTranscriptionService extends Service {
         return warning;
     }
 
-    private static ReflectTranscript convert(Transcript output) {
+    static ReflectTranscript convert(Transcript output) {
         List<ReflectTranscript.Line> lines = new ArrayList<>(output.getUtterances().size());
         for (Utterance utterance : output.getUtterances()) {
+            // Nemotron intervals without assigned ASR words remain in the engine artifacts.
+            // They have no display text and must not reject the rest of the transcript.
+            if (utterance.getText().trim().isEmpty()) continue;
             lines.add(new ReflectTranscript.Line(utterance.getSpeakerId(),
                     Math.toIntExact(utterance.getStartMs()), Math.toIntExact(utterance.getEndMs()),
-                    utterance.getText(), utterance.getEmotionProbabilities()));
+                    utterance.getText(), utterance.getEmotionProbabilities(),
+                    output.speaker(utterance.getSpeakerId()).getName(), utterance.getOverlapDetected()));
         }
         return new ReflectTranscript(lines);
     }
@@ -280,7 +361,7 @@ public final class ReflectTranscriptionService extends Service {
                 .setOngoing(true)
                 .setVisibility(Notification.VISIBILITY_PRIVATE)
                 .setContentIntent(open)
-                .setProgress(100, current.percent(), current.percent() == 0 || !current.cancellable());
+                .setProgress(100, current.overallPercent(), current.overallPercent() == 0 || !current.cancellable());
         if (Build.VERSION.SDK_INT >= 31) builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
         if (request != null && current.cancellable()) {
             Intent cancel = new Intent(this, ReflectTranscriptionService.class).setAction(ACTION_CANCEL)
@@ -293,10 +374,11 @@ public final class ReflectTranscriptionService extends Service {
 
     private void complete(Job started, ReflectTranscript transcript, String message) {
         if (job != started) return;
+        new ReflectTranscriptionOutcomes(this).finish(started.request.recording(), transcript != null || started.backgroundEmotions, message);
         job = null;
         ReflectLocalTranscription.forget(this, started.request);
         stopForegroundAndSelf();
-        ReflectLocalTranscription.notifyFinished(new ReflectLocalTranscription.Result(started.request.recording(), transcript, message));
+        ReflectLocalTranscription.notifyFinished(new ReflectLocalTranscription.Result(started.request.recording(), transcript, message, started.backgroundEmotions));
     }
 
     private void interrupt() {
@@ -315,7 +397,7 @@ public final class ReflectTranscriptionService extends Service {
     }
 
     @Override public void onTaskRemoved(Intent rootIntent) {
-        if (job != null && job.progress.cancellable()) {
+        if (job != null && job.progress.cancellable() && !job.backgroundEmotions) {
             interrupt();
             stopForegroundAndSelf();
         }
@@ -340,6 +422,7 @@ public final class ReflectTranscriptionService extends Service {
         final PendingTranscription request;
         ReflectEngine.Task task;
         volatile boolean interrupted;
+        volatile boolean backgroundEmotions;
         ReflectLocalTranscription.Progress progress = ReflectLocalTranscription.WAITING;
 
         Job(PendingTranscription request) { this.request = request; }

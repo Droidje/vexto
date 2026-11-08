@@ -19,16 +19,18 @@ data class SpeakerTurn(
 
 /** Реплика: непрерывная речь одного говорящего. */
 @Serializable
-data class Utterance(
+data class Utterance @JvmOverloads constructor(
     val speakerId: String,
     val startMs: Long,
     val endMs: Long,
     val text: String,
     val words: List<Word> = emptyList(),
     val emotionProbabilities: EmotionProbabilities? = null,
+    /** null means not evaluated; only true produces the interruption warning. */
+    val overlapDetected: Boolean? = null,
 )
 
-/** Участник разговора. [id] стабилен и уходит в экспорт, [name] задаёт пользователь. */
+/** Участник разговора. [id] стабилен и уходит в экспорт, [name] — контекстная подсказка LLM или имя, заданное пользователем. */
 @Serializable
 data class Speaker(
     val id: String,

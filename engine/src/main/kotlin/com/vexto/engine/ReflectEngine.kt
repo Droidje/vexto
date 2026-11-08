@@ -3,11 +3,15 @@ package com.vexto.engine
 import android.content.Context
 import android.net.Uri
 import com.vexto.engine.audio.AudioDecoder
+import com.vexto.engine.audio.PcmWave
+import java.io.File
+import kotlin.math.min
 import com.vexto.engine.model.ProcessingStats
 import com.vexto.engine.model.Stage
 import com.vexto.engine.model.Transcript
 import com.vexto.engine.model.TranscriptionEvent
 import com.vexto.engine.model.TranscriptionOptions
+import com.vexto.engine.review.LocalConversationSummary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +20,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.util.function.BooleanSupplier
 import java.util.function.Consumer
 
 /** Фасад для Java-кода UI: колбэки приходят в главном потоке. */
@@ -36,7 +41,30 @@ object ReflectEngine {
         fun onCoreReady(transcript: Transcript, artifactDirectory: String)
     }
 
-    /** Запущенная расшифровка. После [cancel] колбэки больше не приходят. */
+    /** Main dialogue is durable while optional emotion enrichment continues in the same job. */
+    interface EnrichmentListener : DetailedListener {
+        fun onDialogueReady(transcript: Transcript, artifactDirectory: String, warning: String?)
+    }
+
+    interface SummaryListener {
+        /** Remaining time is unknown (−1) until the first model response. */
+        fun onProgress(done: Int, total: Int, remainingMs: Long)
+        fun onDone(summary: String)
+        fun onError(error: Throwable)
+    }
+
+    interface SummaryWithTitleListener : SummaryListener {
+        /** Optional title from the still-loaded model; null means the attempt failed. */
+        fun onTitle(title: String?)
+    }
+
+    interface TitleListener {
+        fun onDone(title: String)
+        fun onBusy()
+        fun onError(error: Throwable)
+    }
+
+    /** Запущенная локальная задача. После [cancel] колбэки больше не приходят. */
     class Task internal constructor(private val job: Job) {
         fun cancel() = job.cancel()
 
@@ -81,6 +109,97 @@ object ReflectEngine {
         listener: DetailedListener,
     ): Task = listen(TranscriptionEngine(context).transcribeResumable(audio, options, jobId), listener)
 
+    @JvmStatic
+    fun summarize(context: Context, transcript: String, listener: SummaryListener): Task =
+        summarizeInternal(context, transcript, null, listener, null)
+
+    /** The optional title gate runs on IO immediately before an extra request on the warm model. */
+    @JvmStatic
+    fun summarize(
+        context: Context,
+        transcript: String,
+        generateTitle: BooleanSupplier,
+        listener: SummaryWithTitleListener,
+    ): Task = summarizeInternal(context, transcript, generateTitle, listener, null)
+
+    @JvmStatic
+    fun summarize(context: Context, transcript: String, checkpointDirectory: File,
+                  generateTitle: BooleanSupplier, listener: SummaryWithTitleListener): Task =
+        summarizeInternal(context, transcript, generateTitle, listener, checkpointDirectory)
+
+    private fun summarizeInternal(
+        context: Context,
+        transcript: String,
+        generateTitle: BooleanSupplier?,
+        listener: SummaryListener,
+        checkpointDirectory: File?,
+    ): Task = Task(scope.launch {
+        try {
+            withContext(Dispatchers.IO) {
+                LocalConversationSummary(context.applicationContext).run(
+                    transcript,
+                    checkpointDirectory,
+                    progress = { done, total, remaining ->
+                        withContext(Dispatchers.Main) { listener.onProgress(done, total, remaining) }
+                    },
+                    onSummary = { summary -> withContext(Dispatchers.Main) { listener.onDone(summary) } },
+                    generateTitle = generateTitle?.let { { it.asBoolean } },
+                    onTitle = { title ->
+                        withContext(Dispatchers.Main) { (listener as? SummaryWithTitleListener)?.onTitle(title) }
+                    },
+                )
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            listener.onError(error)
+        }
+    })
+
+    /** Title generation is opportunistic: never queue behind other model work. */
+    @JvmStatic
+    fun tryGenerateTitle(
+        context: Context,
+        transcript: String,
+        eligible: BooleanSupplier,
+        listener: TitleListener,
+    ): Task = Task(scope.launch {
+        try {
+            val title = withContext(Dispatchers.IO) {
+                LocalConversationSummary(context.applicationContext).tryTitle(transcript, eligible::getAsBoolean)
+            }
+            if (title == null) listener.onBusy() else listener.onDone(title)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            listener.onError(error)
+        }
+    })
+
+    /** True while a transcription coroutine holds the single engine lock. */
+    @JvmStatic
+    fun transcriptionBusy(): Boolean = TranscriptionEngine.isTranscriptionPending
+
+    /** Duration of a decoded 16 kHz job WAV, which is the transcript time base. */
+    @JvmStatic
+    fun wavDurationMs(wav: File): Int {
+        val info = PcmWave.inspect(wav)
+        val duration = info.sampleCount * 1000 / info.sampleRate
+        require(duration <= Int.MAX_VALUE) { "Recording is too long" }
+        return duration.toInt()
+    }
+
+    /** Exact PCM crop. [endMs] is exclusive and clamped to the file. */
+    @JvmStatic
+    fun clipWav(source: File, startMs: Int, endMs: Int, dest: File) {
+        require(startMs >= 0 && endMs > startMs)
+        val info = PcmWave.inspect(source)
+        val from = startMs.toLong() * info.sampleRate / 1000
+        val to = min(info.sampleCount, endMs.toLong() * info.sampleRate / 1000)
+        require(to > from) { "Clip is empty" }
+        PcmWave.crop(source, dest, from, to)
+    }
+
     private fun listen(events: Flow<TranscriptionEvent>, listener: Listener): Task = Task(
         scope.launch {
             try {
@@ -88,7 +207,11 @@ object ReflectEngine {
                     when (event) {
                         is TranscriptionEvent.Progress -> listener.onProgress(event.stage, event.fraction)
                         is TranscriptionEvent.Partial -> listener.onPartial(event.transcript)
-                        is TranscriptionEvent.CoreReady -> (listener as? DetailedListener)?.onCoreReady(event.transcript, event.artifactDirectory)
+                        is TranscriptionEvent.CoreReady -> {
+                            if (event.finalText && listener is EnrichmentListener)
+                                listener.onDialogueReady(event.transcript, event.artifactDirectory, event.warning)
+                            else (listener as? DetailedListener)?.onCoreReady(event.transcript, event.artifactDirectory)
+                        }
                         is TranscriptionEvent.Done -> listener.onDone(event.transcript, event.stats)
                     }
                 }

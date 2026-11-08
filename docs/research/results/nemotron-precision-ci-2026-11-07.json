@@ -1,0 +1,639 @@
+{
+  "emulator_ram_kib": 4013940,
+  "avx2_available": false,
+  "scope": "public Russian clips <=6s plus synthetic 37s cache check; cold process includes model load and ADB; not app RSS or full-pipeline RTF",
+  "runs": [
+    {
+      "status": "scored",
+      "der": 0.2256162915326904,
+      "der_percent": 22.56162915326904,
+      "miss_speaker_seconds": 0.0,
+      "false_alarm_speaker_seconds": 0.42100000000000026,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.42100000000000026,
+      "reference_speaker_seconds": 1.866,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 3.222
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-01.wav",
+      "precision": "f32",
+      "avx2": false,
+      "adb_process_wall_seconds": 16.320726567999998,
+      "audio_seconds": 3.222,
+      "source_fixture_sha256": "973fff3183d3ef60832b12f26a44e5952b95e01ff1b63a7aa4b7b6965270ea27",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "d9d745790a0039277c7aae465bcac73f2a37ac8f0b56792cf570aeb2d8468667"
+    },
+    {
+      "status": "scored",
+      "der": 0.2256162915326904,
+      "der_percent": 22.56162915326904,
+      "miss_speaker_seconds": 0.0,
+      "false_alarm_speaker_seconds": 0.42100000000000026,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.42100000000000026,
+      "reference_speaker_seconds": 1.866,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 3.222
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-01.wav",
+      "precision": "f16",
+      "avx2": false,
+      "adb_process_wall_seconds": 11.167929359000027,
+      "audio_seconds": 3.222,
+      "source_fixture_sha256": "973fff3183d3ef60832b12f26a44e5952b95e01ff1b63a7aa4b7b6965270ea27",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "d9d745790a0039277c7aae465bcac73f2a37ac8f0b56792cf570aeb2d8468667"
+    },
+    {
+      "status": "scored",
+      "der": 0.2256162915326904,
+      "der_percent": 22.56162915326904,
+      "miss_speaker_seconds": 0.0,
+      "false_alarm_speaker_seconds": 0.42100000000000026,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.42100000000000026,
+      "reference_speaker_seconds": 1.866,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 3.222
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-01.wav",
+      "precision": "q8_0",
+      "avx2": false,
+      "adb_process_wall_seconds": 5.682231772000023,
+      "audio_seconds": 3.222,
+      "source_fixture_sha256": "973fff3183d3ef60832b12f26a44e5952b95e01ff1b63a7aa4b7b6965270ea27",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "d9d745790a0039277c7aae465bcac73f2a37ac8f0b56792cf570aeb2d8468667"
+    },
+    {
+      "status": "scored",
+      "der": 0.15284280936454842,
+      "der_percent": 15.284280936454842,
+      "miss_speaker_seconds": 0.0,
+      "false_alarm_speaker_seconds": 0.4569999999999998,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.4569999999999998,
+      "reference_speaker_seconds": 2.99,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 4.336
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-02.wav",
+      "precision": "f32",
+      "avx2": false,
+      "adb_process_wall_seconds": 2.4530471539999894,
+      "audio_seconds": 4.336,
+      "source_fixture_sha256": "5b46f87f1fca0fc8dd452193c07dbc80ff8ec1438d63cadacb7d8ad94282a18f",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "d7ee370fde891b80d05a50fb9112d956d4209255860dfe64ce1cf7cee7e92528"
+    },
+    {
+      "status": "scored",
+      "der": 0.15284280936454842,
+      "der_percent": 15.284280936454842,
+      "miss_speaker_seconds": 0.0,
+      "false_alarm_speaker_seconds": 0.4569999999999998,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.4569999999999998,
+      "reference_speaker_seconds": 2.99,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 4.336
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-02.wav",
+      "precision": "f16",
+      "avx2": false,
+      "adb_process_wall_seconds": 6.393353891000004,
+      "audio_seconds": 4.336,
+      "source_fixture_sha256": "5b46f87f1fca0fc8dd452193c07dbc80ff8ec1438d63cadacb7d8ad94282a18f",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "d7ee370fde891b80d05a50fb9112d956d4209255860dfe64ce1cf7cee7e92528"
+    },
+    {
+      "status": "scored",
+      "der": 0.14949832775919725,
+      "der_percent": 14.949832775919724,
+      "miss_speaker_seconds": 0.0,
+      "false_alarm_speaker_seconds": 0.4469999999999998,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.4469999999999998,
+      "reference_speaker_seconds": 2.99,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 4.336
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-02.wav",
+      "precision": "q8_0",
+      "avx2": false,
+      "adb_process_wall_seconds": 1.5165364960000147,
+      "audio_seconds": 4.336,
+      "source_fixture_sha256": "5b46f87f1fca0fc8dd452193c07dbc80ff8ec1438d63cadacb7d8ad94282a18f",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "d7ee370fde891b80d05a50fb9112d956d4209255860dfe64ce1cf7cee7e92528"
+    },
+    {
+      "status": "scored",
+      "der": 0.10112059765208116,
+      "der_percent": 10.112059765208116,
+      "miss_speaker_seconds": 0.0,
+      "false_alarm_speaker_seconds": 0.3790000000000002,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.3790000000000002,
+      "reference_speaker_seconds": 3.748,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 5.146
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-03.wav",
+      "precision": "f32",
+      "avx2": false,
+      "adb_process_wall_seconds": 4.856697558000008,
+      "audio_seconds": 5.146,
+      "source_fixture_sha256": "d09e789ac43f4f2b278b157d6d3316673b897732f363b253afb242b68b240207",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "9abb931df33344fd86cc66919377ff153a3cfad14d59b1e934c68704f8c1ec8d"
+    },
+    {
+      "status": "scored",
+      "der": 0.10112059765208116,
+      "der_percent": 10.112059765208116,
+      "miss_speaker_seconds": 0.0,
+      "false_alarm_speaker_seconds": 0.3790000000000002,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.3790000000000002,
+      "reference_speaker_seconds": 3.748,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 5.146
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-03.wav",
+      "precision": "f16",
+      "avx2": false,
+      "adb_process_wall_seconds": 9.056563452000034,
+      "audio_seconds": 5.146,
+      "source_fixture_sha256": "d09e789ac43f4f2b278b157d6d3316673b897732f363b253afb242b68b240207",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "9abb931df33344fd86cc66919377ff153a3cfad14d59b1e934c68704f8c1ec8d"
+    },
+    {
+      "status": "scored",
+      "der": 0.10112059765208116,
+      "der_percent": 10.112059765208116,
+      "miss_speaker_seconds": 0.0,
+      "false_alarm_speaker_seconds": 0.3790000000000002,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.3790000000000002,
+      "reference_speaker_seconds": 3.748,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 5.146
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-03.wav",
+      "precision": "q8_0",
+      "avx2": false,
+      "adb_process_wall_seconds": 1.7880147990000523,
+      "audio_seconds": 5.146,
+      "source_fixture_sha256": "d09e789ac43f4f2b278b157d6d3316673b897732f363b253afb242b68b240207",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "9abb931df33344fd86cc66919377ff153a3cfad14d59b1e934c68704f8c1ec8d"
+    },
+    {
+      "status": "scored",
+      "der": 0.10180180180180169,
+      "der_percent": 10.18018018018017,
+      "miss_speaker_seconds": 0.020999999999999908,
+      "false_alarm_speaker_seconds": 0.3179999999999997,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.33899999999999963,
+      "reference_speaker_seconds": 3.33,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 4.6500625
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-04.wav",
+      "precision": "f32",
+      "avx2": false,
+      "adb_process_wall_seconds": 2.0861151949999908,
+      "audio_seconds": 4.6500625,
+      "source_fixture_sha256": "7b4192c3d748b28f34b7ee7793958ec784e068d656331c8ceb8137784a3454b7",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "7c493d0a4a48e3825947586c6335f6eb58cb9eae5a8237369e135e1ca642ba1a"
+    },
+    {
+      "status": "scored",
+      "der": 0.10180180180180169,
+      "der_percent": 10.18018018018017,
+      "miss_speaker_seconds": 0.020999999999999908,
+      "false_alarm_speaker_seconds": 0.3179999999999997,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.33899999999999963,
+      "reference_speaker_seconds": 3.33,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 4.6500625
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-04.wav",
+      "precision": "f16",
+      "avx2": false,
+      "adb_process_wall_seconds": 7.759010776000025,
+      "audio_seconds": 4.6500625,
+      "source_fixture_sha256": "7b4192c3d748b28f34b7ee7793958ec784e068d656331c8ceb8137784a3454b7",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "7c493d0a4a48e3825947586c6335f6eb58cb9eae5a8237369e135e1ca642ba1a"
+    },
+    {
+      "status": "scored",
+      "der": 0.09879879879879876,
+      "der_percent": 9.879879879879876,
+      "miss_speaker_seconds": 0.01100000000000012,
+      "false_alarm_speaker_seconds": 0.3179999999999997,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.32899999999999985,
+      "reference_speaker_seconds": 3.33,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 4.6500625
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-04.wav",
+      "precision": "q8_0",
+      "avx2": false,
+      "adb_process_wall_seconds": 2.780167102000007,
+      "audio_seconds": 4.6500625,
+      "source_fixture_sha256": "7b4192c3d748b28f34b7ee7793958ec784e068d656331c8ceb8137784a3454b7",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "7c493d0a4a48e3825947586c6335f6eb58cb9eae5a8237369e135e1ca642ba1a"
+    },
+    {
+      "status": "scored",
+      "der": 0.08268234943429062,
+      "der_percent": 8.268234943429063,
+      "miss_speaker_seconds": 0.08697278899999983,
+      "false_alarm_speaker_seconds": 0.29303528899999987,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.3800080779999997,
+      "reference_speaker_seconds": 4.596,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 5.9240625
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-05.wav",
+      "precision": "f32",
+      "avx2": false,
+      "adb_process_wall_seconds": 6.577937492999979,
+      "audio_seconds": 5.9240625,
+      "source_fixture_sha256": "804e2929b98853bc0e2bdf8d9f4fd5ee1e2767ed65f155f32a8e68b77d3e9ccb",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "4a657f9adcb2b2305b86816e97f3168490880488daf323a265c777aa710be265"
+    },
+    {
+      "status": "scored",
+      "der": 0.08268234943429062,
+      "der_percent": 8.268234943429063,
+      "miss_speaker_seconds": 0.08697278899999983,
+      "false_alarm_speaker_seconds": 0.29303528899999987,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.3800080779999997,
+      "reference_speaker_seconds": 4.596,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 5.9240625
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-05.wav",
+      "precision": "f16",
+      "avx2": false,
+      "adb_process_wall_seconds": 9.868615648999992,
+      "audio_seconds": 5.9240625,
+      "source_fixture_sha256": "804e2929b98853bc0e2bdf8d9f4fd5ee1e2767ed65f155f32a8e68b77d3e9ccb",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "4a657f9adcb2b2305b86816e97f3168490880488daf323a265c777aa710be265"
+    },
+    {
+      "status": "scored",
+      "der": 0.08268234943429062,
+      "der_percent": 8.268234943429063,
+      "miss_speaker_seconds": 0.08697278899999983,
+      "false_alarm_speaker_seconds": 0.29303528899999987,
+      "confusion_speaker_seconds": 0.0,
+      "error_speaker_seconds": 0.3800080779999997,
+      "reference_speaker_seconds": 4.596,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_1",
+        "speaker_2": "speaker_2"
+      },
+      "unmapped_reference_labels": [],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 5.9240625
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "rinco-ru-05.wav",
+      "precision": "q8_0",
+      "avx2": false,
+      "adb_process_wall_seconds": 5.235839825000028,
+      "audio_seconds": 5.9240625,
+      "source_fixture_sha256": "804e2929b98853bc0e2bdf8d9f4fd5ee1e2767ed65f155f32a8e68b77d3e9ccb",
+      "stable_prefix_parity": null,
+      "synthetic": false,
+      "pcm_sha256": "4a657f9adcb2b2305b86816e97f3168490880488daf323a265c777aa710be265"
+    },
+    {
+      "status": "scored",
+      "der": 0.523962810704961,
+      "der_percent": 52.3962810704961,
+      "miss_speaker_seconds": 0.5308992340000005,
+      "false_alarm_speaker_seconds": 2.9018992340000045,
+      "confusion_speaker_seconds": 11.016,
+      "error_speaker_seconds": 14.448798468000005,
+      "reference_speaker_seconds": 27.576,
+      "mapping_hypothesis_to_reference": {
+        "speaker_1": "speaker_2"
+      },
+      "unmapped_reference_labels": [
+        "speaker_1"
+      ],
+      "reference_labels": [
+        "speaker_1",
+        "speaker_2"
+      ],
+      "hypothesis_labels": [
+        "speaker_1"
+      ],
+      "collar_seconds": 0,
+      "overlap_scored": true,
+      "uem": {
+        "start": 0,
+        "end": 37.044375
+      },
+      "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+      "fixture": "synthetic-cache-continuity.wav",
+      "precision": "f32",
+      "avx2": false,
+      "adb_process_wall_seconds": 18.176298198999973,
+      "audio_seconds": 37.044375,
+      "source_fixture_sha256": "804e2929b98853bc0e2bdf8d9f4fd5ee1e2767ed65f155f32a8e68b77d3e9ccb",
+      "stable_prefix_parity": true,
+      "synthetic": true,
+      "pcm_sha256": "5bcbf6e687b79bda7b30bd9787d9903477d1e6657b6a2b663026591478d2e673"
+    }
+  ],
+  "provenance": {
+    "run_url": "https://github.com/Droidje/vexto/actions/runs/42378985219",
+    "source_commit": "08e7cfc",
+    "backend_commit": "9099193",
+    "probe_status": "partial: F16 synthetic exceeded 45 seconds; Q8 synthetic not run",
+    "threads": 4,
+    "order": "F32, F16, Q8; OS cache uncontrolled"
+  }
+}
