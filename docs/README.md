@@ -1,8 +1,10 @@
 # Карта документации
 
-Вход в документацию Vexto. Каждый документ отвечает за свой слой и ссылается на соседние; актуальность поддерживается вместе с кодом.
+Вход в документацию Vexto, актуализирован 8 ноября 2026. Описание текущего поведения отделено от журналов прошлых экспериментов; версия и условия замера важнее даты ссылки.
 
 ## С чего начать
+
+Четыре основных документа для проверки: [README](../README.md), [ARCHITECTURE](ARCHITECTURE.md), [LIMITATIONS](LIMITATIONS.md), [TEST_RESULTS](TEST_RESULTS.md). Файл результатов называется `TEST_RESULTS.md` (во множественном числе).
 
 | Кому | Порядок чтения |
 |---|---|
@@ -21,12 +23,15 @@
 
 ## Архитектура
 
+- [ARCHITECTURE.md](ARCHITECTURE.md) — общая схема, языковые маршруты, процессы, данные и поставка.
+- [architecture/russian-gigaam-only.md](architecture/russian-gigaam-only.md) — русский без Whisper ASR, границы LLM-участия и отдельный Android-прогон.
+
 - [local-architecture.md](local-architecture.md) — полностью локальные данные: хранение, SQLite-профили спикеров, связи, экспорт.
 - [architecture/quality-pipeline.md](architecture/quality-pipeline.md) — **полный конвейер качественной расшифровки**: все этапы от импорта до экспорта, все модели и фичи.
-- [architecture/fast-pipeline.md](architecture/fast-pipeline.md) — **полный конвейер быстрой расшифровки**: каскад, фоновые эмоции, отличия от качественного.
+- [architecture/fast-pipeline.md](architecture/fast-pipeline.md) — **полный конвейер быстрой расшифровки**: один лёгкий проход, языковые ветки, фоновые эмоции, отличия от качественного.
 - [architecture/quality-engine.md](architecture/quality-engine.md) — инварианты движка: неизменяемые кандидаты, процессы, артефакты, возобновление.
 - [architecture/queued-audio-modes.md](architecture/queued-audio-modes.md) — профили, очереди чанков, пропуск тишины, жизненный цикл ресурсов.
-- [architecture/adaptive-audio-core.md](architecture/adaptive-audio-core.md) — адаптивное ядро: каскад быстрого профиля, планирование CPU/RAM.
+- [architecture/adaptive-audio-core.md](architecture/adaptive-audio-core.md) — текущие стратегии и планирование CPU/RAM; тяжёлый каскад FAST отключён.
 - [architecture/audio-preparation.md](architecture/audio-preparation.md) — подготовка аудио без лишних преобразований + замер.
 - [architecture/audio-followup.md](architecture/audio-followup.md) — доработки native-контракта Qwen после PR37.
 - [architecture/background-fast-emotions.md](architecture/background-fast-emotions.md) — фоновая стадия эмоций быстрого профиля.
@@ -35,6 +40,9 @@
 - [engine/README.md](../engine/README.md) — сборка движка, манифест моделей, офлайн-пакет.
 
 ## Исследования
+
+- [Синтетические записи: 5 + 5](research/synthetic-diarization-2026-11-08.md) — текущий FAST на Vexto_3, WER/DER и ограничения эталонов.
+- [Токен-бюджет LLM-резюме](architecture/summary-token-budget.md) — актуальные контракты отдельной операции резюмирования; [замеры harness](research/summary-token-budget.md).
 
 [research/README.md](research/README.md) — индекс всех исследований, экспериментов и выводов, включая [выбор моделей](research/model-selection.md), [оптимизации](research/optimization.md) и публичные [результаты замеров](research/results/).
 

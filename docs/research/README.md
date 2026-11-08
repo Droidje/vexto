@@ -4,6 +4,8 @@
 
 ## Как читать
 
+Текущее поведение — [ARCHITECTURE](../ARCHITECTURE.md), сводка измерений — [TEST_RESULTS](../TEST_RESULTS.md). На русском успешно определённом LID используется GigaAM-only; старые двух-ASR/каскадные пробы ниже сохраняют исторический профиль. Это не замеры текущего маршрута и не обязательное участие LLM в каждом файле. LID 30/30 измерен на Mac; Android-инференс и вычисление метрик на ПК отмечаются раздельно.
+
 Каждый документ фиксирует: условия замера (устройство, RAM, ABI), что именно измерено и чего замер **не** доказывает. Развёрнутые агрегаты лежат в [results/](results/) — публичные JSON без приватных записей и расшифровок. Приватные артефакты (аудио, тексты, веса, логи) остаются в игнорируемых локальных каталогах.
 
 ## Выбор моделей и ресурсы
@@ -59,3 +61,5 @@
 | [results/nemotron-precision-ci-2026-11-07.json](results/nemotron-precision-ci-2026-11-07.json) / [nemotron-followup-ci-2026-11-07.json](results/nemotron-followup-ci-2026-11-07.json) | CI-пробы Nemotron |
 | [results/android-overlap-2026-11-07.json](results/android-overlap-2026-11-07.json) | перенос детектора перебиваний на Android |
 | [results/natural-overlap-precision-2026-11-07.json](results/natural-overlap-precision-2026-11-07.json) | обучение детектора на реальной речи, все агрегаты |
+
+- [results/russian-gigaam-only-avd-2026-11-07.json](results/russian-gigaam-only-avd-2026-11-07.json) — русский FAST на Vexto_3: 346,048 с → 132,374 с, RSS 1 341 997 056 байт; WER/DER не измерены. [Описание](../architecture/russian-gigaam-only.md).
