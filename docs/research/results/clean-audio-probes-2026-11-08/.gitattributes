@@ -1,0 +1,2 @@
+# Preserve native exporter bytes checked by SHA256.
+*.json -text whitespace=cr-at-eol

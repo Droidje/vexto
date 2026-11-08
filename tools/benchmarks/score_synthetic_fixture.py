@@ -5,8 +5,9 @@ No inference, downloads, device access or transcript text in the output. DER use
 score_diarization's exact global mapping, zero collar, overlap scored and explicit
 [0, duration) UEM. WER uses tools/eval/score.py normalization and edit distance;
 turns are concatenated by start_ms, without speaker attribution. Enable WER only
-when reference-json contains an independent published transcript. --wer-only marks
-DER as not applicable when fixture boundaries are unsuitable for speech-only DER. Missing runtime
+when reference-json or reference-text contains an independent published transcript.
+TXT references imply WER-only and never create speaker/timestamp annotations.
+--wer-only marks DER as not applicable when fixture boundaries are unsuitable for speech-only DER. Missing runtime
 measurements remain null. Source basenames and SHA256s identify inputs portably.
 
 Example:
@@ -25,7 +26,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from tools.benchmarks.score_diarization import parse_rttm, score
-from tools.eval.score import normalize, wer
+from tools.eval.score import edit_distance, normalize, wer
 
 
 def number(value, label):
@@ -167,13 +168,23 @@ def language_info(completion):
 
 
 def evaluate(args):
+    reference_text = getattr(args, 'reference_text', None)
     paths = {'reference_rttm': args.reference_rttm, 'reference_json': args.reference_json,
-             'transcript': args.transcript, 'completion': args.completion}
+             'reference_text': reference_text, 'transcript': args.transcript, 'completion': args.completion}
+    paths = {key: path for key, path in paths.items() if path is not None}
+    if (args.reference_json is None) == (reference_text is None):
+        raise ValueError('Provide exactly one of --reference-json or --reference-text')
+    wer_only = getattr(args, 'wer_only', False) or reference_text is not None
+    if not wer_only and args.reference_rttm is None:
+        raise ValueError('--reference-rttm is required for DER evaluation')
     if args.output.resolve() in {p.resolve() for p in paths.values()}:
         raise ValueError('Output must not overwrite any input')
     blobs = {key: path.read_bytes() for key, path in paths.items()}
-    reference, rttm_info = parse_rttm(blobs['reference_rttm'].decode('utf-8-sig'))
-    ref_json = decode_json(blobs['reference_json'], 'reference_json')
+    reference, rttm_info = (parse_rttm(blobs['reference_rttm'].decode('utf-8-sig'))
+                            if 'reference_rttm' in blobs else
+                            (None, {'status': 'unavailable_no_speaker_timestamp_reference'}))
+    ref_json = decode_json(blobs['reference_json'], 'reference_json') if 'reference_json' in blobs else None
+    ref_text = blobs['reference_text'].decode('utf-8-sig') if reference_text is not None else None
     hyp = transcript_rows(decode_json(blobs['transcript'], 'transcript'), 'transcript', True)
     completion = decode_json(blobs['completion'], 'completion')
     duration = number(args.duration_seconds, 'duration_seconds')
@@ -186,15 +197,20 @@ def evaluate(args):
                   'percent': None, 'errors': None, 'reference_words': None,
                   'hypothesis_words': sum(len(normalize(r['text'])) for r in hyp)}
     if args.wer_reference_available:
-        ref_rows = transcript_rows(ref_json, 'reference_json')
-        errors, words = wer(ref_rows, hyp)
+        if ref_text is not None:
+            reference_words = normalize(ref_text)
+            hypothesis_words = [word for row in sorted(hyp, key=lambda row: row['start_ms'])
+                                for word in normalize(row['text'])]
+            errors, words = edit_distance(reference_words, hypothesis_words), len(reference_words)
+        else:
+            ref_rows = transcript_rows(ref_json, 'reference_json')
+            errors, words = wer(ref_rows, hyp)
         value = errors / words if words else None
         wer_result.update(status='scored' if words else 'undefined_zero_reference_words',
                           value=value, percent=100 * value if value is not None else None,
                           errors=errors, reference_words=words,
                           protocol='start-time order; lowercase; ё->е; punctuation/underscore removed; no speaker attribution')
     processing_ms = optional_number(completion, 'processingMs')
-    wer_only = getattr(args, 'wer_only', False)
     if wer_only and not args.wer_reference_available:
         raise ValueError('--wer-only requires --wer-reference-available')
     not_applicable = {
@@ -230,11 +246,17 @@ def evaluate(args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for key in ('reference-rttm', 'reference-json', 'transcript', 'completion', 'output'):
+    reference = parser.add_mutually_exclusive_group(required=True)
+    reference.add_argument('--reference-json', type=Path)
+    reference.add_argument('--reference-text', type=Path,
+                           help='Independent UTF-8 transcript only; implies --wer-only without invented boundaries')
+    parser.add_argument('--reference-rttm', type=Path,
+                        help='Independent speaker/timestamp reference; required for DER, optional for WER-only')
+    for key in ('transcript', 'completion', 'output'):
         parser.add_argument('--' + key, required=True, type=Path)
     parser.add_argument('--duration-seconds', required=True, type=float)
     parser.add_argument('--wer-reference-available', action='store_true',
-                        help='Score WER only with an independent published transcript in reference-json')
+                        help='Score WER only with an independent published transcript in reference-json or reference-text')
     parser.add_argument('--wer-only', action='store_true',
                         help='Mark both DER values N/A for a WER-only fixture with unsuitable boundaries')
     args = parser.parse_args(argv)
