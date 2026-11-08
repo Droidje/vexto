@@ -65,10 +65,29 @@ jobs:
             run=$(gh api "repos/$REPOSITORY/actions/runs/$INSTALLER_RUN")
             base=$(jq -er --arg repo "$REPOSITORY" '
               select(.conclusion == "success" and .path == ".github/workflows/phone-apk.yml"
-                and .head_repository.full_name == $repo and .head_branch == "main"
+                and .head_repository.full_name == $repo
                 and (.event == "workflow_dispatch" or .event == "workflow_run"))
               | .head_sha
             ' <<<"$run")
+            [[ "$base" =~ ^[a-f0-9]{40}$ ]]
+            branch=$(jq -er '.head_branch | select(type == "string")' <<<"$run")
+            if [[ "$branch" != main ]]; then
+              # Legacy installers were also published from version tags. Trust
+              # such a run only if the current tag still resolves to its commit.
+              [[ "$branch" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+              ref=$(gh api "repos/$REPOSITORY/git/ref/tags/$branch")
+              kind=$(jq -er .object.type <<<"$ref")
+              tag_sha=$(jq -er .object.sha <<<"$ref")
+              for depth in 1 2 3 4; do
+                [[ "$tag_sha" =~ ^[a-f0-9]{40}$ ]] || exit 1
+                if [[ "$kind" == commit ]]; then break; fi
+                [[ "$kind" == tag ]] || exit 1
+                ref=$(gh api "repos/$REPOSITORY/git/tags/$tag_sha")
+                kind=$(jq -er .object.type <<<"$ref")
+                tag_sha=$(jq -er .object.sha <<<"$ref")
+              done
+              [[ "$kind" == commit && "$tag_sha" == "$base" ]] || exit 1
+            fi
             [[ "$(gh api "repos/$REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$REQUESTED_SHA" ]]
             BASE_RUN="$INSTALLER_RUN"
             bootstrap=true
@@ -209,4 +228,4 @@ jobs:
           path: dist/published.json
           retention-days: 7
       - name: Show permanent phone download link
-        run: printf '[Download full Vexto APK](https://droidje.com/vexto/download/vexto-offline.apk)\n' >> "$GITHUB_STEP_SUMMARY"
+        run: printf '[Download full Vexto APK](https://distribute.droidje.com/vexto/download/vexto-offline.apk)\n' >> "$GITHUB_STEP_SUMMARY"
