@@ -20,7 +20,7 @@ WER BookMix недоступен: в опубликованных RTTM/JSON и m
 | [ivkond_train_000031](results/synthetic-diarization-2026-11-08/ivkond_train_000031/metrics.json) | 35.411 | 11.63% | N/A | N/A | 23.029 | 1337.0 |
 | [ivkond_train_000294](results/synthetic-diarization-2026-11-08/ivkond_train_000294/metrics.json) | 44.821 | 6.45% | N/A | N/A | 41.244 | 1743.0 |
 | [ivkond_train_000346](results/synthetic-diarization-2026-11-08/ivkond_train_000346/metrics.json) | 45.560 | 10.00% | N/A | N/A | 33.005 | 1312.8 |
-| [ivkond_train_000391](results/synthetic-diarization-2026-11-08/ivkond_train_000391/metrics.json) | 43.802 | не более 19% | N/A | N/A | 27.738 | 1317.3 |
+| [ivkond_train_000391](results/synthetic-diarization-2026-11-08/ivkond_train_000391/metrics.json) | 43.802 | 18.74% | N/A | N/A | 27.738 | 1317.3 |
 | [ivkond_train_001064](results/synthetic-diarization-2026-11-08/ivkond_train_001064/metrics.json) | 54.132 | 2.13% | N/A | N/A | 32.263 | 1247.6 |
 | [rec_0055](results/synthetic-diarization-2026-11-08/rec_0055/metrics.json) | 60.000 | N/A | 5.20% | 5.20% | 69.320 | 1299.7 |
 | [rec_0056](results/synthetic-diarization-2026-11-08/rec_0056/metrics.json) | 60.000 | N/A | 6.21% | 6.21% | 51.371 | 1305.3 |

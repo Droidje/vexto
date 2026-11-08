@@ -1,6 +1,6 @@
 # Результаты тестов
 
-Сводка актуализирована 8 ноября 2026. Каждая цифра относится к указанной конфигурации и выборке. Инференс APK в Android, расчёт WER/DER на компьютере и исследовательские запуски моделей на компьютере различаются ниже. [Архитектура](ARCHITECTURE.md), [ограничения](LIMITATIONS.md), [агрегаты](research/results/).
+Сводка актуализирована 8 ноября 2026. Каждая цифра относится к указанной конфигурации и выборке. Инференс APK в Android, расчёт WER/DER на компьютере и исследовательские запуски моделей на компьютере различаются ниже. WER оценён на 10 записях (5 ivkond + 5 FLEURS), DER — на 10 записях (5 BookMix + 5 чистых BookMix). [Архитектура](ARCHITECTURE.md), [ограничения](LIMITATIONS.md), [агрегаты](research/results/).
 
 ## Наши записи: Test2 и Video Project 17
 
@@ -31,7 +31,7 @@ ivkond используется **только для WER** (21 ошибка н�
 | [ivkond_train_000031](research/results/synthetic-diarization-2026-11-08/ivkond_train_000031/metrics.json) | 35,411 | 11,63% | N/A |
 | [ivkond_train_000294](research/results/synthetic-diarization-2026-11-08/ivkond_train_000294/metrics.json) | 44,821 | 6,45% | N/A |
 | [ivkond_train_000346](research/results/synthetic-diarization-2026-11-08/ivkond_train_000346/metrics.json) | 45,560 | 10,00% | N/A |
-| [ivkond_train_000391](research/results/synthetic-diarization-2026-11-08/ivkond_train_000391/metrics.json) | 43,802 | не более 19% | N/A |
+| [ivkond_train_000391](research/results/synthetic-diarization-2026-11-08/ivkond_train_000391/metrics.json) | 43,802 | 18,74% | N/A |
 | [ivkond_train_001064](research/results/synthetic-diarization-2026-11-08/ivkond_train_001064/metrics.json) | 54,132 | 2,13% | N/A |
 | [rec_0055](research/results/synthetic-diarization-2026-11-08/rec_0055/metrics.json) | 60,000 | N/A | 5,20% |
 | [rec_0056](research/results/synthetic-diarization-2026-11-08/rec_0056/metrics.json) | 60,000 | N/A | 6,21% |
@@ -73,7 +73,7 @@ WER: нижний регистр, ё→е, пунктуация удалена; 
 
 ## Другие измерения
 
-- **Междиалоговое узнавание:** контролируемый replay реального SQLite-matcher приложения на AMI (7 людей, 28 появлений): после исправления 0/42 пропусков связей и 0/300 ложных объединений. Отдельное аудиосравнение ERes2Net — 14/14 возвращающихся людей. Это разные эксперименты, не статистика всех пользователей. [Протокол](research/speaker-matching-quality.md).
+- **Междиалоговое узнавание:** контролируемый replay реального SQLite-matcher приложения на AMI (7 людей, 28 появлений): после исправления 2/42 пропусков связей и 0/300 ложных объединений. Отдельное аудиосравнение ERes2Net — 14/14 возвращающихся людей. Это разные эксперименты, не статистика всех пользователей. [Протокол](research/speaker-matching-quality.md).
 - **Детектор наложений:** AMI, отложенные участники: precision 18/19 = 94,7%, 1 ложная тревога среди 56 отрицательных окон, 1 ошибка среди 27 коротких подтверждений; F1 0,800, ROC AUC 0,948. Русский отрицательный контроль RINCO — 0/4. [Обучение и выборка](research/natural-overlap-precision.md). Сверка ONNX/PyTorch на 82 окнах: 0 различных решений, max расхождение вероятности 0,0000089. [Перенос](research/android-overlap.md).
 - **LID:** обрезанный Whisper tiny (23,3 против 102,8 МБ) совпал с полным tiny на 30/30 коротких файлов sherpa-onnx. [Метод](research/spoken-language-id.md).
 

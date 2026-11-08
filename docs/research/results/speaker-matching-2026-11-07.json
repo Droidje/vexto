@@ -1712,7 +1712,7 @@
     "candidate": {
       "profiles": 28,
       "positive_pairs": 42,
-      "missed_pairs": 0,
+      "missed_pairs": 2,
       "negative_pairs": 300,
       "false_merges": 0,
       "global_profiles": 7,

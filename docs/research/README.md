@@ -26,7 +26,7 @@
 - [nemotron-android.md](nemotron-android.md) — сборка Nemotron 3 на Android: закреплённые исходники, конвертация F32-весов, лимиты памяти по длительности.
 - [diarization-compaction-avd.md](diarization-compaction-avd.md) — вырезание длинных пауз: замер до/после на 305-секундной записи.
 - [nemotron-precision-ci-2026-11-07.md](nemotron-precision-ci-2026-11-07.md) и [nemotron-followup-ci-2026-11-07.md](nemotron-followup-ci-2026-11-07.md) — F32/F16/Q8 и число потоков; стандарт F32.
-- [speaker-matching-quality.md](speaker-matching-quality.md) — междиалоговое узнавание людей: ERes2Net против ECAPA/WeSpeaker, калибровка порогов, исправление FAST-ветки (0/42 пропусков после фикса).
+- [speaker-matching-quality.md](speaker-matching-quality.md) — междиалоговое узнавание людей: ERes2Net против ECAPA/WeSpeaker, калибровка порогов, исправление FAST-ветки (2/42 пропусков после фикса).
 
 ## ASR и качество расшифровки
 

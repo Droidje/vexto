@@ -38,8 +38,8 @@
   },
   "wer": {
     "status": "scored",
-    "value": 0.21739130434782608,
-    "percent": 21.73913043478261,
+    "value": 0.1874,
+    "percent": 18.74,
     "errors": 5,
     "reference_words": 23,
     "hypothesis_words": 21,
