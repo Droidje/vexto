@@ -1,12 +1,20 @@
 name: Build phone installer
 
 on:
+  workflow_run:
+    workflows: [Android CI/CD]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       base_run:
-        description: Successful Android CI/CD run for the current main source tree
+        description: Successful Android CI/CD main run with the exact source tree
         type: string
-        required: true
+        required: false
+      installer_run:
+        description: Bootstrap from an existing verified main phone-installer run (instead of base_run)
+        type: string
+        required: false
       model_release:
         description: Release with all three verified model split APKs
         type: string
@@ -16,46 +24,134 @@ on:
 permissions:
   actions: read
   contents: read
+  packages: write
+
+# Serialize promotion. A new build must not cancel an upload already in progress.
+concurrency:
+  group: phone-installer-main
+  # Queue up to 100 pending runs instead of replacing the previous pending run.
+  # GitHub supports this; actionlint <=1.7.12 has an older concurrency schema.
+  # https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency
+  queue: max
+  cancel-in-progress: false
 
 jobs:
   phone-apk:
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
+      # Do not execute files from the triggering run until its trusted provenance
+      # is checked. PR/fork workflow_run events cannot reach the package token.
+      - name: Validate successful main CI provenance
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_RUN: ${{ inputs.base_run || github.event.workflow_run.id }}
+          INSTALLER_RUN: ${{ inputs.installer_run }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          bootstrap=false
+          checkout="$REQUESTED_SHA"
+          if [[ -n "$INSTALLER_RUN" ]]; then
+            [[ "$EVENT_NAME" == workflow_dispatch && -z "$BASE_RUN" ]]
+            [[ "$INSTALLER_RUN" =~ ^[0-9]+$ ]]
+            run=$(gh api "repos/$REPOSITORY/actions/runs/$INSTALLER_RUN")
+            base=$(jq -er --arg repo "$REPOSITORY" '
+              select(.conclusion == "success" and .path == ".github/workflows/phone-apk.yml"
+                and .head_repository.full_name == $repo and .head_branch == "main"
+                and (.event == "workflow_dispatch" or .event == "workflow_run"))
+              | .head_sha
+            ' <<<"$run")
+            [[ "$(gh api "repos/$REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$REQUESTED_SHA" ]]
+            BASE_RUN="$INSTALLER_RUN"
+            bootstrap=true
+          else
+            [[ "$BASE_RUN" =~ ^[0-9]+$ ]]
+            run=$(gh api "repos/$REPOSITORY/actions/runs/$BASE_RUN")
+            base=$(jq -er --arg repo "$REPOSITORY" '
+              select(.conclusion == "success" and .path == ".github/workflows/ci.yml"
+                and .head_repository.full_name == $repo and .head_branch == "main"
+                and (.event == "push" or .event == "workflow_dispatch"))
+              | .head_sha
+            ' <<<"$run")
+            if [[ "$EVENT_NAME" == workflow_run ]]; then
+              [[ "$base" == "$REQUESTED_SHA" ]]
+              [[ "$(jq -r .event <<<"$run")" == push ]]
+              checkout="$base"
+            else
+              [[ "$(gh api "repos/$REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$REQUESTED_SHA" ]]
+            fi
+          fi
+          [[ "$base" =~ ^[a-f0-9]{40}$ && "$checkout" =~ ^[a-f0-9]{40}$ ]]
+          printf 'sha=%s\ncheckout=%s\nbase_run=%s\nbootstrap=%s\n' \
+            "$base" "$checkout" "$BASE_RUN" "$bootstrap" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v7
         with:
+          ref: ${{ steps.source.outputs.checkout }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Validate source compatibility
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          BOOTSTRAP: ${{ steps.source.outputs.bootstrap }}
+        run: |
+          git merge-base --is-ancestor "$SOURCE_SHA" HEAD
+          if [[ "$BOOTSTRAP" == true ]]; then
+            # A previous complete installer is reusable only when application,
+            # model, native and packaging inputs remain byte-identical. The new
+            # publisher and web gateway themselves do not change the APK.
+            git diff --quiet "$SOURCE_SHA" HEAD -- app engine tools/native scripts \
+              gradle gradlew gradlew.bat build.gradle build.gradle.kts settings.gradle settings.gradle.kts \
+              gradle.properties gradle.lockfile ':(exclude)scripts/publish_phone_oci.py'
+          else
+            git diff --quiet "$SOURCE_SHA" HEAD
+          fi
+      - name: Download existing verified full installer for bootstrap
+        if: steps.source.outputs.bootstrap == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INSTALLER_RUN: ${{ steps.source.outputs.base_run }}
+        run: |
+          mkdir dist
+          artifact=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$INSTALLER_RUN/artifacts" --jq '
+            [.artifacts[] | select(.name == "vexto-offline.apk" and .expired == false)]
+            | if length == 1 then .[0] else error("Expected one live full installer") end')
+          id=$(jq -er .id <<<"$artifact")
+          digest=$(jq -er .digest <<<"$artifact")
+          [[ "$id" =~ ^[0-9]+$ && "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          # archive:false artifacts are the APK itself. gh run download would
+          # interpret its ZIP structure and extract app internals instead.
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > dist/vexto-offline.apk
+          printf '%s  dist/vexto-offline.apk\n' "${digest#sha256:}" | sha256sum --strict -c -
+          [[ "$(stat -c%s dist/vexto-offline.apk)" == "$(jq -er .size_in_bytes <<<"$artifact")" ]]
+          python3 scripts/verify_android_apk.py dist/vexto-offline.apk --require-models
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
       - name: Download verified base and release models
+        if: steps.source.outputs.bootstrap != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          BASE_RUN: ${{ inputs.base_run }}
-          MODEL_RELEASE: ${{ inputs.model_release }}
+          BASE_RUN: ${{ steps.source.outputs.base_run }}
+          MODEL_RELEASE: ${{ inputs.model_release || 'v0.5.1' }}
         run: |
-          [[ "$BASE_RUN" =~ ^[0-9]+$ ]]
           [[ "$MODEL_RELEASE" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          [[ "$GITHUB_REF" == refs/heads/main || "$GITHUB_REF" == "refs/tags/$MODEL_RELEASE" ]]
-          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BASE_RUN")
-          base=$(jq -er --arg repo "$GITHUB_REPOSITORY" '
-            select(.conclusion == "success" and .path == ".github/workflows/ci.yml"
-              and .head_repository.full_name == $repo)
-            | .head_sha
-          ' <<<"$run")
-          [[ "$base" =~ ^[a-f0-9]{40}$ ]]
-          git merge-base --is-ancestor "$base" "$GITHUB_SHA"
-          git diff --quiet "$base" "$GITHUB_SHA"
           gh run download "$BASE_RUN" --name unsigned-apk --dir base
           mkdir models
           gh release download "$MODEL_RELEASE" --dir models \
             --pattern 'vexto-models-*.apk' --pattern SHA256SUMS
           (cd models && grep -E '^[a-f0-9]{64}  vexto-models-[123]\.apk$' SHA256SUMS | sha256sum --strict -c -)
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;35.0.0"
-      - name: Build and sign one APK
+      - name: Build, sign and verify one full offline APK
+        if: steps.source.outputs.bootstrap != 'true'
         env:
           VEXTO_KEYSTORE: ${{ secrets.VEXTO_ANDROID_KEYSTORE }}
           VEXTO_KEYSTORE_PASSWORD: ${{ secrets.VEXTO_ANDROID_KEYSTORE_PASSWORD }}
@@ -68,15 +164,49 @@ jobs:
             --split models/vexto-models-1.apk --split models/vexto-models-2.apk \
             --split models/vexto-models-3.apk --output dist/vexto-offline.apk \
             --build-tools "$ANDROID_HOME/build-tools/35.0.0" --keystore "$keystore"
+          python3 scripts/verify_android_apk.py dist/vexto-offline.apk --require-models
           sha256sum dist/vexto-offline.apk >> "$GITHUB_STEP_SUMMARY"
+      - name: Install checksum-pinned ORAS
+        run: |
+          curl --fail --location --retry 3 \
+            https://github.com/oras-project/oras/releases/download/v1.3.6/oras_1.3.6_linux_amd64.tar.gz \
+            --output "$RUNNER_TEMP/oras.tar.gz"
+          printf '%s  %s\n' 66fb0ad7206f3f6fa77ed5b552049d364ccf4b50b1684554f731f76302b52ca0 \
+            "$RUNNER_TEMP/oras.tar.gz" | sha256sum --strict -c -
+          mkdir "$RUNNER_TEMP/oras-bin"
+          tar -xzf "$RUNNER_TEMP/oras.tar.gz" -C "$RUNNER_TEMP/oras-bin" oras
+      - name: Publish raw APK to GitHub Packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          BASE_RUN: ${{ steps.source.outputs.base_run }}
+          CHECKOUT_SHA: ${{ steps.source.outputs.checkout }}
+        run: |
+          config="$RUNNER_TEMP/vexto-oras-auth.json"
+          trap 'rm -f "$config"' EXIT
+          printf '%s' "$GH_TOKEN" | "$RUNNER_TEMP/oras-bin/oras" login ghcr.io \
+            --username "$GITHUB_ACTOR" --password-stdin --registry-config "$config"
+          package="ghcr.io/${GITHUB_REPOSITORY,,}-offline"
+          promote=()
+          if [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$CHECKOUT_SHA" ]]; then
+            promote=(--promote-latest --expected-main "$CHECKOUT_SHA")
+          fi
+          python3 scripts/publish_phone_oci.py --apk dist/vexto-offline.apk \
+            --repository "$package" --source-sha "$SOURCE_SHA" --run-id "$BASE_RUN" \
+            --oras "$RUNNER_TEMP/oras-bin/oras" --registry-config "$config" "${promote[@]}" \
+            | tee dist/published.json
       - uses: actions/upload-artifact@v7
         id: installer
         with:
+          name: vexto-offline.apk
           path: dist/vexto-offline.apk
           archive: false
           retention-days: 3
           if-no-files-found: error
-      - name: Show phone download link
-        env:
-          DOWNLOAD_URL: ${{ steps.installer.outputs.artifact-url }}
-        run: printf '[Download vexto-offline.apk](%s)\n' "$DOWNLOAD_URL" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: phone-publication-metadata
+          path: dist/published.json
+          retention-days: 7
+      - name: Show permanent phone download link
+        run: printf '[Download full Vexto APK](https://droidje.com/vexto/download/vexto-offline.apk)\n' >> "$GITHUB_STEP_SUMMARY"
