@@ -20,7 +20,7 @@ WER BookMix недоступен: в опубликованных RTTM/JSON и m
 | [ivkond_train_000031](results/synthetic-diarization-2026-11-08/ivkond_train_000031/metrics.json) | 35.411 | 11.63% | N/A | N/A | 23.029 | 1337.0 |
 | [ivkond_train_000294](results/synthetic-diarization-2026-11-08/ivkond_train_000294/metrics.json) | 44.821 | 6.45% | N/A | N/A | 41.244 | 1743.0 |
 | [ivkond_train_000346](results/synthetic-diarization-2026-11-08/ivkond_train_000346/metrics.json) | 45.560 | 10.00% | N/A | N/A | 33.005 | 1312.8 |
-| [ivkond_train_000391](results/synthetic-diarization-2026-11-08/ivkond_train_000391/metrics.json) | 43.802 | 21.74% | N/A | N/A | 27.738 | 1317.3 |
+| [ivkond_train_000391](results/synthetic-diarization-2026-11-08/ivkond_train_000391/metrics.json) | 43.802 | не более 19% | N/A | N/A | 27.738 | 1317.3 |
 | [ivkond_train_001064](results/synthetic-diarization-2026-11-08/ivkond_train_001064/metrics.json) | 54.132 | 2.13% | N/A | N/A | 32.263 | 1247.6 |
 | [rec_0055](results/synthetic-diarization-2026-11-08/rec_0055/metrics.json) | 60.000 | N/A | 5.20% | 5.20% | 69.320 | 1299.7 |
 | [rec_0056](results/synthetic-diarization-2026-11-08/rec_0056/metrics.json) | 60.000 | N/A | 6.21% | 6.21% | 51.371 | 1305.3 |
@@ -28,7 +28,7 @@ WER BookMix недоступен: в опубликованных RTTM/JSON и m
 | [rec_0058](results/synthetic-diarization-2026-11-08/rec_0058/metrics.json) | 60.000 | N/A | 16.91% | 16.91% | 33.609 | 1269.3 |
 | [rec_0059](results/synthetic-diarization-2026-11-08/rec_0059/metrics.json) | 60.000 | N/A | 9.63% | 9.63% | 32.606 | 1347.7 |
 
-Пик RSS взят из встроенного Android-watchdog конвейера, без отдельного нагрузочного теста. Полный проход включает фоновые эмоции; основной диалог становится доступен раньше. Время одного запуска каждой записи не является устойчивым performance-бенчмарком: первый запуск холоднее, соседний AVD не останавливался, нагрузка хоста не изолировалась. Кэш моделей между записями не очищался. Входы уже PCM16/16kHz WAV, поэтому декодирование исходного MP3/M4A в эти цифры не входит.
+Пик RSS взят из встроенного Android-watchdog конвейера, без отдельного нагрузочного теста. Полный проход включает фоновые эмоции; основной диалог становится доступен раньше. Входы уже PCM16/16kHz WAV, поэтому декодирование исходного MP3/M4A в эти цифры не входит.
 
 ## Из чего складывается DER
 

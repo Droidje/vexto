@@ -31,7 +31,7 @@
 - [architecture/fast-pipeline.md](architecture/fast-pipeline.md) — **полный конвейер быстрой расшифровки**: один лёгкий проход, языковые ветки, фоновые эмоции, отличия от качественного.
 - [architecture/quality-engine.md](architecture/quality-engine.md) — инварианты движка: неизменяемые кандидаты, процессы, артефакты, возобновление.
 - [architecture/queued-audio-modes.md](architecture/queued-audio-modes.md) — профили, очереди чанков, пропуск тишины, жизненный цикл ресурсов.
-- [architecture/adaptive-audio-core.md](architecture/adaptive-audio-core.md) — текущие стратегии и планирование CPU/RAM; тяжёлый каскад FAST отключён.
+- [architecture/adaptive-audio-core.md](architecture/adaptive-audio-core.md) — текущие стратегии и планирование CPU/RAM.
 - [architecture/audio-preparation.md](architecture/audio-preparation.md) — подготовка аудио без лишних преобразований + замер.
 - [architecture/audio-followup.md](architecture/audio-followup.md) — доработки native-контракта Qwen после PR37.
 - [architecture/background-fast-emotions.md](architecture/background-fast-emotions.md) — фоновая стадия эмоций быстрого профиля.
@@ -41,7 +41,7 @@
 
 ## Исследования
 
-- [Синтетические записи: 5 + 5](research/synthetic-diarization-2026-11-08.md) — текущий FAST на Vexto_3, WER/DER и ограничения эталонов.
+- [Синтетические записи: 5 + 5](research/synthetic-diarization-2026-11-08.md) — текущий FAST на Vexto_3, WER/DER.
 - [Токен-бюджет LLM-резюме](architecture/summary-token-budget.md) — актуальные контракты отдельной операции резюмирования; [замеры harness](research/summary-token-budget.md).
 
 [research/README.md](research/README.md) — индекс всех исследований, экспериментов и выводов, включая [выбор моделей](research/model-selection.md), [оптимизации](research/optimization.md) и публичные [результаты замеров](research/results/).

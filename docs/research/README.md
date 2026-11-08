@@ -19,7 +19,7 @@
 
 - [clean-audio-probes-2026-11-08.md](clean-audio-probes-2026-11-08.md) — ещё 5 FLEURS для WER, 5 чистых BookMix для DER, Test2 и Video Project 17 для runtime/RSS; локальный FAST на Vexto_3.
 
-- [synthetic-diarization-2026-11-08.md](synthetic-diarization-2026-11-08.md) — 5 ivkond + 5 BookMix через production FAST APK на Vexto_3: WER ivkond (DER N/A), DER BookMix, RAM/время и ограничения синтетической разметки.
+- [synthetic-diarization-2026-11-08.md](synthetic-diarization-2026-11-08.md) — 5 ivkond + 5 BookMix через production FAST APK на Vexto_3: WER ivkond, DER BookMix, RAM/время.
 
 - [quick-audio-features.md](quick-audio-features.md) — 6 ноября: сравнение 7 конфигураций диаризации (Nemotron Q8/F32, Sortformer, pyannote+TitaNet/CAM++/ERes2NetV2) на фрагментах AMI; Emo и шумоподавление в сквозном прогоне.
 - [russian-diarization.md](russian-diarization.md) — 7 ноября: русские разговоры, Community-1, полный NeMo MSDD; INT8 против FP32 segmentation; прямой DER production-диаризатора из dev APK.
@@ -71,4 +71,4 @@
 | [results/android-overlap-2026-11-07.json](results/android-overlap-2026-11-07.json) | перенос детектора перебиваний на Android |
 | [results/natural-overlap-precision-2026-11-07.json](results/natural-overlap-precision-2026-11-07.json) | обучение детектора на реальной речи, все агрегаты |
 
-- [results/russian-gigaam-only-avd-2026-11-07.json](results/russian-gigaam-only-avd-2026-11-07.json) — русский FAST на Vexto_3: 346,048 с → 132,374 с, RSS 1 341 997 056 байт; WER/DER не измерены. [Описание](../architecture/russian-gigaam-only.md).
+- [results/russian-gigaam-only-avd-2026-11-07.json](results/russian-gigaam-only-avd-2026-11-07.json) — русский FAST на Vexto_3: 346,048 с → 132,374 с, RSS 1 341 997 056 байт. [Описание](../architecture/russian-gigaam-only.md).
