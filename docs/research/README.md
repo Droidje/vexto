@@ -17,7 +17,7 @@
 
 ## Диаризация
 
-- [synthetic-diarization-2026-11-08.md](synthetic-diarization-2026-11-08.md) — 5 ivkond + 5 BookMix через production FAST APK на Vexto_3: WER, DER экспорта/сырого Nemotron, RAM/время и ограничения синтетической разметки.
+- [synthetic-diarization-2026-11-08.md](synthetic-diarization-2026-11-08.md) — 5 ivkond + 5 BookMix через production FAST APK на Vexto_3: WER ivkond (DER N/A), DER BookMix, RAM/время и ограничения синтетической разметки.
 
 - [quick-audio-features.md](quick-audio-features.md) — 6 ноября: сравнение 7 конфигураций диаризации (Nemotron Q8/F32, Sortformer, pyannote+TitaNet/CAM++/ERes2NetV2) на фрагментах AMI; Emo и шумоподавление в сквозном прогоне.
 - [russian-diarization.md](russian-diarization.md) — 7 ноября: русские разговоры, Community-1, полный NeMo MSDD; INT8 против FP32 segmentation; прямой DER production-диаризатора из dev APK.
@@ -33,6 +33,7 @@
 - [whisper-android.md](whisper-android.md) — рецепт сборки нативного whisper.cpp для Android.
 - [fast-asr-models.md](fast-asr-models.md) — происхождение и закрепление весов быстрого профиля (CTC + Whisper Small Q5_1).
 - [legacy-engine.md](legacy-engine.md) — исторический движок до quality-профиля: его замеры не относятся к новой связке.
+- Русский маршрут одной ASR (GigaAM без Whisper) и его замер — [архитектура](../architecture/russian-gigaam-only.md).
 
 ## Языки, перебивания, корректор
 
@@ -40,6 +41,10 @@
 - [android-overlap.md](android-overlap.md) — детектор перебиваний в приложении: одна центральная модель WavLM, окно 4 с, порог, значок на аватаре, проверка переноса на Android.
 - [natural-overlap-precision.md](natural-overlap-precision.md) — обучение детектора на реальной одновременной речи AMI: WavLM Base+ + голова (3 073 параметра), приоритет точности (94,7% верных срабатываний, 1 ложная тревога/56), протокол с фиксацией порога до test.
 - [quick-audio-features.md](quick-audio-features.md) — пробы GTCRN и проба «исправь слово» через Qwen (0 применённых лексических правок), из которых вырос корректор RUPunct как отдельный слой.
+
+## ИИ-резюме
+
+- [summary-token-budget.md](summary-token-budget.md) — точный бюджет токенов и более вместительные части для ИИ-резюме: три реальные расшифровки, замер на ARM64 AVD.
 
 ## CI-пробы
 
@@ -54,6 +59,8 @@
 | [results/pipeline-2gb-measurements-2026-11-06.json](results/pipeline-2gb-measurements-2026-11-06.json) | агрегаты прогонов 2 ГБ |
 | [results/pipeline-2gb-artifacts-2026-11-06.json](results/pipeline-2gb-artifacts-2026-11-06.json) | хеши моделей и runtime серии 2 ГБ |
 | [results/quick-audio-2026-11-06.json](results/quick-audio-2026-11-06.json) | диаризация/Emo/шумоподавление, короткие пробы |
+| [results/russian-gigaam-only-avd-2026-11-07.json](results/russian-gigaam-only-avd-2026-11-07.json) | замер русского маршрута одной ASR на AVD |
+| [results/synthetic-diarization-2026-11-08/](results/synthetic-diarization-2026-11-08/) | WER/DER десяти синтетических записей по файлам |
 | [results/russian-diarization-2026-11-07.json](results/russian-diarization-2026-11-07.json) | русские разговоры и сравнения диаризации |
 | [results/speaker-matching-2026-11-07.json](results/speaker-matching-2026-11-07.json) | междиалоговое узнавание, все метрики |
 | [results/apk-pears04-2026-11-07.json](results/apk-pears04-2026-11-07.json) | DER/WER полного APK на размеченном фрагменте |

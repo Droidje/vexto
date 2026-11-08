@@ -6,22 +6,22 @@
 
 | Набор | Записей | Аудио, с | WER | DER итогового JSON | DER сырого Nemotron |
 |---|---:|---:|---:|---:|---:|
-| ivkond | 5 | 223.726 | 8.94% | 53.61% | 53.61% |
+| ivkond | 5 | 223.726 | 8.94% | N/A | N/A |
 | bookmix | 5 | 300.000 | N/A | 8.86% | 8.86% |
 
 WER BookMix недоступен: в опубликованных RTTM/JSON и manifest нет независимой расшифровки. Гипотеза другой ASR-модели не использовалась как эталон.
 
-**Ограничение DER ivkond:** опубликованные интервалы включают паузы и не являются проверенным человеком VAD-эталоном. Значения ниже измеряют согласие с этими интервалами; их нельзя выдавать за DER на естественных разговорах с ручной речевой разметкой. У BookMix также используются исходные интервалы размещённых реплик.
+**ivkond используется только для WER; DER — N/A.** Опубликованные интервалы включают длинные паузы и не являются проверенным человеком эталоном границ речи. После проверки пригодности разметки первоначальное диагностическое сравнение этих интервалов исключено из оценки DER. Тексты, выбранные записи и WER сохранены. DER в этом отчёте оценивается только на BookMix, по его исходным интервалам размещённых реплик.
 
 ## Каждая запись
 
 | Запись | Аудио, с | WER | DER JSON | DER Nemotron | Полный проход, с | Пик RSS, МиБ |
 |---|---:|---:|---:|---:|---:|---:|
-| [ivkond_train_000031](results/synthetic-diarization-2026-11-08/ivkond_train_000031/metrics.json) | 35.411 | 11.63% | 47.94% | 47.94% | 23.029 | 1337.0 |
-| [ivkond_train_000294](results/synthetic-diarization-2026-11-08/ivkond_train_000294/metrics.json) | 44.821 | 6.45% | 40.09% | 40.09% | 41.244 | 1743.0 |
-| [ivkond_train_000346](results/synthetic-diarization-2026-11-08/ivkond_train_000346/metrics.json) | 45.560 | 10.00% | 52.04% | 52.04% | 33.005 | 1312.8 |
-| [ivkond_train_000391](results/synthetic-diarization-2026-11-08/ivkond_train_000391/metrics.json) | 43.802 | 21.74% | 70.00% | 70.00% | 27.738 | 1317.3 |
-| [ivkond_train_001064](results/synthetic-diarization-2026-11-08/ivkond_train_001064/metrics.json) | 54.132 | 2.13% | 56.58% | 56.58% | 32.263 | 1247.6 |
+| [ivkond_train_000031](results/synthetic-diarization-2026-11-08/ivkond_train_000031/metrics.json) | 35.411 | 11.63% | N/A | N/A | 23.029 | 1337.0 |
+| [ivkond_train_000294](results/synthetic-diarization-2026-11-08/ivkond_train_000294/metrics.json) | 44.821 | 6.45% | N/A | N/A | 41.244 | 1743.0 |
+| [ivkond_train_000346](results/synthetic-diarization-2026-11-08/ivkond_train_000346/metrics.json) | 45.560 | 10.00% | N/A | N/A | 33.005 | 1312.8 |
+| [ivkond_train_000391](results/synthetic-diarization-2026-11-08/ivkond_train_000391/metrics.json) | 43.802 | 21.74% | N/A | N/A | 27.738 | 1317.3 |
+| [ivkond_train_001064](results/synthetic-diarization-2026-11-08/ivkond_train_001064/metrics.json) | 54.132 | 2.13% | N/A | N/A | 32.263 | 1247.6 |
 | [rec_0055](results/synthetic-diarization-2026-11-08/rec_0055/metrics.json) | 60.000 | N/A | 5.20% | 5.20% | 69.320 | 1299.7 |
 | [rec_0056](results/synthetic-diarization-2026-11-08/rec_0056/metrics.json) | 60.000 | N/A | 6.21% | 6.21% | 51.371 | 1305.3 |
 | [rec_0057](results/synthetic-diarization-2026-11-08/rec_0057/metrics.json) | 60.000 | N/A | 6.90% | 6.90% | 48.205 | 1667.0 |
@@ -34,10 +34,10 @@ WER BookMix недоступен: в опубликованных RTTM/JSON и m
 
 | Набор | Пропуск, speaker-с | Ложная речь, speaker-с | Путаница, speaker-с | Эталон, speaker-с |
 |---|---:|---:|---:|---:|
-| ivkond | 119.934 | 0.000 | 0.000 | 223.720 |
+| ivkond | N/A | N/A | N/A | N/A |
 | bookmix | 10.426 | 15.394 | 0.104 | 292.694 |
 
-Равенство DER экспорта и сырого Nemotron проверяется по результатам каждого файла; это отдельные расчёты, с независимым оптимальным соответствием меток спикеров. Пропуски на ivkond требуют ручной аудиопроверки: исходная разметка содержит длинные тихие участки внутри реплик, поэтому весь пропуск нельзя автоматически считать потерянной речью модели. Эталоны после получения результатов не исправлялись.
+Равенство DER экспорта и сырого Nemotron проверено отдельно на каждом из пяти файлов BookMix, с независимым оптимальным соответствием меток спикеров. Для ivkond DER и его компоненты не применяются. Исходные аудио, тексты и интервалы не исправлялись; для DER ivkond потребовалась бы независимая речевая разметка.
 
 ## Версия и путь обработки
 
@@ -58,8 +58,8 @@ WER BookMix недоступен: в опубликованных RTTM/JSON и m
 ## Протокол метрик
 
 - WER: опубликованный текст и итоговый JSON конкатенируются в порядке начала реплик. Нижний регистр, ё→е, пунктуация/подчёркивание удаляются; цифры не разворачиваются в слова, повторы/междометия не удаляются. Левенштейн по словам, `(S+D+I)/N`; атрибуция спикеров в WER не учитывается. Общий WER = сумма ошибок / сумма эталонных слов, без усреднения процентов.
-- DER: точные временные события, без дискретизации; UEM от 0 до полной длительности файла, collar=0, overlap учитывается, оптимальное глобальное взаимно-однозначное соответствие меток отдельно для каждого файла. Активные множества меток исключают двойной счёт пересекающихся интервалов одного спикера. DER = `(miss+false_alarm+confusion)/reference_speaker_time`; общий DER считается по суммам speaker-time, не средним процентов.
-- Два DER: по готовому strict JSON и по `DIARIZE.turns` из completion, чтобы отделить модель от последующей сборки. Формат JSON и SHA256 против completion проверены. Для каждого входа/эталона/выхода сохранены контрольные суммы. Нулевые или отсутствующие эталоны не заменяются идеальным результатом.
+- DER (только BookMix): точные временные события, без дискретизации; UEM от 0 до полной длительности файла, collar=0, overlap учитывается, оптимальное глобальное взаимно-однозначное соответствие меток отдельно для каждого файла. Активные множества меток исключают двойной счёт пересекающихся интервалов одного спикера. DER = `(miss+false_alarm+confusion)/reference_speaker_time`; общий DER считается по суммам speaker-time, не средним процентов.
+- Два DER для BookMix: по готовому strict JSON и по `DIARIZE.turns` из completion, чтобы отделить модель от последующей сборки. Формат JSON и SHA256 против completion проверены. Для каждого входа/эталона/выхода сохранены контрольные суммы. Нулевые или отсутствующие эталоны не заменяются идеальным результатом.
 
 ## Файлы и воспроизведение
 
@@ -70,7 +70,7 @@ WER BookMix недоступен: в опубликованных RTTM/JSON и m
 Пример повторного подсчёта (из корня репозитория, Python 3, без ML-зависимостей):
 
 ```text
-python tools/benchmarks/score_synthetic_fixture.py --reference-rttm testdata/audio/ru/synthetic-20261108/ivkond/ivkond_train_000031.rttm --reference-json testdata/audio/ru/synthetic-20261108/ivkond/ivkond_train_000031.reference.json --transcript docs/research/results/synthetic-diarization-2026-11-08/ivkond_train_000031/transcript.json --completion docs/research/results/synthetic-diarization-2026-11-08/ivkond_train_000031/completion.json --duration-seconds 35.411125 --wer-reference-available --output metrics-recomputed.json
+python tools/benchmarks/score_synthetic_fixture.py --reference-rttm testdata/audio/ru/synthetic-20261108/ivkond/ivkond_train_000031.rttm --reference-json testdata/audio/ru/synthetic-20261108/ivkond/ivkond_train_000031.reference.json --transcript docs/research/results/synthetic-diarization-2026-11-08/ivkond_train_000031/transcript.json --completion docs/research/results/synthetic-diarization-2026-11-08/ivkond_train_000031/completion.json --duration-seconds 35.411125 --wer-reference-available --wer-only --output metrics-recomputed.json
 ```
 
-Для BookMix передать соответствующий файл, `--duration-seconds 60` и убрать `--wer-reference-available`. Для повторного инференса импортировать сохранённый WAV в тот же APK, явно выбрать FAST и дождаться финального completion; job UUID будет другим. Общие показатели следует пересчитать по всем пяти случаям, не заменяя неудобные файлы.
+Для BookMix передать соответствующий файл, `--duration-seconds 60` и убрать `--wer-reference-available` и `--wer-only`. Для повторного инференса импортировать сохранённый WAV в тот же APK, явно выбрать FAST и дождаться финального completion; job UUID будет другим. Общие показатели следует пересчитать по всем пяти случаям, не заменяя неудобные файлы.

@@ -4,7 +4,7 @@
 
 | Набор | Записи | Эталоны | Источник и лицензия |
 |---|---|---|---|
-| ivkond | train rows 31, 294, 346, 391, 1064; 223,726 с | Исходный текст, speaker/timing JSON и RTTM | [ivkond/synthetic-speech-diarization-ru](https://huggingface.co/datasets/ivkond/synthetic-speech-diarization-ru/tree/3fa8404cfde61d2e3a3369000ce771747821e844), MIT по карточке |
+| ivkond | train rows 31, 294, 346, 391, 1064; 223,726 с | Текст для WER; speaker/timing JSON и RTTM сохранены как исходные данные, DER — N/A | [ivkond/synthetic-speech-diarization-ru](https://huggingface.co/datasets/ivkond/synthetic-speech-diarization-ru/tree/3fa8404cfde61d2e3a3369000ce771747821e844), MIT по карточке |
 | BookMix | rec_0055–rec_0059; 300 с | Исходный RTTM и speaker/timing JSON; текста нет | [mexus/ru-book-mix-10h](https://huggingface.co/datasets/mexus/ru-book-mix-10h/tree/18655c48833c5acfcd868a36eb38465712d15f1c), CC-BY-4.0 по карточке |
 
 В каждом наборе выбраны первые пять подходящих записей по фиксированному порядку до первого инференса. ivkond: 2–3 спикера, без заявленных шума и наложений, непустой текст, валидные непересекающиеся интервалы; точные дубли аудио исключены до инференса. BookMix: первые пять file_id с двумя спикерами; шум и overlap не исключались. Никакого отбора по итоговым WER/DER.
@@ -14,3 +14,5 @@
 Разметка обоих наборов содержит интервалы выделенных реплик и может включать внутренние паузы; это не проверенный человеком VAD-эталон. У ivkond поле duration иногда отличается от end-start: RTTM использует опубликованные start/end, без подгонки под модель. Для BookMix WER не определён: независимого текста нет; результат ASR не используется как эталон.
 
 [Результаты и протокол](../../../../docs/research/synthetic-diarization-2026-11-08.md).
+
+Для итоговой оценки ivkond используется только WER: его интервалы с паузами не подходят для speech-only DER. Метрика DER здесь оценивается на BookMix. Исходные файлы и checksum не изменены.
