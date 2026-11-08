@@ -1,0 +1,199 @@
+{
+  "dataset": "ivkond/synthetic-speech-diarization-ru",
+  "revision": "3fa8404cfde61d2e3a3369000ce771747821e844",
+  "split": "train",
+  "row_idx": 1064,
+  "audio_file": "ivkond_train_001064.wav",
+  "duration_seconds": 54.1319375,
+  "published_metadata": {
+    "duration": 54.13,
+    "num_speakers": 2,
+    "sampling_rate": 16000,
+    "conversation_type": "dialogue",
+    "difficulty": "easy",
+    "has_overlaps": false,
+    "has_simultaneous": false,
+    "has_noise": false,
+    "speakers": [
+      {
+        "speaker_id": 1,
+        "start": 0.0,
+        "end": 4.68,
+        "duration": 4.68,
+        "text": "сколько сейчас стоят фунты стерлингов"
+      },
+      {
+        "speaker_id": 2,
+        "start": 4.68,
+        "end": 11.83,
+        "duration": 6.01,
+        "text": "смени свет в гостиной с зеленого на красный"
+      },
+      {
+        "speaker_id": 1,
+        "start": 11.83,
+        "end": 16.54,
+        "duration": 4.01,
+        "text": "где родился президент мэдисон"
+      },
+      {
+        "speaker_id": 2,
+        "start": 16.54,
+        "end": 23.8,
+        "duration": 6.63,
+        "text": "пожалуйста включи песни восьмидесятых"
+      },
+      {
+        "speaker_id": 1,
+        "start": 23.8,
+        "end": 29.25,
+        "duration": 4.79,
+        "text": "напомни мне про встречу во вторник за тридцать минут"
+      },
+      {
+        "speaker_id": 2,
+        "start": 29.25,
+        "end": 38.25,
+        "duration": 5.9,
+        "text": "скоро мне менять покрышки на зимнюю резину"
+      },
+      {
+        "speaker_id": 1,
+        "start": 38.25,
+        "end": 44.11,
+        "duration": 3.64,
+        "text": "какая сейчас погода"
+      },
+      {
+        "speaker_id": 2,
+        "start": 44.11,
+        "end": 54.13,
+        "duration": 6.64,
+        "text": "над каким новым фильмом работает дженнифер лоуренс"
+      }
+    ],
+    "noise_type": null,
+    "snr": null,
+    "speaker_volumes": [
+      {
+        "speaker_id": 1,
+        "volume": 1.26
+      },
+      {
+        "speaker_id": 2,
+        "volume": 1.28
+      }
+    ],
+    "simultaneous_segments": []
+  },
+  "segments": [
+    {
+      "speaker_id": 1,
+      "start": 0.0,
+      "end": 4.68,
+      "duration": 4.68,
+      "text": "сколько сейчас стоят фунты стерлингов"
+    },
+    {
+      "speaker_id": 2,
+      "start": 4.68,
+      "end": 11.83,
+      "duration": 6.01,
+      "text": "смени свет в гостиной с зеленого на красный"
+    },
+    {
+      "speaker_id": 1,
+      "start": 11.83,
+      "end": 16.54,
+      "duration": 4.01,
+      "text": "где родился президент мэдисон"
+    },
+    {
+      "speaker_id": 2,
+      "start": 16.54,
+      "end": 23.8,
+      "duration": 6.63,
+      "text": "пожалуйста включи песни восьмидесятых"
+    },
+    {
+      "speaker_id": 1,
+      "start": 23.8,
+      "end": 29.25,
+      "duration": 4.79,
+      "text": "напомни мне про встречу во вторник за тридцать минут"
+    },
+    {
+      "speaker_id": 2,
+      "start": 29.25,
+      "end": 38.25,
+      "duration": 5.9,
+      "text": "скоро мне менять покрышки на зимнюю резину"
+    },
+    {
+      "speaker_id": 1,
+      "start": 38.25,
+      "end": 44.11,
+      "duration": 3.64,
+      "text": "какая сейчас погода"
+    },
+    {
+      "speaker_id": 2,
+      "start": 44.11,
+      "end": 54.13,
+      "duration": 6.64,
+      "text": "над каким новым фильмом работает дженнифер лоуренс"
+    }
+  ],
+  "transcript": [
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 0,
+      "end_ms": 4680,
+      "text": "сколько сейчас стоят фунты стерлингов"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 4680,
+      "end_ms": 11830,
+      "text": "смени свет в гостиной с зеленого на красный"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 11830,
+      "end_ms": 16540,
+      "text": "где родился президент мэдисон"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 16540,
+      "end_ms": 23800,
+      "text": "пожалуйста включи песни восьмидесятых"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 23800,
+      "end_ms": 29250,
+      "text": "напомни мне про встречу во вторник за тридцать минут"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 29250,
+      "end_ms": 38250,
+      "text": "скоро мне менять покрышки на зимнюю резину"
+    },
+    {
+      "speaker_id": "speaker_1",
+      "start_ms": 38250,
+      "end_ms": 44110,
+      "text": "какая сейчас погода"
+    },
+    {
+      "speaker_id": "speaker_2",
+      "start_ms": 44110,
+      "end_ms": 54130,
+      "text": "над каким новым фильмом работает дженнифер лоуренс"
+    }
+  ],
+  "text": "сколько сейчас стоят фунты стерлингов смени свет в гостиной с зеленого на красный где родился президент мэдисон пожалуйста включи песни восьмидесятых напомни мне про встречу во вторник за тридцать минут скоро мне менять покрышки на зимнюю резину какая сейчас погода над каким новым фильмом работает дженнифер лоуренс",
+  "reference_origin": "Published dataset annotation; not generated by ASR, LLM, VAD or the tested pipeline."
+}

@@ -1,0 +1,5 @@
+# Preserve checksummed corpus bytes on Windows checkouts.
+*.wav binary
+*.rttm -text whitespace=cr-at-eol
+*.json -text whitespace=cr-at-eol
+upstream-README.md -text

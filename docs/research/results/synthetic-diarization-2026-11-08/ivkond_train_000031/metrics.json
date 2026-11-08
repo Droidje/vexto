@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "duration_seconds": 35.411125,
+  "inputs": {
+    "reference_rttm": {
+      "name": "ivkond_train_000031.rttm",
+      "sha256": "196097c86172f624c6184e4d3c8ca19d05b41e3c9f30cf979a6ca7a2d9ae078c"
+    },
+    "reference_json": {
+      "name": "ivkond_train_000031.reference.json",
+      "sha256": "8b0f34b16dba978a13286011c363f8d9272349b5fdbf74e8fd4567f7ca6d189d"
+    },
+    "transcript": {
+      "name": "transcript.json",
+      "sha256": "27020117ebd5d89f5fdb0f69b8c7e499d0b0dc11ea4d1cc885e0595906b4d439"
+    },
+    "completion": {
+      "name": "completion.json",
+      "sha256": "074b7cc6e02c2a056bab8eda383bf5911559f75912c0437529f970abd6242f38"
+    }
+  },
+  "reference": {
+    "format": "rttm",
+    "recording": "ivkond_train_000031",
+    "channel": "1"
+  },
+  "exportedDER": {
+    "status": "scored",
+    "der": 0.47935611409206463,
+    "der_percent": 47.935611409206466,
+    "miss_speaker_seconds": 16.974000000000007,
+    "false_alarm_speaker_seconds": 0.0,
+    "confusion_speaker_seconds": 0.0,
+    "error_speaker_seconds": 16.974000000000007,
+    "reference_speaker_seconds": 35.41,
+    "mapping_hypothesis_to_reference": {
+      "speaker_1": "speaker_1",
+      "speaker_2": "speaker_2"
+    },
+    "unmapped_reference_labels": [],
+    "reference_labels": [
+      "speaker_1",
+      "speaker_2"
+    ],
+    "hypothesis_labels": [
+      "speaker_1",
+      "speaker_2"
+    ],
+    "collar_seconds": 0,
+    "overlap_scored": true,
+    "uem": {
+      "start": 0,
+      "end": 35.411125
+    },
+    "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+    "hypothesis_segments": 7
+  },
+  "rawNemotronDER": {
+    "status": "scored",
+    "der": 0.47935611409206463,
+    "der_percent": 47.935611409206466,
+    "miss_speaker_seconds": 16.974000000000007,
+    "false_alarm_speaker_seconds": 0.0,
+    "confusion_speaker_seconds": 0.0,
+    "error_speaker_seconds": 16.974000000000007,
+    "reference_speaker_seconds": 35.41,
+    "mapping_hypothesis_to_reference": {
+      "0": "speaker_1",
+      "1": "speaker_2"
+    },
+    "unmapped_reference_labels": [],
+    "reference_labels": [
+      "speaker_1",
+      "speaker_2"
+    ],
+    "hypothesis_labels": [
+      "0",
+      "1"
+    ],
+    "collar_seconds": 0,
+    "overlap_scored": true,
+    "uem": {
+      "start": 0,
+      "end": 35.411125
+    },
+    "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
+    "stage_completed": true,
+    "hypothesis_segments": 7
+  },
+  "wer": {
+    "status": "scored",
+    "value": 0.11627906976744186,
+    "percent": 11.627906976744185,
+    "errors": 5,
+    "reference_words": 43,
+    "hypothesis_words": 42,
+    "protocol": "start-time order; lowercase; ё->е; punctuation/underscore removed; no speaker attribution"
+  },
+  "runtime": {
+    "processing_ms": 23029,
+    "rtf": 0.65033234612004,
+    "reported_audio_ms": 35411,
+    "peak_rss_bytes": 1401995264,
+    "peak_pss_bytes": null,
+    "memory_note": "Reported Android job RSS/PSS if present; no host memory measurement or inferred zero.",
+    "stage_ms": {
+      "Assembly": 9,
+      "Preparing": 2303,
+      "Diarization": 4798,
+      "Selection": 1149,
+      "Decoding": 99,
+      "Recognition": 3960,
+      "Emotion": 6619,
+      "Language": 2110,
+      "Voiceprints": 3588
+    }
+  },
+  "complete": true,
+  "full_profile_completed": false,
+  "selection_resolved": true,
+  "coverage": {
+    "expectedChunks": 7,
+    "gigaamChunks": 7,
+    "whisperChunks": 0,
+    "selectedChunks": 7,
+    "llmSelectedChunks": 0,
+    "unresolvedChunks": 0,
+    "equivalentChunks": 0
+  },
+  "language": null
+}

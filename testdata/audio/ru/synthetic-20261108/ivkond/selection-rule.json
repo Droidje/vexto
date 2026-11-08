@@ -1,0 +1,34 @@
+{
+  "dataset": "ivkond/synthetic-speech-diarization-ru",
+  "revision": "3fa8404cfde61d2e3a3369000ce771747821e844",
+  "config": "default",
+  "split": "train",
+  "order": "source parquet filenames lexicographic, then row-group index ascending, then row position ascending; global row index counts all rows including rejected rows",
+  "selection": "first 5 unique source_float32 SHA256 waveforms satisfying all original metadata conditions; shard/row order unchanged; deduplicate before inference, with no model-quality filtering",
+  "conditions": [
+    "num_speakers in {2,3}",
+    "sampling_rate == 16000",
+    "has_noise == false",
+    "has_overlaps == false",
+    "has_simultaneous == false",
+    "speakers contains nonempty text, finite nonnegative start/end and start<end for every segment",
+    "number of distinct speaker_id equals num_speakers",
+    "all segment ends <= published duration + 0.001s",
+    "no pair of different speakers overlaps by more than one audio sample (1/16000s)"
+  ],
+  "audio_policy": "full published waveform, no cropping/denoising/VAD; mono PCM16/16kHz WAV quantized from source float array",
+  "reference_policy": "published text and speaker segments copied independently of model output; canonical RTTM without VAD boundary editing",
+  "uniqueness": "SHA256 of source float32 little-endian mono samples, before PCM conversion; first eligible row for each unique waveform wins",
+  "amendment": {
+    "fixed_before_any_inference": true,
+    "reason": "Initial first five metadata-matching rows contained exact duplicate waveforms (294/297 and 346/348). Five records means five unique source recordings. Original files and selection audit retained under initial-* and original row names.",
+    "original_row_ids": [
+      31,
+      294,
+      297,
+      346,
+      348
+    ],
+    "authorization": "Parent explicitly authorized amendment before first inference; no inference results used."
+  }
+}
