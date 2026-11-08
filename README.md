@@ -31,7 +31,7 @@ Qwen3-1.7B может определить имена при наличии пр
 
 - [Презентация проекта](https://docs.google.com/presentation/d/1zIF7n8jUz8OrY8d8CgEq4H5kMGfL3L5IY2t65B78oZs/edit?usp=sharing)
 - [Макет в Figma](https://www.figma.com/design/mNJLx5uVwFRaCwwgEgrd2D/Vexto?node-id=0-1&t=UnwMPRWzOYyk4sn0-1)
-- Видео-демо: скоро
+- [Видео-демо](https://drive.google.com/file/d/1hzGV46B78FDHC9HN9rfYNAJKeGiKYfzi/view?usp=sharing)
 
 ## Связь с командой
 
