@@ -39,3 +39,5 @@ local.properties
 
 # Reproducible WavLM export (scripts/export_overlap_model.py).
 /engine/src/main/overlap-assets/
+
+.venv/
