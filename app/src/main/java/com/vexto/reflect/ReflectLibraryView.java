@@ -167,7 +167,7 @@ final class ReflectLibraryView extends ViewGroup {
 
     void setRecordings(List<ReflectCatalog.Recording> recordings) {
         this.recordings = recordings;
-        renderRows(false);
+        updateContent();
     }
 
     void setSpeakers(List<ReflectCatalog.Speaker> speakers) {
@@ -214,8 +214,10 @@ final class ReflectLibraryView extends ViewGroup {
 
     private boolean emptySpeakers() { return page == Page.SPEAKERS && speakers.isEmpty(); }
 
+    private boolean emptyRecords() { return page == Page.RECORDS && recordings.isEmpty(); }
+
     private void updateContent() {
-        boolean empty = emptySpeakers();
+        boolean empty = emptySpeakers() || emptyRecords();
         if (search != null) search.setVisibility(empty ? GONE : VISIBLE);
         scroller.setVisibility(empty ? GONE : VISIBLE);
         renderRows(false);
@@ -243,7 +245,7 @@ final class ReflectLibraryView extends ViewGroup {
             }
             case CONVERSATIONS -> collectConversations(query);
         }
-        if (adapter.rows.isEmpty() && !emptySpeakers() && page != Page.CONVERSATIONS) {
+        if (adapter.rows.isEmpty() && !emptySpeakers() && !emptyRecords() && page != Page.CONVERSATIONS) {
             String message = query.trim().isEmpty() ? "Сохранённых записей пока нет" : "Ничего не найдено";
             adapter.rows.add(new TextRow(message, false));
         }
@@ -387,7 +389,7 @@ final class ReflectLibraryView extends ViewGroup {
         if (scroller.getVisibility() != GONE) scroller.layout(0, px(scrollTop()), getWidth(),
                 Math.max(px(scrollTop()), getHeight()));
         if (addSpeaker != null) {
-            int bottom = emptySpeakers() ? px(494) : getHeight() - px(SPEAKER_BUTTON_BOTTOM_INSET);
+            int bottom = emptySpeakers() ? px(536) : getHeight() - px(SPEAKER_BUTTON_BOTTOM_INSET);
             addSpeaker.layout(px(100), bottom - addSpeaker.getMeasuredHeight(), px(295), bottom);
         }
     }
@@ -403,11 +405,19 @@ final class ReflectLibraryView extends ViewGroup {
     @Override protected void onDraw(Canvas canvas) {
         canvas.save();
         canvas.scale(scale, scale);
-        if (emptySpeakers()) {
+        if (emptySpeakers() || emptyRecords()) {
             artwork.icon(canvas, "invite_cards", 100.81f, 121.1f);
             ReflectLibraryRow.style(paint, 22, 0xfff5f5f5, artwork.display, -.22f);
             paint.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText("Добавьте спикера", 197.5f, 419, paint);
+            canvas.drawText(emptySpeakers() ? "Пока нет спикеров" : "Ваши записи", 197.5f, 419, paint);
+            ReflectLibraryRow.style(paint, 16, 0xff999999, artwork.medium, 0);
+            paint.setTextAlign(Paint.Align.CENTER);
+            if (emptySpeakers()) {
+                canvas.drawText("Здесь показываются все", 197.5f, 447, paint);
+                canvas.drawText("уникальные спикеры", 197.5f, 468, paint);
+            } else {
+                canvas.drawText("Здесь будут храниться аудиофайлы", 197.5f, 447, paint);
+            }
         } else {
             String title = switch (page) {
                 case RECORDS -> "Ваши записи";

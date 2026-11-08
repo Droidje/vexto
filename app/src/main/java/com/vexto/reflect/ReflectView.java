@@ -689,8 +689,8 @@ final class ReflectView extends ViewGroup {
     private void drawHome(Canvas c) {
         artwork.image(c, "butterfly", 71, 280, 250, 194);
         text(c, welcomeTitle, 196, 501, 22, 0xfff5f5f5, artwork.display, true);
-        text(c, "Прикрепите файлы или запишите", 186.5f, 533.3f, 16, 0xff999999, artwork.medium, true);
-        text(c, "аудио прямо сейчас", 186.5f, 554, 16, 0xff999999, artwork.medium, true);
+        text(c, "Нажмите чтобы прикрепить файл", 186.5f, 533.3f, 16, 0xff999999, artwork.medium, true);
+        text(c, "или удерживайте для записи", 186.5f, 554, 16, 0xff999999, artwork.medium, true);
         artwork.icon(c, "guide_arrow", 177.24f, 579.25f);
     }
 
