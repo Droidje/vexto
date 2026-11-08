@@ -31,7 +31,7 @@ class TagBootstrapTest(unittest.TestCase):
             mock='gh() { case "$2" in\n'+cases+'\n*) echo "Unexpected API route" >&2; return 90;; esac; }\n'
             env=os.environ|{'EVENT_NAME':'workflow_dispatch' if event=='bootstrap' else 'workflow_run','INSTALLER_RUN':'42' if event=='bootstrap' else '', 'BASE_RUN':'' if event=='bootstrap' else '42','REQUESTED_SHA':MAIN if event=='bootstrap' else COMMIT,'REPOSITORY':'Droidje/vexto','GITHUB_OUTPUT':str(root/'out')}
             run=subprocess.run(['bash','-e','-o','pipefail','-c',mock+SHELL],env=env,capture_output=True,text=True)
-            
+
             return run.returncode,(root/'out').read_text() if (root/'out').exists() else ''
     def test_fork_run_is_rejected(self):
         self.assertNotEqual(0, self.invoke(metadata_override={'head_repository': {'full_name': 'outsider/vexto'}})[0])
