@@ -28,6 +28,7 @@ jobs:
       - name: Benchmark tests and script syntax
         run: |
           python -m unittest discover -s tools/benchmarks/tests -v
+          python -m unittest discover -s ops/apk-download-gateway -p 'test_*.py' -v
           bash -n tools/benchmarks/android_memory_guard.sh
           bash -n scripts/prepare_android_runtime.sh
       - uses: actions/setup-java@v5
