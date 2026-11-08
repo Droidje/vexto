@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "duration_seconds": 27.0,
+  "inputs": {
+    "reference_text": {
+      "name": "fleurs-ru-03.txt",
+      "sha256": "88e5e9053a97cf2c51f90299ac6b205338a1503fb22b9a5054e27fc3453c274c"
+    },
+    "transcript": {
+      "name": "transcript.json",
+      "sha256": "b476fc7d2e52d3c8dbdf3eb67dfbfae246111957abf319e33feb52757bf62a50"
+    },
+    "completion": {
+      "name": "completion.json",
+      "sha256": "8c92e4f8d2a159eb0e5f69b82a82784c952fef70bdf0dd4634841fcc7ab8ea31"
+    }
+  },
+  "reference": {
+    "status": "unavailable_no_speaker_timestamp_reference"
+  },
+  "exportedDER": {
+    "status": "not_applicable_wer_only",
+    "der": null,
+    "der_percent": null,
+    "reason": "WER-only evaluation: reference boundaries are not validated for speech-only DER."
+  },
+  "rawNemotronDER": {
+    "status": "not_applicable_wer_only",
+    "der": null,
+    "der_percent": null,
+    "reason": "WER-only evaluation: reference boundaries are not validated for speech-only DER."
+  },
+  "wer": {
+    "status": "scored",
+    "value": 0.02631578947368421,
+    "percent": 2.631578947368421,
+    "errors": 1,
+    "reference_words": 38,
+    "hypothesis_words": 38,
+    "protocol": "start-time order; lowercase; ё->е; punctuation/underscore removed; no speaker attribution"
+  },
+  "runtime": {
+    "processing_ms": 44189,
+    "rtf": 1.6366296296296297,
+    "reported_audio_ms": 27000,
+    "peak_rss_bytes": 1341214720,
+    "peak_pss_bytes": null,
+    "memory_note": "Reported Android job RSS/PSS if present; no host memory measurement or inferred zero.",
+    "stage_ms": {
+      "Recognition": 5371,
+      "Selection": 1245,
+      "Decoding": 68,
+      "Preparing": 9651,
+      "Assembly": 5,
+      "Language": 4065,
+      "Voiceprints": 3775,
+      "Diarization": 10682,
+      "Emotion": 12752
+    }
+  },
+  "complete": true,
+  "full_profile_completed": false,
+  "selection_resolved": true,
+  "coverage": {
+    "expectedChunks": 1,
+    "gigaamChunks": 1,
+    "whisperChunks": 0,
+    "selectedChunks": 1,
+    "llmSelectedChunks": 0,
+    "unresolvedChunks": 0,
+    "equivalentChunks": 0
+  },
+  "language": null
+}

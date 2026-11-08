@@ -17,6 +17,8 @@
 
 ## Диаризация
 
+- [clean-audio-probes-2026-11-08.md](clean-audio-probes-2026-11-08.md) — ещё 5 FLEURS для WER, 5 чистых BookMix для DER, Test2 и Video Project 17 для runtime/RSS; локальный FAST на Vexto_3.
+
 - [synthetic-diarization-2026-11-08.md](synthetic-diarization-2026-11-08.md) — 5 ivkond + 5 BookMix через production FAST APK на Vexto_3: WER ivkond (DER N/A), DER BookMix, RAM/время и ограничения синтетической разметки.
 
 - [quick-audio-features.md](quick-audio-features.md) — 6 ноября: сравнение 7 конфигураций диаризации (Nemotron Q8/F32, Sortformer, pyannote+TitaNet/CAM++/ERes2NetV2) на фрагментах AMI; Emo и шумоподавление в сквозном прогоне.
