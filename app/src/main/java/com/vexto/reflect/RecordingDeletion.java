@@ -93,6 +93,7 @@ final class RecordingDeletion {
         for (String suffix : SIDECARS) {
             Files.deleteIfExists(new File(transcripts, plan.recording() + suffix).toPath());
         }
+        ReflectTranscriptStore.deleteCheckpointTree(new File(transcripts, plan.recording() + ".summary-work"));
         Files.deleteIfExists(source.toPath());
         new AtomicFile(marker(plan.recording())).delete();
     }

@@ -59,9 +59,20 @@ final class ReflectTranscriptStore {
         boolean save() throws IOException;
     }
 
+    File summaryCheckpoints(File recording) throws IOException { return sidecar(recording, ".summary-work"); }
+
     void deleteSummary(File recording) throws IOException {
         synchronized (TRANSCRIPT_WRITE_LOCK) {
             Files.deleteIfExists(sidecar(recording, ".summary").toPath());
+            deleteCheckpointTree(summaryCheckpoints(recording));
+        }
+    }
+
+    static void deleteCheckpointTree(File directory) throws IOException {
+        if (!directory.exists()) return;
+        try (var paths = Files.walk(directory.toPath())) {
+            java.util.Iterator<Path> iterator = paths.sorted(java.util.Comparator.reverseOrder()).iterator();
+            while (iterator.hasNext()) Files.deleteIfExists(iterator.next());
         }
     }
 

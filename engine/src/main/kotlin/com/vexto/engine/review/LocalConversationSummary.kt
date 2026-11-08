@@ -16,12 +16,14 @@ import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.nio.file.Files
+import kotlinx.serialization.json.*
 import java.util.concurrent.atomic.AtomicReference
 
 /** Reuses packaged Qwen and holds the inference gate until its process is closed. */
 internal class LocalConversationSummary(private val context: Context) {
     suspend fun run(
         transcript: String,
+        checkpointDirectory: File?,
         progress: suspend (Int, Int, Long) -> Unit,
         onSummary: suspend (String) -> Unit,
         generateTitle: (() -> Boolean)?,
@@ -30,19 +32,32 @@ internal class LocalConversationSummary(private val context: Context) {
         val plan = SummaryPlan(transcript)
         val language = plan.language
         val summaryPrompt = language.summaryPrompt()
-        progress(0, plan.steps, -1)
+        progress(0, 0, -1)
         TranscriptionEngine.lock.withLock {
             withModel { session ->
-                var elapsed = 0L
-                var done = 0
-                val summary = plan.run { input ->
-                    val start = SystemClock.elapsedRealtime()
-                    val result = SummaryPlan.finishSummary(session.generate(summaryPrompt, input, 120_000))
-                    elapsed += SystemClock.elapsedRealtime() - start
-                    done++
-                    progress(done, plan.steps, elapsed * (plan.steps - done) / done)
-                    result
+                val tokenPlan = TokenSummaryPlan(transcript)
+                val checkpoints = checkpointDirectory?.let {
+                    SummaryCheckpoints(it, "token-summary-v1\n${session.modelSha}\n$summaryPrompt\n${tokenPlan.source}")
                 }
+                var elapsed = 0L
+                var completed = 0
+                val summary = tokenPlan.run(
+                    fitPrefix = { text, suffix -> session.fitPrefix(summaryPrompt, text, suffix) },
+                    fits = { session.fits(summaryPrompt, it) },
+                    summarize = { input ->
+                        val generate: suspend () -> String = {
+                            val start = SystemClock.elapsedRealtime()
+                            val result = SummaryPlan.finishSummary(session.generate(summaryPrompt, input, 120_000))
+                            elapsed += SystemClock.elapsedRealtime() - start
+                            completed++
+                            result
+                        }
+                        checkpoints?.response(input, generate) ?: generate()
+                    },
+                    progress = { done, total ->
+                        progress(done, total, if (completed == 0) -1 else elapsed * (total - done) / completed)
+                    },
+                )
                 onSummary(summary)
 
                 // The caller checks title eligibility again at dispatch time. Keep the same
@@ -82,7 +97,8 @@ internal class LocalConversationSummary(private val context: Context) {
     }
 
     private suspend fun <T> withModel(run: suspend (ModelSession) -> T): T {
-        val model = QualityModelStore.prepareSummary(context).file("qwen")
+        val models = QualityModelStore.prepareSummary(context)
+        val model = models.file("qwen")
         val cache = File(context.cacheDir, "conversation-summary").apply {
             check(mkdirs() || isDirectory)
             listFiles().orEmpty().filter { it.name.startsWith("run-") }.forEach { it.deleteRecursively() }
@@ -90,14 +106,14 @@ internal class LocalConversationSummary(private val context: Context) {
         val work = Files.createTempDirectory(cache.toPath(), "run-").toFile()
         try {
             return NativeProcessRunner(context).persistentExecutor(work).use { executor ->
-                run(ModelSession(model, work, executor))
+                run(ModelSession(model, models.manifest.artifacts.getValue("qwen").sha256, work, executor))
             }
         } finally {
             work.deleteRecursively()
         }
     }
 
-    private class ModelSession(model: File, private val work: File, private val executor: PersistentNativeExecutor) {
+    private class ModelSession(model: File, val modelSha: String, private val work: File, private val executor: PersistentNativeExecutor) {
         private val system = File(work, "system.txt")
         private val prompt = File(work, "prompt.txt")
         private val output = File(work, "result.txt")
@@ -112,10 +128,29 @@ internal class LocalConversationSummary(private val context: Context) {
             generate(language.titlePrompt(), input, 45_000),
         )
 
+        suspend fun fits(instruction: String, input: String): Boolean =
+            budget(instruction, input, listOf("--count-tokens", "1"))["accepted"]!!.jsonPrimitive.boolean
+
+        suspend fun fitPrefix(instruction: String, input: String, suffix: String): Int {
+            val file = File(work, "suffix.txt").apply { writeText(suffix) }
+            return budget(instruction, input, listOf("--fit-prefix", "1", "--summary-suffix-file", file.absolutePath))[
+                "prefix_bytes"]!!.jsonPrimitive.int
+        }
+
+        private suspend fun budget(instruction: String, input: String, operation: List<String>): JsonObject {
+            currentCoroutineContext().ensureActive()
+            require(instruction.toByteArray().size <= 400 && input.toByteArray().size <= 32768)
+            system.writeText(instruction)
+            prompt.writeText(input)
+            executor.run("libvexto_llama_exec.so", args + operation, work, output, errors, 120_000)
+            check(output.length() in 1..4096)
+            return Json.parseToJsonElement(output.readText()).jsonObject
+        }
+
         suspend fun generate(instruction: String, input: String, timeoutMs: Long): String {
             currentCoroutineContext().ensureActive()
             check(instruction.toByteArray(Charsets.UTF_8).size <= 400)
-            check(input.toByteArray(Charsets.UTF_8).size <= 1400)
+            check(input.toByteArray(Charsets.UTF_8).size <= 32768)
             system.writeText(instruction)
             prompt.writeText(input)
             executor.run("libvexto_llama_exec.so", args, work, output, errors, timeoutMs)

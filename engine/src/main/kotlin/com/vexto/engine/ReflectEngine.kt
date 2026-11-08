@@ -111,7 +111,7 @@ object ReflectEngine {
 
     @JvmStatic
     fun summarize(context: Context, transcript: String, listener: SummaryListener): Task =
-        summarizeInternal(context, transcript, null, listener)
+        summarizeInternal(context, transcript, null, listener, null)
 
     /** The optional title gate runs on IO immediately before an extra request on the warm model. */
     @JvmStatic
@@ -120,18 +120,25 @@ object ReflectEngine {
         transcript: String,
         generateTitle: BooleanSupplier,
         listener: SummaryWithTitleListener,
-    ): Task = summarizeInternal(context, transcript, generateTitle, listener)
+    ): Task = summarizeInternal(context, transcript, generateTitle, listener, null)
+
+    @JvmStatic
+    fun summarize(context: Context, transcript: String, checkpointDirectory: File,
+                  generateTitle: BooleanSupplier, listener: SummaryWithTitleListener): Task =
+        summarizeInternal(context, transcript, generateTitle, listener, checkpointDirectory)
 
     private fun summarizeInternal(
         context: Context,
         transcript: String,
         generateTitle: BooleanSupplier?,
         listener: SummaryListener,
+        checkpointDirectory: File?,
     ): Task = Task(scope.launch {
         try {
             withContext(Dispatchers.IO) {
                 LocalConversationSummary(context.applicationContext).run(
                     transcript,
+                    checkpointDirectory,
                     progress = { done, total, remaining ->
                         withContext(Dispatchers.Main) { listener.onProgress(done, total, remaining) }
                     },

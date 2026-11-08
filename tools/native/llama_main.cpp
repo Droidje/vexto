@@ -23,6 +23,32 @@ void trim_partial_utf8(std::string & text) {
     const size_t needed = byte < 0x80 ? 1 : byte < 0xe0 ? 2 : byte < 0xf0 ? 3 : 4;
     if (text.size() - start < needed) text.resize(start);
 }
+
+std::vector<size_t> prefix_boundaries(const std::string & text, bool words) {
+    std::vector<size_t> result;
+    for (size_t at = 0; at < text.size();) {
+        const auto first = static_cast<unsigned char>(text[at++]);
+        uint32_t cp = first;
+        int extra = 0;
+        if (first >= 0xc2 && first <= 0xdf) { cp = first & 0x1f; extra = 1; }
+        else if (first >= 0xe0 && first <= 0xef) { cp = first & 0x0f; extra = 2; }
+        else if (first >= 0xf0 && first <= 0xf4) { cp = first & 7; extra = 3; }
+        else if (first >= 0x80) throw std::runtime_error("Invalid UTF-8 planning input");
+        for (int i = 0; i < extra; ++i) {
+            if (at == text.size() || (static_cast<unsigned char>(text[at]) & 0xc0) != 0x80)
+                throw std::runtime_error("Invalid UTF-8 planning input");
+            cp = (cp << 6) | (static_cast<unsigned char>(text[at++]) & 0x3f);
+        }
+        if ((extra == 1 && cp < 0x80) || (extra == 2 && cp < 0x800) ||
+            (extra == 3 && cp < 0x10000) || cp > 0x10ffff || (cp >= 0xd800 && cp <= 0xdfff))
+            throw std::runtime_error("Invalid UTF-8 planning input");
+        const bool space = (cp >= 9 && cp <= 13) || cp == 0x20 || cp == 0x85 || cp == 0xa0 ||
+            cp == 0x1680 || (cp >= 0x2000 && cp <= 0x200a) || cp == 0x2028 || cp == 0x2029 ||
+            cp == 0x202f || cp == 0x205f || cp == 0x3000;
+        if (!words || space || at == text.size()) result.push_back(at);
+    }
+    return result;
+}
 }
 
 int main(int argc, char ** argv) {
@@ -61,20 +87,50 @@ int main(int argc, char ** argv) {
             if (vexto::option(args, "--summary-system-file") != summary_path)
                 throw std::runtime_error("Worker generation mode changed");
             // Exact expansion of SelectorPrompt.NonThinkingTemplate for its single user message.
-            const auto prompt = vexto::read_file(vexto::option(args, "-f"), summary ? 1400 : 8192);
+            const auto prompt = vexto::read_file(vexto::option(args, "-f"), summary ? 32768 : 8192);
             const auto system = summary
                 ? "<|im_start|>system\n" + vexto::read_file(summary_path, 400) + "<|im_end|>\n" : "";
-            const auto formatted = system + "<|im_start|>user\n" + chat_data(prompt) +
-                "<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n";
+            const auto format = [&](const std::string & input) {
+                return system + "<|im_start|>user\n" + chat_data(input) +
+                    "<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n";
+            };
             const int max_tokens = std::stoi(vexto::option(args, "-n", "16"));
             if (max_tokens < 1 || max_tokens > (summary ? 192 : 16))
                 throw std::runtime_error("Qwen output token budget exceeded");
+            if (vexto::option(args, "--fit-prefix") == "1") {
+                if (!summary) throw std::runtime_error("Token planning requires summary mode");
+                const auto suffix = vexto::read_file(vexto::option(args, "--summary-suffix-file"), 1024);
+                // Token counts are not monotonic in prefix length. Inspect boundaries from
+                // longest to shortest instead of assuming a binary-search predicate.
+                for (bool words : {true, false}) {
+                    const auto boundaries = prefix_boundaries(prompt, words);
+                    for (auto it = boundaries.rbegin(); it != boundaries.rend(); ++it) {
+                        const auto candidate = format(prompt.substr(0, *it) + suffix);
+                        const int count = -llama_tokenize(vocab, candidate.data(), int(candidate.size()), nullptr, 0, true, true);
+                        if (count > 0 && count + max_tokens <= int(cp.n_ctx)) return vexto::json{
+                            {"prefix_bytes", *it}, {"prompt_tokens", count}, {"context_tokens", cp.n_ctx},
+                            {"max_output_tokens", max_tokens}, {"accepted", true}}.dump();
+                    }
+                }
+                throw std::runtime_error("QWEN_CONTEXT_BUDGET_EXCEEDED");
+            }
+            const auto formatted = format(prompt);
             int count = -llama_tokenize(vocab, formatted.data(), int(formatted.size()), nullptr, 0, true, true);
+            const auto budget = vexto::json{
+                {"prompt_tokens", count}, {"context_tokens", cp.n_ctx},
+                {"max_output_tokens", max_tokens},
+                {"accepted", count > 0 && count + max_tokens <= int(cp.n_ctx)}};
             const auto audit = vexto::option(args, "--prompt-audit-file");
             if (!audit.empty()) vexto::write_file(audit, vexto::json{
                 {"prompt_utf8_bytes", prompt.size()}, {"prompt_tokens", count}, {"context_tokens", cp.n_ctx},
                 {"max_output_tokens", max_tokens}, {"threads", cp.n_threads},
                 {"accepted", count > 0 && count + max_tokens <= int(cp.n_ctx)}}.dump());
+            // Planning uses the exact same escaped ChatML and vocabulary as generation.
+            // It does not evaluate the prompt or alter the retained context/KV state.
+            if (vexto::option(args, "--count-tokens") == "1") {
+                if (!summary) throw std::runtime_error("Token planning requires summary mode");
+                return budget.dump();
+            }
             if (count <= 0 || count + max_tokens > int(cp.n_ctx)) throw std::runtime_error("QWEN_CONTEXT_BUDGET_EXCEEDED");
             std::vector<llama_token> tokens(count);
             if (llama_tokenize(vocab, formatted.data(), int(formatted.size()), tokens.data(), count, true, true) != count)

@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 
 /** Owns one local generation, while the conversation view may come and go. */
 final class ReflectSummaryController {
-    private static final String SUMMARY_DOMAIN = "vexto-summary-gist-v3\n";
+    private static final String SUMMARY_DOMAIN = "vexto-summary-token-v4\n";
     private final Activity activity;
     private final ReflectTranscriptStore store;
     private final ReflectConversationTitles titles;
@@ -120,12 +120,12 @@ final class ReflectSummaryController {
         state = job.state;
         titles.prioritizeSummary();
         try {
-            job.task = ReflectEngine.summarize(activity.getApplicationContext(), source.text(),
+            job.task = ReflectEngine.summarize(activity.getApplicationContext(), source.text(), store.summaryCheckpoints(job.recording),
                     titles.warmEligibility(job.recording), new ReflectEngine.SummaryWithTitleListener() {
                 @Override public void onProgress(int done, int total, long remainingMs) {
                     if (active != job || destroyed) return;
                     int percent = total <= 0 ? -1 : Math.min(99, Math.round(100f * done / total));
-                    String step = total <= 0 ? "Готовлю локальную модель…"
+                    String step = total <= 0 ? (done < 0 ? "Подбираю части по контексту…" : "Готовлю локальную модель…")
                             : "Шаг " + Math.min(done + 1, total) + " из " + total;
                     if (remainingMs >= 0) step += " · осталось около " + eta(remainingMs);
                     job.state = busy(step, percent);
@@ -155,7 +155,7 @@ final class ReflectSummaryController {
                     finish(job, failure("Не удалось создать резюме на устройстве. Повторите попытку."));
                 }
             });
-        } catch (RuntimeException unavailable) {
+        } catch (IOException | RuntimeException unavailable) {
             logFailure(unavailable);
             finish(job, failure("Не удалось запустить локальную модель. Повторите попытку."));
         }

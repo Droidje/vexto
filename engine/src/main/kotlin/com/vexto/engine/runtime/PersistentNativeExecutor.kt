@@ -153,7 +153,7 @@ class PersistentNativeExecutor internal constructor(
         var i = 0
         while (i < args.size) {
             val arg = args[i++]
-            if (arg in setOf("-f", "-of", "--json-schema-file", "--chat-template-file", "--prompt-audit-file")) {
+            if (arg in setOf("-f", "-of", "--json-schema-file", "--chat-template-file", "--prompt-audit-file", "--count-tokens", "--fit-prefix", "--summary-suffix-file")) {
                 require(i < args.size); i++
             } else result += arg
         }

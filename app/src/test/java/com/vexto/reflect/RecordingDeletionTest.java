@@ -50,6 +50,12 @@ public class RecordingDeletionTest {
         var transcript = new ReflectTranscript(List.of(new ReflectTranscript.Line("speaker_1", 0, 1000, "Текст")));
         store.save(selected, transcript);
         store.save(other, transcript);
+        File selectedCheckpoints = new File(store.summaryCheckpoints(selected), "revision/step");
+        File otherCheckpoints = new File(store.summaryCheckpoints(other), "revision/step");
+        Files.createDirectories(selectedCheckpoints.getParentFile().toPath());
+        Files.createDirectories(otherCheckpoints.getParentFile().toPath());
+        Files.write(selectedCheckpoints.toPath(), new byte[]{1});
+        Files.write(otherCheckpoints.toPath(), new byte[]{2});
         String person = profiles.create("Анна").id();
         profiles.link(selected, transcript, "speaker_1", person);
         profiles.link(other, transcript, "speaker_1", person);
@@ -77,6 +83,8 @@ public class RecordingDeletionTest {
         assertFalse(new File(context.getFilesDir(), "transcripts/selected.wav.summary").exists());
         assertFalse(new File(context.getFilesDir(), "transcripts/selected.wav.title").exists());
         assertFalse(new File(context.getFilesDir(), "transcripts/selected.wav.engine").exists());
+        assertFalse(selectedCheckpoints.exists());
+        assertTrue(otherCheckpoints.isFile());
         assertFalse(job.exists());
         assertEquals(null, new ReflectTranscriptionOutcomes(context).failure(selected));
         assertTrue(conversations.isDeleted(selected));

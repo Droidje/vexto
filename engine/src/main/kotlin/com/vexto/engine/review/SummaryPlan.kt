@@ -1,6 +1,6 @@
 package com.vexto.engine.review
 
-/** Byte limits bound Qwen's byte-level tokenizer; the native worker also checks exact tokens. */
+/** Legacy excerpt sampler for titles and baseline tests; summaries use TokenSummaryPlan. */
 internal class SummaryPlan(transcript: String) {
     val language = ConversationLanguage.detect(transcript)
     val chunks = split(transcript.lineSequence().joinToString("\n", transform = ConversationLanguage::dialogueLine).trim())
