@@ -4,7 +4,7 @@ The public path `/vexto/download/vexto-offline.apk` streams the full APK from th
 
 Run tests: `python3 -m unittest discover -s ops/apk-download-gateway -p 'test_*.py'`.
 
-Deploy the directory to the existing host, run `docker compose up -d --build`, and include `nginx-location.conf` inside only the existing `droidje.com` HTTPS server. Run `nginx -t` before a scoped reload. Preserve all unrelated server blocks and services. The container is non-root, read-only, limited to 128 MB / 32 PIDs, exposed only at host loopback port 18768. `/healthz` is liveness; test the actual download path to verify GHCR availability.
+Deploy the directory to the existing host, run `docker compose up -d --build`, and include `nginx-location.conf` inside only the existing `distribute.droidje.com` HTTPS server. Run `nginx -t` before a scoped reload. Preserve all unrelated server blocks and services. The container is non-root, read-only, limited to 128 MB / 32 PIDs, exposed only at host loopback port 18768. `/healthz` is liveness; test the actual download path to verify GHCR availability.
 
 Public GHCR artifacts need no personal credential. If a private artifact must be served, provide `GITHUB_USER` and `GITHUB_TOKEN` to the container through the host's secret management; the token needs only `read:packages` and access to this package. Do not put values into compose, the repository, command-line arguments, URLs or logs. With a private package, the endpoint still intentionally publishes its APK to anyone who knows the public URL. The public endpoint never exposes registry credentials.
 
@@ -13,9 +13,9 @@ Metadata/token cache lives for at most 30 seconds and never falls back to an unv
 Acceptance checks after publishing:
 
 ```sh
-curl -I https://droidje.com/vexto/download/vexto-offline.apk
-curl -fsS -r 0-15 https://droidje.com/vexto/download/vexto-offline.apk -o apk-prefix.bin
-curl -fL -C - -o vexto-offline.apk https://droidje.com/vexto/download/vexto-offline.apk
+curl -I https://distribute.droidje.com/vexto/download/vexto-offline.apk
+curl -fsS -r 0-15 https://distribute.droidje.com/vexto/download/vexto-offline.apk -o apk-prefix.bin
+curl -fL -C - -o vexto-offline.apk https://distribute.droidje.com/vexto/download/vexto-offline.apk
 sha256sum vexto-offline.apk
 ```
 
