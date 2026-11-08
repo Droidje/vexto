@@ -9,9 +9,9 @@
   "synthetic": true,
   "ground_truth": "Published generator-scheduled turns; internal pauses may be inside RTTM turns; not manual frame-level speech activity. Zero overlap selected by source metadata before inference; clean demo subset, not corpus quality estimate.",
   "audio_transformation": "Lossless FLAC decode to mono PCM16/16k WAV; no cropping, denoising, speed changes or silence trimming.",
-  "selection_file": "C:\\Users\\AS152\\.codex\\worktrees\\pipeline-two-gb\\vexto\\.agents\\work\\additional-clean-fixtures-20261108\\bookmix\\selection-before-inference.json",
+  "selection_file": "selection-before-inference.json",
   "selection_sha256": "2acc0392cfbc0aaa007d57e1b872e40a709a4b67915df9a2833dd9f43fab6b99",
-  "source_readme": "C:\\Users\\AS152\\.codex\\worktrees\\pipeline-two-gb\\vexto\\.agents\\work\\additional-clean-fixtures-20261108\\bookmix\\README.md",
+  "source_readme": "upstream-README.md",
   "cohort_label": "metadata-defined zero-overlap clean demo subset; not a random corpus benchmark",
   "unique_pcm_against_previous_bookmix_five": true,
   "samples": [
@@ -97,7 +97,7 @@
         ".json": "f4313eed01b624572985b4b53bca3c6fc12693a8301d7f064bdfc8b336286afb",
         ".reference.json": "91a32f2f63fe7f71fa9606b48cb581c6dfc14614603f00c72c5743adfb538aea"
       },
-      "source_metadata": "C:\\Users\\AS152\\.codex\\worktrees\\pipeline-two-gb\\vexto\\.agents\\work\\additional-clean-fixtures-20261108\\bookmix\\rec_0061.json",
+      "source_metadata": "rec_0061.json",
       "metadata": {
         "file_id": "rec_0061",
         "duration": 60.0,
@@ -221,7 +221,7 @@
         ".json": "0f71883fa8c99e0e0ffb208a1b7978767e68d10507b117308d423bf68d86238e",
         ".reference.json": "ab379d972dacbff9c17d50270f5a1d79763442004e230363c05f46d3e76d1d4f"
       },
-      "source_metadata": "C:\\Users\\AS152\\.codex\\worktrees\\pipeline-two-gb\\vexto\\.agents\\work\\additional-clean-fixtures-20261108\\bookmix\\rec_0063.json",
+      "source_metadata": "rec_0063.json",
       "metadata": {
         "file_id": "rec_0063",
         "duration": 60.0,
@@ -335,7 +335,7 @@
         ".json": "f415258fbc8295a910c9ba4f543353622de513887c1fe1609c8c33de1d0d0c30",
         ".reference.json": "eee03772142e380a1d8fa13e8d6850c01ac2727c2abbd04610959591b4fbac8f"
       },
-      "source_metadata": "C:\\Users\\AS152\\.codex\\worktrees\\pipeline-two-gb\\vexto\\.agents\\work\\additional-clean-fixtures-20261108\\bookmix\\rec_0066.json",
+      "source_metadata": "rec_0066.json",
       "metadata": {
         "file_id": "rec_0066",
         "duration": 60.0,
@@ -454,7 +454,7 @@
         ".json": "247f32cb5fa12bde8b2d41dba3720be3d8b1c8e94e4352a54ab064afb9014118",
         ".reference.json": "c88b613e78d3c89a2178a81616fa050543d5b86cac23a2f028d120786cb82f20"
       },
-      "source_metadata": "C:\\Users\\AS152\\.codex\\worktrees\\pipeline-two-gb\\vexto\\.agents\\work\\additional-clean-fixtures-20261108\\bookmix\\rec_0070.json",
+      "source_metadata": "rec_0070.json",
       "metadata": {
         "file_id": "rec_0070",
         "duration": 60.0,
@@ -573,7 +573,7 @@
         ".json": "04febaef351c27f0743fbbd98fd3e0ba51740ea481fa65cc47832c7509f1c57e",
         ".reference.json": "f456802763764c69d9217555d1899d0bffdbd37122962aa91265a878cfefe52b"
       },
-      "source_metadata": "C:\\Users\\AS152\\.codex\\worktrees\\pipeline-two-gb\\vexto\\.agents\\work\\additional-clean-fixtures-20261108\\bookmix\\rec_0071.json",
+      "source_metadata": "rec_0071.json",
       "metadata": {
         "file_id": "rec_0071",
         "duration": 60.0,

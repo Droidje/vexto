@@ -1,0 +1,95 @@
+{
+  "dataset": "mexus/ru-book-mix-10h",
+  "revision": "18655c48833c5acfcd868a36eb38465712d15f1c",
+  "manifest_sha256": "2f1e26fe123afe43e76b96cd49fd62e75bdb94c2f056c1fc7fa43c981de46a6c",
+  "fixed_utc": "2026-11-08T01:47:27.311335+00:00",
+  "selection_rule": "First five ascending file_id among NEW recordings excluding rec_0055..rec_0059, n_speakers==2, overlap2==0, overlap3plus==0, snr_db==25; fixed before audio download or inference. Clean metadata-defined demo subset, not corpus quality estimate.",
+  "eligible_count": 67,
+  "samples": [
+    {
+      "shard": "data/shard-0000.tar",
+      "file_id": "rec_0061",
+      "duration": 60.0,
+      "n_speakers": 2,
+      "speakers": {
+        "spk0": "smelova_s",
+        "spk1": "evgenii_lebedev"
+      },
+      "overlap_stats": {
+        "single": 1.0,
+        "overlap2": 0.0,
+        "overlap3plus": 0.0,
+        "speech": 0.9262040960684474
+      },
+      "snr_db": 25.0
+    },
+    {
+      "shard": "data/shard-0000.tar",
+      "file_id": "rec_0063",
+      "duration": 60.0,
+      "n_speakers": 2,
+      "speakers": {
+        "spk0": "yulia_tarhova",
+        "spk1": "aleksandr_kotov"
+      },
+      "overlap_stats": {
+        "single": 1.0,
+        "overlap2": 0.0,
+        "overlap3plus": 0.0,
+        "speech": 0.9292658359984435
+      },
+      "snr_db": 25.0
+    },
+    {
+      "shard": "data/shard-0000.tar",
+      "file_id": "rec_0066",
+      "duration": 60.0,
+      "n_speakers": 2,
+      "speakers": {
+        "spk0": "aleksandr_zbarovskii",
+        "spk1": "vladimir_eremin"
+      },
+      "overlap_stats": {
+        "single": 1.0,
+        "overlap2": 0.0,
+        "overlap3plus": 0.0,
+        "speech": 0.9309721808424302
+      },
+      "snr_db": 25.0
+    },
+    {
+      "shard": "data/shard-0000.tar",
+      "file_id": "rec_0070",
+      "duration": 60.0,
+      "n_speakers": 2,
+      "speakers": {
+        "spk0": "vladimir_shevyakov",
+        "spk1": "maksim_suslov"
+      },
+      "overlap_stats": {
+        "single": 1.0,
+        "overlap2": 0.0,
+        "overlap3plus": 0.0,
+        "speech": 0.9403742958559501
+      },
+      "snr_db": 25.0
+    },
+    {
+      "shard": "data/shard-0000.tar",
+      "file_id": "rec_0071",
+      "duration": 60.0,
+      "n_speakers": 2,
+      "speakers": {
+        "spk0": "yurii_mironenko",
+        "spk1": "andrei_finagin"
+      },
+      "overlap_stats": {
+        "single": 1.0,
+        "overlap2": 0.0,
+        "overlap3plus": 0.0,
+        "speech": 0.9286838702367267
+      },
+      "snr_db": 25.0
+    }
+  ]
+}
