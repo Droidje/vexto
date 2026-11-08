@@ -19,7 +19,7 @@ Each `.reference.json` preserves all original published metadata/segments and a 
 ## Boundary limitations
 
 - The published duration field disagrees with end-start in many segments. Original values are preserved; RTTM does not use that field.
-- Published regions contain leading/internal quiet intervals; the longest observed leading interval below1e-4 amplitude is about3.7seconds. They are utterance/clip allocation spans rather than a verified human VAD segmentation. Report DER as agreement against published spans; missed-speaker time may include silence.
+- Published regions contain leading/internal quiet intervals; the longest observed leading interval below1e-4 amplitude is about3.7seconds. They are utterance/clip allocation spans rather than a verified human VAD segmentation. Use this fixture for WER only; DER is N/A because these spans are unsuitable as validated speech-only boundaries.
 - Boundary diagnostics are descriptive, not reference correction. No segments or text were discarded for measured model quality.
 - All five final source waveform SHA256 values differ. PCM conversion clipped no samples.
 - Actual Parquet schema: audio struct(array:list<float32>,sampling_rate:int64); speaker segments list(struct(speaker_id:int64,start:float64,end:float64,duration:float64,text:string)). See `source-schema.txt` for complete schema. The loader script has a different Audio/audio_path declaration, so the actual Parquet schema was used.

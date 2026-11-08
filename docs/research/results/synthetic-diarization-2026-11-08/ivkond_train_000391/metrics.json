@@ -25,67 +25,16 @@
     "channel": "1"
   },
   "exportedDER": {
-    "status": "scored",
-    "der": 0.6999543378995434,
-    "der_percent": 69.99543378995435,
-    "miss_speaker_seconds": 30.657999999999998,
-    "false_alarm_speaker_seconds": 0.0,
-    "confusion_speaker_seconds": 0.0,
-    "error_speaker_seconds": 30.657999999999998,
-    "reference_speaker_seconds": 43.8,
-    "mapping_hypothesis_to_reference": {
-      "speaker_1": "speaker_1",
-      "speaker_2": "speaker_2"
-    },
-    "unmapped_reference_labels": [],
-    "reference_labels": [
-      "speaker_1",
-      "speaker_2"
-    ],
-    "hypothesis_labels": [
-      "speaker_1",
-      "speaker_2"
-    ],
-    "collar_seconds": 0,
-    "overlap_scored": true,
-    "uem": {
-      "start": 0,
-      "end": 43.801625
-    },
-    "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
-    "hypothesis_segments": 4
+    "status": "not_applicable_wer_only",
+    "der": null,
+    "der_percent": null,
+    "reason": "WER-only evaluation: reference boundaries are not validated for speech-only DER."
   },
   "rawNemotronDER": {
-    "status": "scored",
-    "der": 0.6999543378995434,
-    "der_percent": 69.99543378995435,
-    "miss_speaker_seconds": 30.657999999999998,
-    "false_alarm_speaker_seconds": 0.0,
-    "confusion_speaker_seconds": 0.0,
-    "error_speaker_seconds": 30.657999999999998,
-    "reference_speaker_seconds": 43.8,
-    "mapping_hypothesis_to_reference": {
-      "0": "speaker_1",
-      "1": "speaker_2"
-    },
-    "unmapped_reference_labels": [],
-    "reference_labels": [
-      "speaker_1",
-      "speaker_2"
-    ],
-    "hypothesis_labels": [
-      "0",
-      "1"
-    ],
-    "collar_seconds": 0,
-    "overlap_scored": true,
-    "uem": {
-      "start": 0,
-      "end": 43.801625
-    },
-    "protocol": "single-recording active-set DER, global one-to-one mapping, collar 0, overlap scored",
-    "stage_completed": true,
-    "hypothesis_segments": 4
+    "status": "not_applicable_wer_only",
+    "der": null,
+    "der_percent": null,
+    "reason": "WER-only evaluation: reference boundaries are not validated for speech-only DER."
   },
   "wer": {
     "status": "scored",
