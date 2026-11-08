@@ -5,6 +5,7 @@ import hashlib
 import json
 from prepare_punctuation_models import ARTIFACTS
 from prepare_quality_models import MANIFEST, ROOT
+from export_overlap_model import ENCODER_SHA, THRESHOLD, digest
 from zipfile import ZipFile
 
 
@@ -43,10 +44,21 @@ with ZipFile(args.apk) as apk:
         sys.exit("Missing APK files: " + ", ".join(sorted(missing)))
     for name, (size, checksum) in ARTIFACTS.items():
         verify_asset(apk, f"assets/models/punctuation/{name}", size, checksum)
-    overlap = json.loads((ROOT / "engine/src/main/overlap-assets/overlap/manifest.json").read_text())
-    if json.loads(apk.read("assets/overlap/manifest.json")) != overlap:
+    overlap = json.loads(apk.read("assets/overlap/manifest.json"))
+    expected_overlap = {
+        "version": "natural-overlap-v1", "path": "overlap/wavlm.onnx",
+        "sample_rate": 16000, "window_samples": 64000, "threshold": THRESHOLD,
+        "encoder_sha256": ENCODER_SHA,
+        "head_sha256": digest(ROOT / "tools/models/overlap-head.json"),
+    }
+    if any(overlap.get(key) != value for key, value in expected_overlap.items()):
+        sys.exit("Embedded overlap manifest differs from repository pins")
+    prepared = ROOT / "engine/src/main/overlap-assets/overlap/manifest.json"
+    if prepared.exists() and json.loads(prepared.read_text()) != overlap:
         sys.exit("Embedded overlap manifest differs from prepared model")
     verify_asset(apk, "assets/" + overlap["path"], overlap["bytes"], overlap["sha256"])
+    notice = "tools/model-notices/overlap-wavlm-torchaudio-MIT.txt"
+    verify_asset(apk, "assets/overlap/NOTICE.txt", (ROOT / notice).stat().st_size, digest(ROOT / notice))
     if args.require_models:
         if apk.read("assets/vexto-models/embedded") != b"1\n":
             sys.exit("Missing embedded offline pack marker")
