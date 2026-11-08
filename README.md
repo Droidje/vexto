@@ -9,12 +9,12 @@ Vexto — Android-диктофон с локальной расшифровко�
 <p align="center">
   <a href="https://github.com/Droidje/vexto/releases/latest"><img src="https://img.shields.io/github/v/release/Droidje/vexto?label=%D0%A0%D0%B5%D0%BB%D0%B8%D0%B7&style=flat-square" alt="Актуальный релиз"></a>
   <a href="https://github.com/Droidje/vexto/actions/workflows/ci.yml"><img src="https://github.com/Droidje/vexto/actions/workflows/ci.yml/badge.svg?style=flat-square" alt="CI/CD"></a>
-  <a href="https://github.com/Droidje/vexto/releases/latest"><img src="https://img.shields.io/badge/Download-APK-2ea44f?style=flat-square&logo=github" alt="Download APK"></a>
+  <a href="https://distribute.droidje.com/vexto/download/vexto-offline.apk"><img src="https://img.shields.io/badge/Download-APK-2ea44f?style=flat-square&logo=github" alt="Download APK"></a>
 </p>
 
 ## Быстрый старт
 
-1. Для установки прямо на телефоне скачайте `vexto-offline.apk` из успешной [сборки установщика](https://github.com/Droidje/vexto/actions/workflows/phone-apk.yml). Откройте файл в «Загрузках» и подтвердите установку. Сборка включает модели. На Android нужно около 13 ГБ свободного места для установки и первого запуска.
+1. Для установки прямо на телефоне скачайте [полный `vexto-offline.apk` со всеми моделями](https://distribute.droidje.com/vexto/download/vexto-offline.apk). Откройте файл в «Загрузках» и подтвердите установку. Сборка включает модели. На Android нужно около 13 ГБ свободного места для установки и первого запуска.
 2. Откройте Vexto → Нажмите «+» → «Прикрепить файл» или «Записать сейчас» (для быстрой записи можно зажать +). В предпросмотре нажмите синюю стрелку для немедленной обработки либо «Расшифровать в фоне», чтобы вернуться к списку (расшифровка пойдет в фоне).
 3. Откройте готовый разговор, нажмите значок «Поделиться» в верхней панели и экспортируйте JSON (в формате ТЗ) или Markdown (с именами и эмоциями реплик)
 4. Исследуйте другие функции приложения: [Дополнительные функции](docs/features.md) — что добавили поверх ТЗ и зачем.
@@ -66,6 +66,8 @@ Qwen3-1.7B может определить имена при наличии пр
 - Определение языка записи: 99 языков, собственная компактная модель
 - Обученная голова детектора перебиваний и собственное преобразование Whisper tiny для определения языка без нового обучения
 - Отметка «Вы» и статистика времени речи участников
+
+Установщик автоматически публикуется после успешного CI в `main`; [адрес скачивания](https://distribute.droidje.com/vexto/download/vexto-offline.apk) остаётся прежним. [Как устроена публикация](docs/architecture/phone-download.md).
 
 ## Документация
 
